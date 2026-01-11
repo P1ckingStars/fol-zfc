@@ -29,7 +29,7 @@ void prove_and_print(const std::string& name,
 
     // Prove
     ProverConfig config;
-    config.max_depth = 25;
+    config.max_depth = 16;
     Prover prover(config);
     auto result = prover.prove(premises, goal);
 
@@ -120,6 +120,8 @@ int main() {
     );
 
     prove_and_print("Contrapositive", {"A -> B"}, "~B -> ~A");
+
+    prove_and_print("Contrapositive", {"A -> B"}, "A -> ~B");
 
     return 0;
 }
