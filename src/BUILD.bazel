@@ -1,0 +1,48 @@
+cc_library(
+    name = "formula",
+    srcs = ["formula.cpp"],
+    hdrs = ["formula.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "rule_engine",
+    srcs = ["rule_engine.cpp"],
+    hdrs = ["rule_engine.h"],
+    visibility = ["//visibility:public"],
+    deps = [":formula"],
+)
+
+cc_library(
+    name = "parser",
+    srcs = ["parser.cpp"],
+    hdrs = ["parser.h"],
+    visibility = ["//visibility:public"],
+    deps = [":formula"],
+)
+
+cc_library(
+    name = "prover",
+    srcs = ["prover.cpp"],
+    hdrs = ["prover.h"],
+    visibility = ["//visibility:public"],
+    deps = [":rule_engine"],
+)
+
+cc_library(
+    name = "fitch",
+    srcs = ["fitch.cpp"],
+    hdrs = ["fitch.h"],
+    visibility = ["//visibility:public"],
+    deps = [":rule_engine"],
+)
+
+cc_binary(
+    name = "main",
+    srcs = ["main.cpp"],
+    deps = [
+        ":fitch",
+        ":parser",
+        ":prover",
+    ],
+)

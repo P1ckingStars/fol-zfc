@@ -1,0 +1,14 @@
+# Bazel
+bazel-*
+/external
+
+# Clangd
+compile_commands.json
+.cache/
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

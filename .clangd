@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - "-std=c++20"
+    - "-Wall"
+  Remove:
+    - "-fno-canonical-system-headers"
+
+Diagnostics:
+  UnusedIncludes: Strict

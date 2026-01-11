@@ -1,0 +1,36 @@
+cc_test(
+    name = "rule_engine_test",
+    srcs = ["rule_engine_test.cpp"],
+    deps = [
+        "//src:rule_engine",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "parser_test",
+    srcs = ["parser_test.cpp"],
+    deps = [
+        "//src:parser",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "prover_test",
+    srcs = ["prover_test.cpp"],
+    deps = [
+        "//src:parser",
+        "//src:prover",
+        "@googletest//:gtest_main",
+    ],
+)
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":parser_test",
+        ":prover_test",
+        ":rule_engine_test",
+    ],
+)
