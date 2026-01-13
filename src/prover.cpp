@@ -1,431 +1,338 @@
 #include "prover.h"
 
-#include <iostream>
-#include <sstream>
-
 namespace logic {
 
-Prover::Prover(ProverConfig config) : config_(config) {}
+// ==================== ZFCProver Methods ====================
 
-ProverResult Prover::prove(const std::vector<FormulaPtr>& premises, FormulaPtr goal) {
-    SearchState state;
-    state.depth = 0;
+ProverResult ZFCProver::prove_with_assumptions(formula_id goal,
+                                                const std::vector<formula_id>& extra_assumptions) {
+    SearchState state(db_);
 
-    // Add premises to context
-    for (const auto& p : premises) {
-        state.context.emplace_back(p, make_premise(p));
+    // Add axioms
+    for (const auto& [axiom, name] : axioms_) {
+        auto step = state.proof->assume(axiom);
+        add_derived(state, axiom, step);
     }
 
-    auto result = search(state, goal);
-
-    if (result) {
-        return {true, result, "Proof found"};
+    // Add theorems
+    for (const auto& [theorem, name] : theorems_) {
+        auto step = state.proof->assume(theorem);
+        add_derived(state, theorem, step);
     }
-    return {false, std::nullopt, "No proof found"};
+
+    // Add extra assumptions
+    for (auto f : extra_assumptions) {
+        auto step = state.proof->assume(f);
+        add_derived(state, f, step);
+    }
+
+    // Check if goal is already derived
+    if (is_derived(state, goal)) {
+        return {true, std::move(state.proof), "Goal is an axiom/assumption", 0};
+    }
+
+    // Search for proof
+    if (search(state, goal)) {
+        return {true, std::move(state.proof), "Proof found", state.steps};
+    }
+
+    return {false, nullptr, "Could not find proof", state.steps};
 }
 
-std::optional<ProofPtr> Prover::search(SearchState& state, FormulaPtr goal) {
-    // Depth limit
-    if (state.depth > config_.max_depth) {
-        return std::nullopt;
+bool ZFCProver::search(SearchState& state, formula_id goal) {
+    // Check limits
+    if (state.depth >= config_.max_depth || state.steps >= config_.max_steps) {
+        return false;
     }
-
-    // Loop detection
-    auto key = goal_key(state, *goal);
-    if (state.seen_goals.count(key)) {
-        return std::nullopt;
-    }
-    state.seen_goals.insert(key);
-
-    if (config_.verbose) {
-        std::cerr << std::string(state.depth * 2, ' ')
-                  << "Goal: " << to_string(*goal) << "\n";
-    }
-
+    state.steps++;
     state.depth++;
 
-    // 1. Check if goal is directly in context
-    if (auto proof = find_in_context(state, *goal)) {
-        state.depth--;
-        state.seen_goals.erase(key);
-        return proof;
+    if (config_.verbose) {
+        std::cout << "[Prover] Searching for goal (depth=" << state.depth
+                  << ", id=" << goal << ")\n";
     }
 
-    // 2. Try introduction rules (goal-directed)
-    if (auto proof = try_intro_rules(state, goal)) {
+    // Already derived?
+    if (is_derived(state, goal)) {
         state.depth--;
-        state.seen_goals.erase(key);
-        return proof;
+        return true;
     }
 
-    // 3. Try elimination rules (use context)
-    if (auto proof = try_elim_rules(state, goal)) {
+    // Try elimination rules first (may directly derive goal)
+    if (try_elim_rules(state, goal)) {
         state.depth--;
-        state.seen_goals.erase(key);
-        return proof;
+        return true;
+    }
+
+    // Try introduction rules (backward reasoning)
+    if (try_intro_rules(state, goal)) {
+        state.depth--;
+        return true;
     }
 
     state.depth--;
-    state.seen_goals.erase(key);
-    return std::nullopt;
+    return false;
 }
 
-std::optional<ProofPtr> Prover::find_in_context(const SearchState& state, const Formula& goal) {
-    for (const auto& [f, p] : state.context) {
-        if (*f == goal) {
-            return p;
+bool ZFCProver::try_intro_rules(SearchState& state, formula_id goal) {
+    if (try_and_intro(state, goal)) return true;
+    if (try_implies_intro(state, goal)) return true;
+    if (try_iff_intro(state, goal)) return true;
+    if (try_or_intro(state, goal)) return true;
+    if (try_not_intro(state, goal)) return true;
+    if (try_forall_intro(state, goal)) return true;
+    if (try_exists_intro(state, goal)) return true;
+    return false;
+}
+
+bool ZFCProver::try_elim_rules(SearchState& state, formula_id goal) {
+    if (try_modus_ponens(state, goal)) return true;
+    if (try_and_elim(state, goal)) return true;
+    if (try_forall_elim(state, goal)) return true;
+    if (try_iff_elim(state, goal)) return true;
+    return false;
+}
+
+// ==================== Introduction Rules ====================
+
+bool ZFCProver::try_and_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_compound() || f.as_compound().op != Op::And) return false;
+
+    auto left = f.as_compound().left;
+    auto right = f.as_compound().right;
+
+    // Try to prove both conjuncts
+    if (!search(state, left)) return false;
+    if (!search(state, right)) return false;
+
+    auto left_step = find_step(state, left);
+    auto right_step = find_step(state, right);
+    if (!left_step || !right_step) return false;
+
+    auto step = state.proof->and_intro(*left_step, *right_step);
+    add_derived(state, goal, step);
+    return true;
+}
+
+bool ZFCProver::try_or_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_compound() || f.as_compound().op != Op::Or) return false;
+
+    auto left = f.as_compound().left;
+    auto right = f.as_compound().right;
+
+    // Try left disjunct first
+    if (search(state, left)) {
+        auto left_step = find_step(state, left);
+        if (left_step) {
+            auto step = state.proof->or_intro_l(*left_step, right);
+            add_derived(state, goal, step);
+            return true;
         }
     }
-    return std::nullopt;
+
+    // Try right disjunct
+    if (search(state, right)) {
+        auto right_step = find_step(state, right);
+        if (right_step) {
+            auto step = state.proof->or_intro_r(left, *right_step);
+            add_derived(state, goal, step);
+            return true;
+        }
+    }
+
+    return false;
 }
 
-std::optional<ProofPtr> Prover::try_intro_rules(SearchState& state, FormulaPtr goal) {
-    if (has_op(*goal, Op::And)) {
-        if (auto p = try_and_intro(state, goal)) return p;
-    }
+bool ZFCProver::try_implies_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_compound() || f.as_compound().op != Op::Implies) return false;
 
-    if (has_op(*goal, Op::Or)) {
-        if (auto p = try_or_intro(state, goal)) return p;
-    }
-
-    if (has_op(*goal, Op::Implies)) {
-        if (auto p = try_impl_intro(state, goal)) return p;
-    }
-
-    if (has_op(*goal, Op::Not)) {
-        if (auto p = try_neg_intro(state, goal)) return p;
-    }
-
-    if (has_op(*goal, Op::Iff)) {
-        if (auto p = try_iff_intro(state, goal)) return p;
-    }
-
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_elim_rules(SearchState& state, FormulaPtr goal) {
-    // Try modus ponens (most useful)
-    if (auto p = try_modus_ponens(state, goal)) return p;
-
-    // Try and elimination
-    if (auto p = try_and_elim(state, goal)) return p;
-
-    // Try or elimination (case split)
-    if (auto p = try_or_elim(state, goal)) return p;
-
-    // Try double negation elimination
-    if (auto p = try_double_neg_elim(state, goal)) return p;
-
-    // Try bottom elimination (ex falso)
-    if (auto p = try_bottom_elim(state, goal)) return p;
-
-    // Try iff elimination
-    if (auto p = try_iff_elim(state, goal)) return p;
-
-    return std::nullopt;
-}
-
-// Introduction rules
-
-std::optional<ProofPtr> Prover::try_and_intro(SearchState& state, FormulaPtr goal) {
-    const auto& comp = as_compound(*goal);
-    auto left_goal = comp.args[0];
-    auto right_goal = comp.args[1];
-
-    auto left_proof = search(state, left_goal);
-    if (!left_proof) return std::nullopt;
-
-    auto right_proof = search(state, right_goal);
-    if (!right_proof) return std::nullopt;
-
-    auto result = engine_.and_intro(*left_proof, *right_proof);
-    return result.success ? std::optional(result.proof) : std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_or_intro(SearchState& state, FormulaPtr goal) {
-    const auto& comp = as_compound(*goal);
-    auto left = comp.args[0];
-    auto right = comp.args[1];
-
-    // Try proving left disjunct
-    if (auto left_proof = search(state, left)) {
-        auto result = engine_.or_intro_left(*left_proof, right);
-        if (result.success) return result.proof;
-    }
-
-    // Try proving right disjunct
-    if (auto right_proof = search(state, right)) {
-        auto result = engine_.or_intro_right(left, *right_proof);
-        if (result.success) return result.proof;
-    }
-
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_impl_intro(SearchState& state, FormulaPtr goal) {
-    const auto& comp = as_compound(*goal);
-    auto antecedent = comp.args[0];
-    auto consequent = comp.args[1];
+    auto antecedent = f.as_compound().left;
+    auto consequent = f.as_compound().right;
 
     // Assume antecedent
-    auto assumption = make_assumption(antecedent);
-    push_to_context(state, antecedent, assumption);
+    auto assume_step = state.proof->assume(antecedent);
+    assumption_id aid = *state.proof->get_step(assume_step).assumption_label;
+    add_derived(state, antecedent, assume_step);
 
     // Try to prove consequent
-    auto consequent_proof = search(state, consequent);
-
-    pop_from_context(state);
-
-    if (consequent_proof) {
-        auto result = engine_.implies_intro(antecedent, *consequent_proof);
-        if (result.success) return result.proof;
-    }
-
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_neg_intro(SearchState& state, FormulaPtr goal) {
-    const auto& comp = as_compound(*goal);
-    auto inner = comp.args[0];
-
-    // Assume inner (to derive ⊥)
-    auto assumption = make_assumption(inner);
-    push_to_context(state, inner, assumption);
-
-    // Try to derive ⊥
-    auto bottom_proof = search(state, bottom());
-
-    pop_from_context(state);
-
-    if (bottom_proof) {
-        auto result = engine_.not_intro(inner, *bottom_proof);
-        if (result.success) return result.proof;
-    }
-
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_iff_intro(SearchState& state, FormulaPtr goal) {
-    const auto& comp = as_compound(*goal);
-    auto left = comp.args[0];
-    auto right = comp.args[1];
-
-    // Prove left → right
-    auto left_impl = impl(left, right);
-    auto left_proof = search(state, left_impl);
-    if (!left_proof) return std::nullopt;
-
-    // Prove right → left
-    auto right_impl = impl(right, left);
-    auto right_proof = search(state, right_impl);
-    if (!right_proof) return std::nullopt;
-
-    auto result = engine_.iff_intro(*left_proof, *right_proof);
-    return result.success ? std::optional(result.proof) : std::nullopt;
-}
-
-// Elimination rules
-
-std::optional<ProofPtr> Prover::try_modus_ponens(SearchState& state, FormulaPtr goal) {
-    // Look for implications in context that conclude with our goal
-    for (const auto& [f, p] : state.context) {
-        if (has_op(*f, Op::Implies)) {
-            const auto& comp = as_compound(*f);
-            if (*comp.args[1] == *goal) {
-                // Found A → goal, try to prove A
-                auto antecedent = comp.args[0];
-                if (auto ant_proof = search(state, antecedent)) {
-                    auto result = engine_.implies_elim(*ant_proof, p);
-                    if (result.success) return result.proof;
-                }
-            }
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_and_elim(SearchState& state, FormulaPtr goal) {
-    // Look for conjunctions in context
-    for (const auto& [f, p] : state.context) {
-        if (has_op(*f, Op::And)) {
-            const auto& comp = as_compound(*f);
-
-            // Check if left conjunct matches goal
-            if (*comp.args[0] == *goal) {
-                auto result = engine_.and_elim_left(p);
-                if (result.success) return result.proof;
-            }
-
-            // Check if right conjunct matches goal
-            if (*comp.args[1] == *goal) {
-                auto result = engine_.and_elim_right(p);
-                if (result.success) return result.proof;
-            }
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_or_elim(SearchState& state, FormulaPtr goal) {
-    // Look for disjunctions in context
-    for (const auto& [f, p] : state.context) {
-        if (has_op(*f, Op::Or)) {
-            const auto& comp = as_compound(*f);
-            auto left = comp.args[0];
-            auto right = comp.args[1];
-
-            // Try case split: assume left, prove goal
-            auto left_assumption = make_assumption(left);
-            push_to_context(state, left, left_assumption);
-            auto left_case = search(state, goal);
-            pop_from_context(state);
-
-            if (!left_case) continue;
-
-            // Assume right, prove goal
-            auto right_assumption = make_assumption(right);
-            push_to_context(state, right, right_assumption);
-            auto right_case = search(state, goal);
-            pop_from_context(state);
-
-            if (!right_case) continue;
-
-            // Build the case proofs as implications
-            auto left_impl_result = engine_.implies_intro(left, *left_case);
-            auto right_impl_result = engine_.implies_intro(right, *right_case);
-
-            if (left_impl_result.success && right_impl_result.success) {
-                auto result = engine_.or_elim(p, left_impl_result.proof, right_impl_result.proof);
-                if (result.success) return result.proof;
-            }
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_double_neg_elim(SearchState& state, FormulaPtr goal) {
-    // Look for ¬¬goal in context
-    auto double_neg = neg(neg(goal));
-
-    if (auto proof = find_in_context(state, *double_neg)) {
-        auto result = engine_.not_elim(*proof);
-        if (result.success) return result.proof;
-    }
-
-    // Or try to prove ¬¬goal
-    if (auto proof = search(state, double_neg)) {
-        auto result = engine_.not_elim(*proof);
-        if (result.success) return result.proof;
-    }
-
-    return std::nullopt;
-}
-
-std::optional<ProofPtr> Prover::try_bottom_elim(SearchState& state, FormulaPtr goal) {
-    // Check if ⊥ is already in context
-    if (auto bottom_proof = find_in_context(state, *bottom())) {
-        auto result = engine_.bottom_elim(*bottom_proof, goal);
-        if (result.success) return result.proof;
-    }
-
-    // Check for direct contradiction in context (A and ¬A)
-    for (const auto& [f, p] : state.context) {
-        // Case 1: f is ¬A, look for A
-        if (has_op(*f, Op::Not)) {
-            auto inner = as_compound(*f).args[0];
-            if (auto inner_proof = find_in_context(state, *inner)) {
-                auto bottom_result = engine_.bottom_intro(*inner_proof, p);
-                if (bottom_result.success) {
-                    auto result = engine_.bottom_elim(bottom_result.proof, goal);
-                    if (result.success) return result.proof;
-                }
-            }
-        }
-
-        // Case 2: f is A, look for ¬A
-        auto negated = neg(f);
-        if (auto neg_proof = find_in_context(state, *negated)) {
-            auto bottom_result = engine_.bottom_intro(p, *neg_proof);
-            if (bottom_result.success) {
-                auto result = engine_.bottom_elim(bottom_result.proof, goal);
-                if (result.success) return result.proof;
-            }
+    if (search(state, consequent)) {
+        auto conseq_step = find_step(state, consequent);
+        if (conseq_step) {
+            auto step = state.proof->implies_intro(aid, *conseq_step);
+            add_derived(state, goal, step);
+            return true;
         }
     }
 
-    // Try to derive a formula that contradicts something in context
-    // Look for ¬X in context, try to prove X via modus ponens
-    for (const auto& [f, p] : state.context) {
-        if (has_op(*f, Op::Not)) {
-            auto inner = as_compound(*f).args[0];
-            // Try to prove inner using modus ponens
-            for (const auto& [f2, p2] : state.context) {
-                if (has_op(*f2, Op::Implies)) {
-                    const auto& impl_comp = as_compound(*f2);
-                    if (*impl_comp.args[1] == *inner) {
-                        // Found X → inner, try to prove X
-                        auto antecedent = impl_comp.args[0];
-                        if (auto ant_proof = find_in_context(state, *antecedent)) {
-                            auto mp_result = engine_.implies_elim(*ant_proof, p2);
-                            if (mp_result.success) {
-                                // Now we have inner and ¬inner
-                                auto bottom_result = engine_.bottom_intro(mp_result.proof, p);
-                                if (bottom_result.success) {
-                                    auto result = engine_.bottom_elim(bottom_result.proof, goal);
-                                    if (result.success) return result.proof;
-                                }
-                            }
-                        }
+    return false;
+}
+
+bool ZFCProver::try_not_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_compound() || f.as_compound().op != Op::Not) return false;
+
+    auto inner = f.as_compound().left;
+    auto bottom = db_.create_bottom();
+
+    // Assume the inner formula
+    auto assume_step = state.proof->assume(inner);
+    assumption_id aid = *state.proof->get_step(assume_step).assumption_label;
+    add_derived(state, inner, assume_step);
+
+    // Try to derive bottom (contradiction)
+    if (search(state, bottom)) {
+        auto bottom_step = find_step(state, bottom);
+        if (bottom_step) {
+            auto step = state.proof->not_intro(aid, *bottom_step);
+            add_derived(state, goal, step);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ZFCProver::try_iff_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_compound() || f.as_compound().op != Op::Iff) return false;
+
+    auto left = f.as_compound().left;
+    auto right = f.as_compound().right;
+    auto left_impl = db_.create_implies(left, right);
+    auto right_impl = db_.create_implies(right, left);
+
+    // Prove both directions
+    if (!search(state, left_impl)) return false;
+    if (!search(state, right_impl)) return false;
+
+    auto left_step = find_step(state, left_impl);
+    auto right_step = find_step(state, right_impl);
+    if (!left_step || !right_step) return false;
+
+    auto step = state.proof->iff_intro(*left_step, *right_step);
+    add_derived(state, goal, step);
+    return true;
+}
+
+bool ZFCProver::try_forall_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_quantified() || f.as_quantified().op != Op::Forall) return false;
+
+    auto var = f.as_quantified().var;
+    auto body = f.as_quantified().body;
+
+    // Try to prove body (with var as arbitrary)
+    if (search(state, body)) {
+        auto body_step = find_step(state, body);
+        if (body_step) {
+            auto step = state.proof->forall_intro(*body_step, var);
+            add_derived(state, goal, step);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ZFCProver::try_exists_intro(SearchState& state, formula_id goal) {
+    const Formula& f = db_.get_formula(goal);
+    if (!f.is_quantified() || f.as_quantified().op != Op::Exists) return false;
+
+    // This is tricky - we need to find a witness term
+    // For now, just try with available constants
+    return false;  // TODO: implement witness search
+}
+
+// ==================== Elimination Rules ====================
+
+bool ZFCProver::try_modus_ponens(SearchState& state, formula_id goal) {
+    // Look for A -> goal in derived formulas
+    for (auto [fid, sid] : state.formula_to_step) {
+        const Formula& f = db_.get_formula(fid);
+        if (f.is_compound() && f.as_compound().op == Op::Implies) {
+            if (f.as_compound().right == goal) {
+                auto antecedent = f.as_compound().left;
+                if (search(state, antecedent)) {
+                    auto ante_step = find_step(state, antecedent);
+                    if (ante_step) {
+                        auto step = state.proof->implies_elim(sid, *ante_step);
+                        add_derived(state, goal, step);
+                        return true;
                     }
                 }
             }
         }
     }
-
-    return std::nullopt;
+    return false;
 }
 
-std::optional<ProofPtr> Prover::try_iff_elim(SearchState& state, FormulaPtr goal) {
-    // Check if goal is an implication that can come from a biconditional
-    if (has_op(*goal, Op::Implies)) {
-        const auto& comp = as_compound(*goal);
-        auto left = comp.args[0];
-        auto right = comp.args[1];
-
-        // Look for left ↔ right in context
-        auto bicon1 = iff(left, right);
-        if (auto proof = find_in_context(state, *bicon1)) {
-            auto result = engine_.iff_elim_left(*proof);
-            if (result.success) return result.proof;
-        }
-
-        // Look for right ↔ left in context
-        auto bicon2 = iff(right, left);
-        if (auto proof = find_in_context(state, *bicon2)) {
-            auto result = engine_.iff_elim_right(*proof);
-            if (result.success) return result.proof;
+bool ZFCProver::try_and_elim(SearchState& state, formula_id goal) {
+    // Look for goal & _ or _ & goal in derived formulas
+    for (auto [fid, sid] : state.formula_to_step) {
+        const Formula& f = db_.get_formula(fid);
+        if (f.is_compound() && f.as_compound().op == Op::And) {
+            if (f.as_compound().left == goal) {
+                auto step = state.proof->and_elim_l(sid);
+                add_derived(state, goal, step);
+                return true;
+            }
+            if (f.as_compound().right == goal) {
+                auto step = state.proof->and_elim_r(sid);
+                add_derived(state, goal, step);
+                return true;
+            }
         }
     }
-    return std::nullopt;
+    return false;
 }
 
-// Helpers
-
-void Prover::push_to_context(SearchState& state, FormulaPtr f, ProofPtr p) {
-    state.context.emplace_back(f, p);
-}
-
-void Prover::pop_from_context(SearchState& state) {
-    state.context.pop_back();
-}
-
-std::string Prover::goal_key(const SearchState& state, const Formula& goal) {
-    std::ostringstream ss;
-    ss << to_string(goal) << "@";
-    for (const auto& [f, _] : state.context) {
-        ss << to_string(*f) << ";";
+bool ZFCProver::try_forall_elim(SearchState& state, formula_id goal) {
+    // Look for forall x. P(x) where instantiating gives goal
+    for (auto [fid, sid] : state.formula_to_step) {
+        const Formula& f = db_.get_formula(fid);
+        if (f.is_quantified() && f.as_quantified().op == Op::Forall) {
+            // Try to find a term that when substituted gives goal
+            // This is complex - for now, try available terms
+            // TODO: proper unification
+        }
     }
-    return ss.str();
+    return false;
+}
+
+bool ZFCProver::try_iff_elim(SearchState& state, formula_id goal) {
+    // If goal is A -> B, look for A <-> B
+    const Formula& g = db_.get_formula(goal);
+    if (!g.is_compound() || g.as_compound().op != Op::Implies) return false;
+
+    auto left = g.as_compound().left;
+    auto right = g.as_compound().right;
+
+    // Look for left <-> right
+    auto iff1 = db_.create_iff(left, right);
+    if (is_derived(state, iff1)) {
+        auto iff_step = find_step(state, iff1);
+        if (iff_step) {
+            auto step = state.proof->iff_elim_l(*iff_step);
+            add_derived(state, goal, step);
+            return true;
+        }
+    }
+
+    // Look for right <-> left
+    auto iff2 = db_.create_iff(right, left);
+    if (is_derived(state, iff2)) {
+        auto iff_step = find_step(state, iff2);
+        if (iff_step) {
+            auto step = state.proof->iff_elim_r(*iff_step);
+            add_derived(state, goal, step);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }  // namespace logic

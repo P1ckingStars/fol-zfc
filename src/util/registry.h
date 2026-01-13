@@ -121,4 +121,45 @@ private:
     Id next_id_ = 1;
 };
 
+// Simple indexed store without deduplication
+// Each add() creates a new entry with unique ID
+// Use for items where each instance is unique (e.g., proof steps)
+template<typename T, typename Id>
+class IndexedStore {
+public:
+    Id add(T item) {
+        Id id = next_id_++;
+        items_.emplace(id, std::move(item));
+        return id;
+    }
+
+    const T& get(Id id) const {
+        return items_.at(id);
+    }
+
+    T& get_mut(Id id) {
+        return items_.at(id);
+    }
+
+    bool contains(Id id) const {
+        return items_.find(id) != items_.end();
+    }
+
+    size_t size() const {
+        return items_.size();
+    }
+
+    bool empty() const {
+        return items_.empty();
+    }
+
+    // Iterator support for range-based for loops
+    auto begin() const { return items_.begin(); }
+    auto end() const { return items_.end(); }
+
+private:
+    std::unordered_map<Id, T> items_;
+    Id next_id_ = 1;
+};
+
 }  // namespace logic::util

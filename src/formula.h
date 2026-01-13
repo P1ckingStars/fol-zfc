@@ -2,7 +2,9 @@
 
 #include "util/registry.h"
 
+#include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <variant>
 #include <vector>
@@ -73,18 +75,22 @@ struct ConstantHash {
     }
 };
 
+// Tagged wrappers to distinguish var_index and constant_id in variant
+struct VarTag { var_index idx; bool operator==(const VarTag&) const = default; };
+struct ConstTag { constant_id id; bool operator==(const ConstTag&) const = default; };
+
 // A term is either a local variable (by index) or a global constant (by id)
 struct Term {
-    std::variant<var_index, constant_id> data;
+    std::variant<VarTag, ConstTag> data;
 
-    static Term var(var_index idx) { return Term{idx}; }
-    static Term constant(constant_id id) { return Term{id}; }
+    static Term var(var_index idx) { return Term{VarTag{idx}}; }
+    static Term constant(constant_id id) { return Term{ConstTag{id}}; }
 
-    bool is_variable() const { return std::holds_alternative<var_index>(data); }
-    bool is_constant() const { return std::holds_alternative<constant_id>(data); }
+    bool is_variable() const { return std::holds_alternative<VarTag>(data); }
+    bool is_constant() const { return std::holds_alternative<ConstTag>(data); }
 
-    var_index as_variable() const { return std::get<var_index>(data); }
-    constant_id as_constant() const { return std::get<constant_id>(data); }
+    var_index as_variable() const { return std::get<VarTag>(data).idx; }
+    constant_id as_constant() const { return std::get<ConstTag>(data).id; }
 
     bool operator==(const Term& other) const { return data == other.data; }
 };
@@ -320,9 +326,20 @@ private:
 };
 
 
-// String conversion
-std::string to_string(const Formula& f);
-std::string to_string(const Sentence& s);
+// ==================== String Conversion ====================
+
 std::string op_symbol(Op op);
+std::string var_name(var_index idx);
+std::string term_to_string(const Term& t, const ProofDatabase* db);
+std::string formula_to_string_impl(const Formula& f, const ProofDatabase* db);
+
+// ==================== Free Variable Analysis ====================
+
+void collect_free_vars(const Formula& f, const ProofDatabase& db,
+                       std::set<var_index>& free_vars,
+                       std::set<var_index>& bound_vars);
+std::set<var_index> get_free_vars(formula_id fid, const ProofDatabase& db);
+bool is_sentence(formula_id fid, const ProofDatabase& db);
+size_t count_bound_vars(formula_id fid, const ProofDatabase& db);
 
 }  // namespace logic

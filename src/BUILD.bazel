@@ -3,12 +3,13 @@ cc_library(
     srcs = ["formula.cpp"],
     hdrs = ["formula.h"],
     visibility = ["//visibility:public"],
+    deps = ["//src/util:registry"],
 )
 
 cc_library(
-    name = "rule_engine",
-    srcs = ["rule_engine.cpp"],
-    hdrs = ["rule_engine.h"],
+    name = "proof",
+    srcs = ["proof.cpp"],
+    hdrs = ["proof.h"],
     visibility = ["//visibility:public"],
     deps = [":formula"],
 )
@@ -22,27 +23,53 @@ cc_library(
 )
 
 cc_library(
+    name = "zfc",
+    srcs = ["zfc.cpp"],
+    hdrs = ["zfc.h"],
+    visibility = ["//visibility:public"],
+    deps = [":formula"],
+)
+
+cc_library(
     name = "prover",
     srcs = ["prover.cpp"],
     hdrs = ["prover.h"],
     visibility = ["//visibility:public"],
-    deps = [":rule_engine"],
+    deps = [
+        ":formula",
+        ":parser",
+        ":proof",
+    ],
 )
 
 cc_library(
-    name = "fitch",
-    srcs = ["fitch.cpp"],
-    hdrs = ["fitch.h"],
+    name = "script",
+    srcs = ["script.cpp"],
+    hdrs = ["script.h"],
     visibility = ["//visibility:public"],
-    deps = [":rule_engine"],
+    deps = [
+        ":formula",
+        ":parser",
+        ":prover",
+        ":zfc",
+    ],
 )
 
 cc_binary(
     name = "main",
     srcs = ["main.cpp"],
     deps = [
-        ":fitch",
+        ":formula",
         ":parser",
-        ":prover",
+        ":proof",
+        ":zfc",
+    ],
+)
+
+cc_binary(
+    name = "run",
+    srcs = ["run.cpp"],
+    deps = [
+        ":script",
     ],
 )

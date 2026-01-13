@@ -1,253 +1,332 @@
 #include "parser.h"
 
-#include <cctype>
-
 namespace logic {
 
-Parser::Parser(std::string_view input) : input_(input), pos_(0) {}
+// ==================== Lexer ====================
 
-char Parser::peek() const {
-    if (at_end()) return '\0';
-    return input_[pos_];
-}
-
-char Parser::advance() {
-    if (at_end()) return '\0';
-    return input_[pos_++];
-}
-
-bool Parser::at_end() const {
-    return pos_ >= input_.size();
-}
-
-void Parser::skip_whitespace() {
-    while (!at_end() && std::isspace(peek())) {
-        advance();
-    }
-}
-
-bool Parser::match(char c) {
+Token Lexer::next() {
     skip_whitespace();
-    if (peek() == c) {
-        advance();
-        return true;
-    }
-    return false;
-}
 
-bool Parser::match(std::string_view s) {
-    skip_whitespace();
-    if (pos_ + s.size() <= input_.size() &&
-        input_.substr(pos_, s.size()) == s) {
-        // Make sure it's not a prefix of a longer identifier
-        size_t end = pos_ + s.size();
-        if (end < input_.size() && std::isalnum(input_[end])) {
-            return false;
+    if (pos_ >= input_.size()) {
+        return {TokenType::Eof, "", pos_};
+    }
+
+    size_t start = pos_;
+    char c = input_[pos_];
+
+    // Single character tokens
+    if (c == '(') { pos_++; return {TokenType::LParen, "(", start}; }
+    if (c == ')') { pos_++; return {TokenType::RParen, ")", start}; }
+    if (c == ',') { pos_++; return {TokenType::Comma, ",", start}; }
+    if (c == '.') { pos_++; return {TokenType::Dot, ".", start}; }
+    if (c == '&') { pos_++; return {TokenType::And, "&", start}; }
+    if (c == '|') { pos_++; return {TokenType::Or, "|", start}; }
+    if (c == '~') { pos_++; return {TokenType::Not, "~", start}; }
+
+    // Multi-character operators
+    if (c == '-' && peek(1) == '>') {
+        pos_ += 2;
+        return {TokenType::Implies, "->", start};
+    }
+    if (c == '<' && peek(1) == '-' && peek(2) == '>') {
+        pos_ += 3;
+        return {TokenType::Iff, "<->", start};
+    }
+    if (c == '_' && peek(1) == '|' && peek(2) == '_') {
+        pos_ += 3;
+        return {TokenType::Bottom, "_|_", start};
+    }
+
+    // Identifiers and keywords
+    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+        std::string ident;
+        while (pos_ < input_.size() &&
+               (std::isalnum(static_cast<unsigned char>(input_[pos_])) || input_[pos_] == '_')) {
+            ident += input_[pos_++];
         }
-        pos_ += s.size();
-        return true;
+
+        // Keywords
+        if (ident == "forall" || ident == "Forall" || ident == "FORALL" || ident == "all") {
+            return {TokenType::Forall, ident, start};
+        }
+        if (ident == "exists" || ident == "Exists" || ident == "EXISTS" || ident == "ex") {
+            return {TokenType::Exists, ident, start};
+        }
+        if (ident == "and" || ident == "AND") {
+            return {TokenType::And, ident, start};
+        }
+        if (ident == "or" || ident == "OR") {
+            return {TokenType::Or, ident, start};
+        }
+        if (ident == "not" || ident == "NOT") {
+            return {TokenType::Not, ident, start};
+        }
+        if (ident == "implies" || ident == "IMPLIES") {
+            return {TokenType::Implies, ident, start};
+        }
+        if (ident == "iff" || ident == "IFF") {
+            return {TokenType::Iff, ident, start};
+        }
+        if (ident == "false" || ident == "FALSE" || ident == "bottom" || ident == "BOTTOM") {
+            return {TokenType::Bottom, ident, start};
+        }
+
+        return {TokenType::Identifier, ident, start};
     }
-    return false;
+
+    pos_++;
+    return {TokenType::Error, std::string(1, c), start};
 }
 
-void Parser::expect(char c) {
-    skip_whitespace();
-    if (peek() != c) {
-        throw ParseError(std::string("Expected '") + c + "'", pos_);
+Token Lexer::peek_token() {
+    size_t saved = pos_;
+    Token t = next();
+    pos_ = saved;
+    return t;
+}
+
+void Lexer::skip_whitespace() {
+    while (pos_ < input_.size() && std::isspace(static_cast<unsigned char>(input_[pos_]))) {
+        pos_++;
     }
+}
+
+char Lexer::peek(size_t offset) const {
+    if (pos_ + offset >= input_.size()) return '\0';
+    return input_[pos_ + offset];
+}
+
+// ==================== ParseError ====================
+
+std::string ParseError::format_error(const std::string& msg, size_t pos, const std::string& input) {
+    std::ostringstream oss;
+    oss << "Parse error at position " << pos << ": " << msg;
+    oss << "\n  Input: " << input;
+    oss << "\n         " << std::string(pos, ' ') << "^";
+    return oss.str();
+}
+
+// ==================== Parser ====================
+
+Parser::Parser(std::string_view input, ProofDatabase& db)
+    : lexer_(input), db_(db), input_(input) {
     advance();
 }
 
-FormulaPtr Parser::parse() {
-    auto result = parse_iff();
-    skip_whitespace();
-    if (!at_end()) {
-        throw ParseError("Unexpected characters after formula", pos_);
+formula_id Parser::parse() {
+    formula_id result = parse_iff();
+    if (current_.type != TokenType::Eof) {
+        throw ParseError("Unexpected token after formula", current_.pos, std::string(input_));
     }
     return result;
 }
 
-std::optional<FormulaPtr> Parser::try_parse(std::string_view input, std::string* error) {
-    try {
-        Parser p(input);
-        return p.parse();
-    } catch (const ParseError& e) {
-        if (error) {
-            *error = e.what();
-        }
-        return std::nullopt;
-    }
-}
+formula_id Parser::parse_iff() {
+    formula_id left = parse_implies();
 
-// iff := implies (('<->' | '↔') implies)*
-FormulaPtr Parser::parse_iff() {
-    auto left = parse_implies();
-
-    while (true) {
-        skip_whitespace();
-        // Check for ↔ (UTF-8: E2 86 94)
-        if (pos_ + 2 < input_.size() &&
-            (unsigned char)input_[pos_] == 0xE2 &&
-            (unsigned char)input_[pos_+1] == 0x86 &&
-            (unsigned char)input_[pos_+2] == 0x94) {
-            pos_ += 3;
-            auto right = parse_implies();
-            left = iff(left, right);
-        } else if (match("<->") || match("iff")) {
-            auto right = parse_implies();
-            left = iff(left, right);
-        } else {
-            break;
-        }
+    while (current_.type == TokenType::Iff) {
+        advance();
+        formula_id right = parse_implies();
+        left = db_.create_iff(left, right);
     }
 
     return left;
 }
 
-// implies := or (('->' | '→') or)*  (right associative)
-FormulaPtr Parser::parse_implies() {
-    auto left = parse_or();
+formula_id Parser::parse_implies() {
+    formula_id left = parse_or();
 
-    skip_whitespace();
-    // Check for → (UTF-8: E2 86 92)
-    bool found_arrow = false;
-    if (pos_ + 2 < input_.size() &&
-        (unsigned char)input_[pos_] == 0xE2 &&
-        (unsigned char)input_[pos_+1] == 0x86 &&
-        (unsigned char)input_[pos_+2] == 0x92) {
-        pos_ += 3;
-        found_arrow = true;
-    } else if (match("->") || match("implies")) {
-        found_arrow = true;
-    }
-
-    if (found_arrow) {
-        auto right = parse_implies();  // Right associative
-        return impl(left, right);
+    if (current_.type == TokenType::Implies) {
+        advance();
+        formula_id right = parse_implies();  // Right associative
+        return db_.create_implies(left, right);
     }
 
     return left;
 }
 
-// or := and (('|' | '∨' | 'or') and)*
-FormulaPtr Parser::parse_or() {
-    auto left = parse_and();
+formula_id Parser::parse_or() {
+    formula_id left = parse_and();
 
-    while (true) {
-        skip_whitespace();
-        // Check for ∨ (UTF-8: E2 88 A8)
-        if (pos_ + 2 < input_.size() &&
-            (unsigned char)input_[pos_] == 0xE2 &&
-            (unsigned char)input_[pos_+1] == 0x88 &&
-            (unsigned char)input_[pos_+2] == 0xA8) {
-            pos_ += 3;
-            auto right = parse_and();
-            left = disj(left, right);
-        } else if (match("|") || match("or") || match("\\/")) {
-            auto right = parse_and();
-            left = disj(left, right);
-        } else {
-            break;
-        }
+    while (current_.type == TokenType::Or) {
+        advance();
+        formula_id right = parse_and();
+        left = db_.create_or(left, right);
     }
 
     return left;
 }
 
-// and := unary (('&' | '∧' | 'and') unary)*
-FormulaPtr Parser::parse_and() {
-    auto left = parse_unary();
+formula_id Parser::parse_and() {
+    formula_id left = parse_unary();
 
-    while (true) {
-        skip_whitespace();
-        // Check for ∧ (UTF-8: E2 88 A7)
-        if (pos_ + 2 < input_.size() &&
-            (unsigned char)input_[pos_] == 0xE2 &&
-            (unsigned char)input_[pos_+1] == 0x88 &&
-            (unsigned char)input_[pos_+2] == 0xA7) {
-            pos_ += 3;
-            auto right = parse_unary();
-            left = conj(left, right);
-        } else if (match("&") || match("and") || match("/\\")) {
-            auto right = parse_unary();
-            left = conj(left, right);
-        } else {
-            break;
-        }
+    while (current_.type == TokenType::And) {
+        advance();
+        formula_id right = parse_unary();
+        left = db_.create_and(left, right);
     }
 
     return left;
 }
 
-// unary := ('~' | '¬' | 'not') unary | primary
-FormulaPtr Parser::parse_unary() {
-    skip_whitespace();
-
-    // Check for ¬ (UTF-8: C2 AC)
-    if (pos_ + 1 < input_.size() &&
-        (unsigned char)input_[pos_] == 0xC2 &&
-        (unsigned char)input_[pos_+1] == 0xAC) {
-        pos_ += 2;
-        return neg(parse_unary());
+formula_id Parser::parse_unary() {
+    if (current_.type == TokenType::Not) {
+        advance();
+        formula_id operand = parse_unary();
+        return db_.create_not(operand);
     }
 
-    if (match('~') || match('!')) {
-        return neg(parse_unary());
+    if (current_.type == TokenType::Forall) {
+        advance();
+        return parse_quantifier(true);
     }
 
-    if (match("not")) {
-        return neg(parse_unary());
-    }
-
-    return parse_primary();
-}
-
-// primary := atom | '(' formula ')' | '⊥' | 'false'
-FormulaPtr Parser::parse_primary() {
-    skip_whitespace();
-
-    // Check for ⊥ (UTF-8: E2 8A A5)
-    if (pos_ + 2 < input_.size() &&
-        (unsigned char)input_[pos_] == 0xE2 &&
-        (unsigned char)input_[pos_+1] == 0x8A &&
-        (unsigned char)input_[pos_+2] == 0xA5) {
-        pos_ += 3;
-        return bottom();
-    }
-
-    if (match("false") || match("_|_")) {
-        return bottom();
-    }
-
-    if (match('(')) {
-        auto inner = parse_iff();
-        expect(')');
-        return inner;
+    if (current_.type == TokenType::Exists) {
+        advance();
+        return parse_quantifier(false);
     }
 
     return parse_atom();
 }
 
-// atom := [A-Za-z][A-Za-z0-9_]*
-FormulaPtr Parser::parse_atom() {
-    skip_whitespace();
-
-    if (at_end() || !std::isalpha(peek())) {
-        throw ParseError("Expected atom (identifier)", pos_);
+formula_id Parser::parse_quantifier(bool is_forall) {
+    if (current_.type != TokenType::Identifier) {
+        throw ParseError("Expected variable name after quantifier", current_.pos, std::string(input_));
     }
 
-    size_t start = pos_;
-    while (!at_end() && (std::isalnum(peek()) || peek() == '_')) {
-        advance();
-    }
+    std::string var_name = current_.value;
+    var_index var = get_or_create_var(var_name);
+    advance();
 
-    std::string name(input_.substr(start, pos_ - start));
-    return atom(std::move(name));
+    if (current_.type != TokenType::Dot) {
+        throw ParseError("Expected '.' after quantifier variable", current_.pos, std::string(input_));
+    }
+    advance();
+
+    formula_id body = parse_iff();  // Parse full formula as body
+
+    if (is_forall) {
+        return db_.create_forall(var, body);
+    } else {
+        return db_.create_exists(var, body);
+    }
 }
 
-FormulaPtr parse(std::string_view input) {
-    Parser p(input);
-    return p.parse();
+formula_id Parser::parse_atom() {
+    if (current_.type == TokenType::Bottom) {
+        advance();
+        return db_.create_bottom();
+    }
+
+    if (current_.type == TokenType::LParen) {
+        advance();
+        formula_id inner = parse_iff();
+        expect(TokenType::RParen, "Expected ')'");
+        return inner;
+    }
+
+    if (current_.type == TokenType::Identifier) {
+        return parse_predicate();
+    }
+
+    throw ParseError("Expected formula", current_.pos, std::string(input_));
+}
+
+formula_id Parser::parse_predicate() {
+    std::string name = current_.value;
+    advance();
+
+    std::vector<Term> args;
+
+    if (current_.type == TokenType::LParen) {
+        advance();
+
+        if (current_.type != TokenType::RParen) {
+            args.push_back(parse_term());
+
+            while (current_.type == TokenType::Comma) {
+                advance();
+                args.push_back(parse_term());
+            }
+        }
+
+        expect(TokenType::RParen, "Expected ')' after predicate arguments");
+    }
+
+    // Get or create predicate
+    predicate_id pred = get_or_create_predicate(name, args.size());
+
+    return db_.create_predicate_instance(pred, std::move(args));
+}
+
+Term Parser::parse_term() {
+    if (current_.type != TokenType::Identifier) {
+        throw ParseError("Expected term (variable or constant)", current_.pos, std::string(input_));
+    }
+
+    std::string name = current_.value;
+    advance();
+
+    // Heuristic: single lowercase letter = variable, otherwise constant
+    if (name.size() == 1 && std::islower(static_cast<unsigned char>(name[0]))) {
+        return Term::var(get_or_create_var(name));
+    } else {
+        return Term::constant(get_or_create_constant(name));
+    }
+}
+
+var_index Parser::get_or_create_var(const std::string& name) {
+    auto it = var_map_.find(name);
+    if (it != var_map_.end()) {
+        return it->second;
+    }
+    var_index idx = next_var_++;
+    var_map_[name] = idx;
+    return idx;
+}
+
+predicate_id Parser::get_or_create_predicate(const std::string& name, size_t arity) {
+    auto existing = db_.find_predicate(name);
+    if (existing) {
+        return *existing;
+    }
+    return db_.create_predicate(name, arity);
+}
+
+constant_id Parser::get_or_create_constant(const std::string& name) {
+    auto existing = db_.find_constant(name);
+    if (existing) {
+        return *existing;
+    }
+    return db_.create_constant(name);
+}
+
+void Parser::advance() {
+    current_ = lexer_.next();
+}
+
+void Parser::expect(TokenType type, const std::string& msg) {
+    if (current_.type != type) {
+        throw ParseError(msg, current_.pos, std::string(input_));
+    }
+    advance();
+}
+
+// ==================== Helper Functions ====================
+
+formula_id parse_formula(std::string_view input, ProofDatabase& db) {
+    Parser parser(input, db);
+    return parser.parse();
+}
+
+std::optional<formula_id> try_parse_formula(std::string_view input, ProofDatabase& db,
+                                             std::string* error) {
+    try {
+        return parse_formula(input, db);
+    } catch (const ParseError& e) {
+        if (error) *error = e.what();
+        return std::nullopt;
+    }
 }
 
 }  // namespace logic
