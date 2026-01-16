@@ -1,18 +1,17 @@
 cc_test(
-    name = "zfc_test",
-    srcs = ["zfc_test.cpp"],
+    name = "runtime_test",
+    srcs = ["runtime_test.cpp"],
     deps = [
-        "//src:formula",
-        "//src:parser",
-        "//src:proof",
-        "//src:prover",
-        "//src:zfc",
+        "//src/logic:formula",
+        "//src/logic:proof",
+        "//src/parser",
+        "//src/runtime",
     ],
 )
 
 test_suite(
     name = "all_tests",
     tests = [
-        ":zfc_test",
+        ":runtime_test",
     ],
 )
