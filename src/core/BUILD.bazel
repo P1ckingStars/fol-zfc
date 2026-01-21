@@ -3,4 +3,5 @@ cc_library(
     srcs = ["formula.cpp"],
     hdrs = ["formula.h"],
     visibility = ["//visibility:public"],
+    deps = ["//src/util:registry"],
 )

@@ -1,4 +1,13 @@
 cc_test(
+    name = "core_test",
+    srcs = ["core_test.cpp"],
+    deps = [
+        "//src/core:formula",
+        "//src/parser",
+    ],
+)
+
+cc_test(
     name = "runtime_test",
     srcs = ["runtime_test.cpp"],
     deps = [
@@ -12,6 +21,7 @@ cc_test(
 test_suite(
     name = "all_tests",
     tests = [
+        ":core_test",
         ":runtime_test",
     ],
 )
