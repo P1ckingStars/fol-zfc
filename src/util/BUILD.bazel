@@ -1,0 +1,17 @@
+cc_library(
+    name = "registry",
+    hdrs = ["registry.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "logging",
+    hdrs = ["logging.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "error",
+    hdrs = ["error.h"],
+    visibility = ["//visibility:public"],
+)

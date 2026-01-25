@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <memory>
+#include <ostream>
 #include <set>
 #include <string>
 #include <variant>
@@ -191,6 +192,10 @@ public:
     SentenceHandle as_sentence() const { return std::get<SentenceHandle>(data_); }
 
     std::string to_string() const;
+
+    friend std::ostream& operator<<(std::ostream& os, const Formula& f) {
+        return os << f.to_string();
+    }
 };
 
 struct FormulaHash {
@@ -208,6 +213,7 @@ using ConstantRegistry = util::KeyedRegistry<Constant, size_t, std::string, std:
 // A sentence is a closed formula (no free variables)
 // All variables are bound by quantifiers
 class Sentence {
+    // No formula duplications within sentence scope (same formula under different sentence have different meaning)
     FormulaRegistry formulas_;
     FormulaHandle root_;
 
@@ -248,6 +254,10 @@ public:
     }
 
     std::string to_string() const;
+
+    friend std::ostream& operator<<(std::ostream& os, const Sentence& s) {
+        return os << s.to_string();
+    }
 };
 
 struct SentenceHash {
@@ -261,7 +271,9 @@ using SentenceRegistry = util::Registry<Sentence, SentenceHash>;
 class GlobalContext {
     SentenceRegistry sentences_;
     PredicateRegistry predicates_;
+
     ConstantRegistry constants_;
+    std::set<util::Handle<Sentence>> known;
 
 public:
     SentenceHandle add_sentence(Sentence s) { return sentences_.register_item(std::move(s)); }
@@ -322,6 +334,7 @@ public:
     FormulaHandle make_iff(FormulaHandle l, FormulaHandle r) { return add_formula(Formula(Compound{Op::Iff, l, r})); }
     FormulaHandle make_not(FormulaHandle f) { return add_formula(Formula(Compound{Op::Not, f, FormulaHandle{}})); }
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
+    FormulaHandle add_sentence(SentenceHandle s) { return add_formula(Formula(s)); }
 
     // Build sentence if formula is closed
     SentenceHandle build_sentence(FormulaHandle root, var_index start = 0) {

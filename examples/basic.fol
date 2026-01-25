@@ -1,0 +1,15 @@
+# Basic ZFC proofs
+# All claims must be sentences (no free variables)
+
+# Subset reflexivity: every set is a subset of itself
+# A ⊆ A means forall x. (x ∈ A -> x ∈ A)
+claim forall x. forall A. (elem(x, A) -> elem(x, A))
+
+# Identity on membership
+claim forall x. forall y. (elem(x, y) -> elem(x, y))
+
+# Identity on equality
+claim forall x. forall y. (eq(x, y) -> eq(x, y))
+
+# Propositional tautologies (as sentences with dummy quantifiers)
+claim forall x. (elem(x, x) -> elem(x, x))

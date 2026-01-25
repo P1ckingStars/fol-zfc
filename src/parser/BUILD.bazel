@@ -1,0 +1,24 @@
+# Parser library using pre-generated flex/bison files
+# To regenerate after editing formula.l or formula.y:
+#   flex --header-file=formula_lexer.h -o formula_lexer.cc formula.l
+#   bison -d --defines=formula_parser.tab.h -o formula_parser.tab.cc formula.y
+
+cc_library(
+    name = "parser",
+    srcs = [
+        "formula_lexer.cc",
+        "formula_parser.tab.cc",
+        "parser_bison.cpp",
+    ],
+    hdrs = [
+        "formula_ast.h",
+        "formula_lexer.h",
+        "formula_parser.tab.h",
+        "parser.h",
+    ],
+    copts = [
+        "-Wno-unused-function",
+    ],
+    visibility = ["//visibility:public"],
+    deps = ["//src/core:formula"],
+)

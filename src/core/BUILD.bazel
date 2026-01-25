@@ -5,3 +5,13 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = ["//src/util:registry"],
 )
+
+cc_library(
+    name = "proof",
+    hdrs = ["proof.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":formula",
+        "//src/util:registry",
+    ],
+)
