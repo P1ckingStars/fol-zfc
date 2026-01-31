@@ -1,4 +1,5 @@
 #include "formula.h"
+#include "src/util/logging.h"
 
 #include <sstream>
 
@@ -26,8 +27,12 @@ int precedence(Op op) {
 std::string formula_to_string_impl(const Formula& f, int parent_prec);
 
 std::string term_to_string(const Term& t) {
-    if (t.is_variable()) {
+    if (t.is_generalized()) {
+        // Generalized variables are bound by quantifiers - use same x_N format
         return "x_" + std::to_string(t.as_variable());
+    } else if (t.is_fixed()) {
+        // Fixed (instantiated) variables - use distinct f_N format
+        return "f_" + std::to_string(t.as_variable());
     } else {
         return t.as_constant().get().get_name();
     }
@@ -124,6 +129,10 @@ std::string formula_to_string_impl(const Formula& f, int parent_prec) {
 
 }  // anonymous namespace
 
+Formula::Formula(SentenceHandle s):
+    next_gen_var_idx_(s.get().root().get().next_gen_var_idx_),
+    data_(std::move(s)) {}
+
 std::string Formula::to_string() const {
     return formula_to_string_impl(*this, 0);
 }
@@ -134,7 +143,11 @@ Term Sentence::remap_term(const Term& t, const std::unordered_map<var_index, var
     if (t.is_variable()) {
         auto it = var_map.find(t.as_variable());
         if (it != var_map.end()) {
-            return Term::var(it->second);
+            // Preserve the variable type (generalized or fixed)
+            if (!t.is_generalized()) {
+                LOG_FATAL << "All term in sentence must be bounded by quantifier";
+            }
+            return Term::generalized(it->second);
         }
         return t;  // Variable not in map (shouldn't happen in well-formed sentence)
     }
@@ -144,9 +157,7 @@ Term Sentence::remap_term(const Term& t, const std::unordered_map<var_index, var
 FormulaHandle Sentence::copy_formula_recursive(
     const FormulaRegistry& src,
     FormulaHandle src_handle,
-    std::unordered_map<FormulaHandle, FormulaHandle>& handle_map,
-    std::unordered_map<var_index, var_index>& var_map,
-    var_index& next_var
+    std::unordered_map<FormulaHandle, FormulaHandle>& handle_map
 ) {
     auto it = handle_map.find(src_handle);
     if (it != handle_map.end()) {
@@ -158,11 +169,7 @@ FormulaHandle Sentence::copy_formula_recursive(
 
     if (f.is_predicate()) {
         const PredicateInstance& p = f.as_predicate();
-        std::vector<Term> new_args;
-        new_args.reserve(p.args().size());
-        for (const Term& t : p.args()) {
-            new_args.push_back(remap_term(t, var_map));
-        }
+        std::vector<Term> new_args = p.args();
         new_handle = formulas_.register_item(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
     }
     else if (f.is_compound()) {
@@ -170,21 +177,18 @@ FormulaHandle Sentence::copy_formula_recursive(
         FormulaHandle new_left;
         FormulaHandle new_right;
         if (c.left.valid()) {
-            new_left = copy_formula_recursive(src, c.left, handle_map, var_map, next_var);
+            new_left = copy_formula_recursive(src, c.left, handle_map);
         }
         if (c.right.valid()) {
-            new_right = copy_formula_recursive(src, c.right, handle_map, var_map, next_var);
+            new_right = copy_formula_recursive(src, c.right, handle_map);
         }
         new_handle = formulas_.register_item(Formula(Compound{c.op, new_left, new_right}));
     }
     else if (f.is_quantified()) {
         const Quantified& q = f.as_quantified();
-        // Map old variable to new variable index
-        var_index new_var = next_var++;
-        var_map[q.var] = new_var;
         // Recursively copy body with updated var_map
-        FormulaHandle new_body = copy_formula_recursive(src, q.body, handle_map, var_map, next_var);
-        new_handle = formulas_.register_item(Formula(Quantified{q.op, new_var, new_body}));
+        FormulaHandle new_body = copy_formula_recursive(src, q.body, handle_map);
+        new_handle = formulas_.register_item(Formula(Quantified{q.op, q.var, new_body}));
     }
     else if (f.is_sentence()) {
         new_handle = formulas_.register_item(Formula(f.as_sentence()));
@@ -196,9 +200,7 @@ FormulaHandle Sentence::copy_formula_recursive(
 
 Sentence::Sentence(FormulaRegistry& src, FormulaHandle src_root) {
     std::unordered_map<FormulaHandle, FormulaHandle> handle_map;
-    std::unordered_map<var_index, var_index> var_map;
-    var_index next_var = 0;
-    root_ = copy_formula_recursive(src, src_root, handle_map, var_map, next_var);
+    root_ = copy_formula_recursive(src, src_root, handle_map);
 }
 
 void Sentence::rebind_formula_handles(Formula& f, FormulaRegistry& new_reg) {

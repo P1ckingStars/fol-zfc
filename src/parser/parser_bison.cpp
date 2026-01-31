@@ -43,7 +43,7 @@ public:
                 FormulaHandle result;
                 {
                     QuantifierBuilder qb(builder_, Op::Forall, result);
-                    var_scopes_.push_back({node->name, qb.var_idx()});
+                    var_scopes_.push_back({node->name, qb.var()});
                     FormulaHandle body = convert(node->body);
                     qb.set_body(body);
                     var_scopes_.pop_back();
@@ -55,7 +55,7 @@ public:
                 FormulaHandle result;
                 {
                     QuantifierBuilder qb(builder_, Op::Exists, result);
-                    var_scopes_.push_back({node->name, qb.var_idx()});
+                    var_scopes_.push_back({node->name, qb.var()});
                     FormulaHandle body = convert(node->body);
                     qb.set_body(body);
                     var_scopes_.pop_back();
@@ -87,10 +87,10 @@ private:
 
         const std::string& name = node->name;
 
-        // First check if it's a bound variable
-        auto var_idx = lookup_var(name);
-        if (var_idx) {
-            return Term::var(*var_idx);
+        // First check if it's a bound variable (fixed during construction)
+        auto term = lookup_var(name);
+        if (term) {
+            return *term;
         }
 
         // Not a bound variable - check if it looks like a variable name
@@ -107,7 +107,7 @@ private:
         return Term::constant(get_or_create_constant(name));
     }
 
-    std::optional<var_index> lookup_var(const std::string& name) const {
+    std::optional<Term> lookup_var(const std::string& name) const {
         // Search from innermost scope outward
         for (auto it = var_scopes_.rbegin(); it != var_scopes_.rend(); ++it) {
             if (it->first == name) {
@@ -139,7 +139,7 @@ private:
 
     GlobalContext& ctx_;
     FormulaBuilder& builder_;
-    std::vector<std::pair<std::string, var_index>> var_scopes_;
+    std::vector<std::pair<std::string, Term>> var_scopes_;
     std::unordered_map<std::string, PredicateHandle> predicates_;
     std::unordered_map<std::string, ConstantHandle> constants_;
 };

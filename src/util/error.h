@@ -84,6 +84,9 @@ private:
 // Macro to create Error with current source location (supports << chaining)
 #define MAKE_ERROR ::logic::util::ErrorBuilder(__FILE__, __LINE__)
 
+// Forward declaration
+class ErrorBuilder;
+
 // Result type: either a value T or an Error
 template<typename T>
 class Result {
@@ -93,6 +96,9 @@ public:
 
     // Error constructor
     Result(Error error) : data_(std::move(error)) {}
+
+    // ErrorBuilder constructor (enables MAKE_ERROR << "msg" to return Result)
+    Result(const ErrorBuilder& builder) : data_(static_cast<Error>(builder)) {}
 
     bool ok() const { return std::holds_alternative<T>(data_); }
     bool is_error() const { return std::holds_alternative<Error>(data_); }
@@ -127,6 +133,7 @@ class Result<void> {
 public:
     Result() : error_(std::nullopt) {}
     Result(Error error) : error_(std::move(error)) {}
+    Result(const ErrorBuilder& builder) : error_(static_cast<Error>(builder)) {}
 
     bool ok() const { return !error_.has_value(); }
     bool is_error() const { return error_.has_value(); }

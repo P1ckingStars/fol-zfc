@@ -78,21 +78,28 @@ struct ConstantHash {
     }
 };
 
-// Tagged wrappers to distinguish var_index and ConstantHandle in variant
-struct VarTag { var_index idx; bool operator==(const VarTag&) const = default; };
+// Tagged wrappers to distinguish variable types in variant
+struct FixedVarTag { var_index idx; bool operator==(const FixedVarTag&) const = default; };
+struct GeneralizedVarTag { var_index idx; bool operator==(const GeneralizedVarTag&) const = default; };
 struct ConstTag { ConstantHandle handle; bool operator==(const ConstTag&) const = default; };
 
-// A term is either a local variable (by index) or a global constant (by handle)
+// A term is a generalized var, fixed var, or constant
 struct Term {
-    std::variant<VarTag, ConstTag> data;
+    std::variant<GeneralizedVarTag, FixedVarTag, ConstTag> data;
 
-    static Term var(var_index idx) { return Term{VarTag{idx}}; }
+    static Term generalized(var_index idx) { return Term{GeneralizedVarTag{idx}}; }
+    static Term fixed(var_index idx) { return Term{FixedVarTag{idx}}; }
     static Term constant(ConstantHandle h) { return Term{ConstTag{h}}; }
 
-    bool is_variable() const { return std::holds_alternative<VarTag>(data); }
+    bool is_generalized() const { return std::holds_alternative<GeneralizedVarTag>(data); }
+    bool is_fixed() const { return std::holds_alternative<FixedVarTag>(data); }
+    bool is_variable() const { return is_generalized() || is_fixed(); }
     bool is_constant() const { return std::holds_alternative<ConstTag>(data); }
 
-    var_index as_variable() const { return std::get<VarTag>(data).idx; }
+    var_index as_variable() const {
+        if (is_generalized()) return std::get<GeneralizedVarTag>(data).idx;
+        return std::get<FixedVarTag>(data).idx;
+    }
     ConstantHandle as_constant() const { return std::get<ConstTag>(data).handle; }
 
     bool operator==(const Term& other) const { return data == other.data; }
@@ -159,6 +166,7 @@ struct Quantified {
     var_index var;  // The variable index being bound
     FormulaHandle body;
 
+    Term get_var_term() const { return Term::generalized(var); }
     bool operator==(const Quantified& other) const {
         return op == other.op && var == other.var && body == other.body;
     }
@@ -169,12 +177,24 @@ class Formula {
     friend class QuantifierBuilder;
     friend class Sentence;
 
+    // next_gen_var_idx_ declared first for correct initialization order
+    var_index next_gen_var_idx_;
     std::variant<PredicateInstance, Compound, Quantified, SentenceHandle> data_;
 
-    explicit Formula(PredicateInstance p) : data_(std::move(p)) {}
-    explicit Formula(Compound c) : data_(std::move(c)) {}
-    explicit Formula(Quantified q) : data_(std::move(q)) {}
-    explicit Formula(SentenceHandle s) : data_(std::move(s)) {}
+    static var_index compute_compound_next_gen(const Compound& c) {
+        var_index left_idx = c.left.valid() ? c.left.get().next_gen_var_idx_ : 0;
+        var_index right_idx = c.right.valid() ? c.right.get().next_gen_var_idx_ : 0;
+        return std::max(left_idx, right_idx);
+    }
+
+    explicit Formula(PredicateInstance p) : next_gen_var_idx_(0), data_(std::move(p)) {}
+    explicit Formula(Compound c) :
+        next_gen_var_idx_(compute_compound_next_gen(c)),
+        data_(std::move(c)) {}
+    explicit Formula(Quantified q) :
+        next_gen_var_idx_(q.body.get().next_gen_var_idx_ + 1),
+        data_(std::move(q)) {}
+    explicit Formula(SentenceHandle s);
 
 public:
     bool operator==(const Formula& other) const {
@@ -190,6 +210,10 @@ public:
     const Compound& as_compound() const { return std::get<Compound>(data_); }
     const Quantified& as_quantified() const { return std::get<Quantified>(data_); }
     SentenceHandle as_sentence() const { return std::get<SentenceHandle>(data_); }
+    
+    var_index get_next_gen_var_idx() {
+        return next_gen_var_idx_;
+    }
 
     std::string to_string() const;
 
@@ -224,9 +248,7 @@ class Sentence {
     FormulaHandle copy_formula_recursive(
         const FormulaRegistry& src,
         FormulaHandle src_handle,
-        std::unordered_map<FormulaHandle, FormulaHandle>& handle_map,
-        std::unordered_map<var_index, var_index>& var_map,
-        var_index& next_var
+        std::unordered_map<FormulaHandle, FormulaHandle>& handle_map
     );
 
     // Rebind a single formula's internal handles to a new registry
@@ -336,6 +358,49 @@ public:
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
     FormulaHandle add_sentence(SentenceHandle s) { return add_formula(Formula(s)); }
 
+    // Generalize a fixed variable: replace Term::fixed(var_idx) with Term::generalized(var_idx)
+    // Returns a new formula handle with the transformation applied
+    FormulaHandle translate_term(FormulaHandle const &h, Term const &old_term, Term const &new_term) {
+        const Formula& f = h.get();
+
+        if (f.is_predicate()) {
+            const PredicateInstance& p = f.as_predicate();
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const Term& t : p.args()) {
+                if (t == old_term) {
+                    new_args.push_back(new_term);
+                    changed = true;
+                } else {
+                    new_args.push_back(t);
+                }
+            }
+            if (changed) {
+                return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+            }
+            return h;
+        }
+        else if (f.is_compound()) {
+            const Compound& c = f.as_compound();
+            FormulaHandle new_left = c.left.valid() ? translate_term(c.left, old_term, new_term) : c.left;
+            FormulaHandle new_right = c.right.valid() ? translate_term(c.right, old_term, new_term) : c.right;
+            if (new_left != c.left || new_right != c.right) {
+                return add_formula(Formula(Compound{c.op, new_left, new_right}));
+            }
+            return h;
+        }
+        else if (f.is_quantified()) {
+            const Quantified& q = f.as_quantified();
+            FormulaHandle new_body = translate_term(q.body, old_term, new_term);
+            if (new_body != q.body) {
+                return add_formula(Formula(Quantified{q.op, q.var, new_body}));
+            }
+            return h;
+        }
+        // SentenceHandle: already closed, no transformation needed
+        return h;
+    }
+
     // Build sentence if formula is closed
     SentenceHandle build_sentence(FormulaHandle root, var_index start = 0) {
         if (!is_closed_since(start)) return SentenceHandle{};
@@ -367,15 +432,21 @@ public:
     ~QuantifierBuilder() {
         builder_.exit_scope();
         if (body_.valid()) {
-            handle_ = builder_.add_formula(Formula(Quantified{op_, var_, body_}));
+            // Generalize the fixed var in body before creating quantified formula
+            // gen_idx is the generalized index for this quantifier's bound variable
+            var_index gen_idx = body_.get().next_gen_var_idx_;
+            FormulaHandle generalized_body = builder_.translate_term(body_, var(), Term::generalized(gen_idx));
+            handle_ = builder_.add_formula(Formula(Quantified{op_, gen_idx, generalized_body}));
             if (SentenceHandle sentence = builder_.build_sentence(handle_, start_depth_); sentence.valid()) {
                 handle_ = builder_.add_formula(Formula(sentence));
             }
         }
     }
 
-    // Get bound variable as Term
-    Term var() const { return Term::var(var_); }
+    Op get_op() const { return op_; }
+
+    // Get bound variable as Term (fixed/instantiated during proof construction)
+    Term var() const { return Term::fixed(var_); }
     var_index var_idx() const { return var_; }
 
     // Set the body formula

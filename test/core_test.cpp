@@ -74,18 +74,18 @@ bool test_parse_nested_quantifiers() {
     auto s = parse_sentence("forall x. exists y. R(x, y)", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    return str == "forall x_0. exists x_1. R(x_0, x_1)";
+    // Convention: outer quantifiers get larger indices, inner get smaller
+    return str == "forall x_1. exists x_0. R(x_1, x_0)";
 }
 
 bool test_parse_same_var_name_different_scope() {
     GlobalContext ctx;
     // Two foralls with same variable name 'x' but different scopes
-    // Each closed subsentence has its own variable numbering starting from 0
     auto s = parse_sentence("forall x. P(x) & forall x. Q(x)", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    // Both get x_0 because each is a separate closed sentence
-    return str == "forall x_0. P(x_0) & forall x_0. Q(x_0)";
+    // Left forall processed first, gets larger index; right forall gets smaller
+    return str == "forall x_1. P(x_1) & forall x_0. Q(x_0)";
 }
 
 bool test_parse_implication() {
@@ -142,14 +142,13 @@ bool test_parse_biconditional() {
 
 bool test_parse_complex() {
     GlobalContext ctx;
-    // This is a single closed sentence with nested quantifiers - no subsentence wrapping
+    // This is a single closed sentence with nested quantifiers
     auto s = parse_sentence("forall x. forall y. (R(x, y) -> exists z. S(x, z) & S(z, y))", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    // The exists is inside the forall scope, so it forms a single sentence
-    // Variable numbering: x=0, y=1, z=2
-    // Note: parentheses around exists are not required by precedence rules
-    return str == "forall x_0. forall x_1. R(x_0, x_1) -> exists x_2. S(x_0, x_2) & S(x_2, x_1)";
+    // Convention: outer quantifiers get larger indices, inner get smaller
+    // x (outermost) = x_2, y (middle) = x_1, z (innermost) = x_0
+    return str == "forall x_2. forall x_1. R(x_2, x_1) -> exists x_0. S(x_2, x_0) & S(x_0, x_1)";
 }
 
 // ==================== Sentence Equality Tests ====================

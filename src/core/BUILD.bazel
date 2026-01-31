@@ -3,15 +3,20 @@ cc_library(
     srcs = ["formula.cpp"],
     hdrs = ["formula.h"],
     visibility = ["//visibility:public"],
-    deps = ["//src/util:registry"],
+    deps = [
+        "//src/util:logging",
+        "//src/util:registry",
+    ],
 )
 
 cc_library(
     name = "proof",
+    srcs = ["proof.cpp"],
     hdrs = ["proof.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":formula",
+        "//src/util:error",
         "//src/util:registry",
     ],
 )
