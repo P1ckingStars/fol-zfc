@@ -1,6 +1,10 @@
 cc_test(
     name = "core_test",
     srcs = ["core_test.cpp"],
+    data = [
+        "//zfc:axioms.fol",
+        "//zfc:ordered_pair.fol",
+    ],
     deps = [
         "//src/core:formula",
         "//src/parser",

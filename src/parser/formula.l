@@ -19,6 +19,7 @@ static int col = 1;
 
 [ \t\r]+        { /* skip whitespace */ }
 \n              { col = 1; }
+#[^\n]*         { /* skip comments */ }
 
 "("             { return LPAREN; }
 ")"             { return RPAREN; }
@@ -33,29 +34,18 @@ static int col = 1;
 "_|_"           { return BOTTOM; }
 
 "forall"        { return FORALL; }
-"Forall"        { return FORALL; }
-"FORALL"        { return FORALL; }
-"all"           { return FORALL; }
-
 "exists"        { return EXISTS; }
-"Exists"        { return EXISTS; }
-"EXISTS"        { return EXISTS; }
-"ex"            { return EXISTS; }
-
 "and"           { return AND; }
-"AND"           { return AND; }
 "or"            { return OR; }
-"OR"            { return OR; }
 "not"           { return NOT; }
-"NOT"           { return NOT; }
 "implies"       { return IMPLIES; }
-"IMPLIES"       { return IMPLIES; }
 "iff"           { return IFF; }
-"IFF"           { return IFF; }
 "false"         { return BOTTOM; }
-"FALSE"         { return BOTTOM; }
 "bottom"        { return BOTTOM; }
-"BOTTOM"        { return BOTTOM; }
+"axiom"         { return AXIOM; }
+"claim"         { return CLAIM; }
+"theorem"       { return CLAIM; }
+":"             { return COLON; }
 
 [a-zA-Z_][a-zA-Z0-9_]*  {
     yylval->str = new std::string(yytext);

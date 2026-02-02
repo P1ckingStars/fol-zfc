@@ -4,9 +4,12 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -290,12 +293,22 @@ struct SentenceHash {
 
 using SentenceRegistry = util::Registry<Sentence, SentenceHash>;
 
+// Hash for SentenceHandle (uses Handle's hash_value())
+struct SentenceHandleHash {
+    size_t operator()(const SentenceHandle& h) const {
+        return h.hash_value();
+    }
+};
+
 class GlobalContext {
     SentenceRegistry sentences_;
     PredicateRegistry predicates_;
-
     ConstantRegistry constants_;
-    std::set<util::Handle<Sentence>> known;
+
+    // Known axioms and theorems
+    std::unordered_set<SentenceHandle, SentenceHandleHash> known_;
+    std::unordered_map<std::string, SentenceHandle> named_axioms_;
+    std::unordered_map<std::string, SentenceHandle> named_theorems_;
 
 public:
     SentenceHandle add_sentence(Sentence s) { return sentences_.register_item(std::move(s)); }
@@ -308,6 +321,38 @@ public:
     const Sentence& get_sentence(SentenceHandle h) const { return h.get(); }
     const Predicate& get_predicate(PredicateHandle h) const { return h.get(); }
     const Constant& get_constant(ConstantHandle h) const { return h.get(); }
+
+    // Axiom/Theorem API
+    void add_axiom(const std::string& name, SentenceHandle sentence) {
+        named_axioms_[name] = sentence;
+        known_.insert(sentence);
+    }
+
+    void add_theorem(const std::string& name, SentenceHandle sentence) {
+        named_theorems_[name] = sentence;
+        known_.insert(sentence);
+    }
+
+    bool is_known(SentenceHandle sentence) const {
+        return known_.count(sentence) > 0;
+    }
+
+    std::optional<SentenceHandle> find_axiom(const std::string& name) const {
+        auto it = named_axioms_.find(name);
+        if (it != named_axioms_.end()) return it->second;
+        return std::nullopt;
+    }
+
+    std::optional<SentenceHandle> find_theorem(const std::string& name) const {
+        auto it = named_theorems_.find(name);
+        if (it != named_theorems_.end()) return it->second;
+        return std::nullopt;
+    }
+
+    std::optional<SentenceHandle> find_known(const std::string& name) const {
+        if (auto ax = find_axiom(name)) return ax;
+        return find_theorem(name);
+    }
 };
 
 // FormulaBuilder builds formulas and tracks variable scope.

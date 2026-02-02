@@ -69,14 +69,17 @@ typedef void* yyscan_t;
     RPAREN = 260,                  /* RPAREN  */
     COMMA = 261,                   /* COMMA  */
     DOT = 262,                     /* DOT  */
-    AND = 263,                     /* AND  */
-    OR = 264,                      /* OR  */
-    NOT = 265,                     /* NOT  */
-    IMPLIES = 266,                 /* IMPLIES  */
-    IFF = 267,                     /* IFF  */
-    BOTTOM = 268,                  /* BOTTOM  */
-    FORALL = 269,                  /* FORALL  */
-    EXISTS = 270                   /* EXISTS  */
+    COLON = 263,                   /* COLON  */
+    AND = 264,                     /* AND  */
+    OR = 265,                      /* OR  */
+    NOT = 266,                     /* NOT  */
+    IMPLIES = 267,                 /* IMPLIES  */
+    IFF = 268,                     /* IFF  */
+    BOTTOM = 269,                  /* BOTTOM  */
+    FORALL = 270,                  /* FORALL  */
+    EXISTS = 271,                  /* EXISTS  */
+    AXIOM = 272,                   /* AXIOM  */
+    CLAIM = 273                    /* CLAIM  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -91,7 +94,7 @@ union YYSTYPE
     ASTNode* node;
     std::vector<ASTNode*>* node_list;
 
-#line 95 "formula_parser.tab.h"
+#line 98 "formula_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -135,6 +138,6 @@ void yypstate_delete (yypstate *ps);
 
 void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg);
 
-#line 139 "formula_parser.tab.h"
+#line 142 "formula_parser.tab.h"
 
 #endif /* !YY_YY_FORMULA_PARSER_TAB_H_INCLUDED  */

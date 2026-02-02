@@ -208,4 +208,97 @@ SentenceHandle try_parse_sentence(std::string_view input, GlobalContext& ctx,
     }
 }
 
+// ==================== Statement Parser Implementation ====================
+
+std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalContext& ctx) {
+    // Initialize scanner
+    yyscan_t scanner;
+    if (yylex_init(&scanner) != 0) {
+        throw std::runtime_error("Failed to initialize lexer");
+    }
+
+    // Set up input buffer
+    std::string input_str(input);
+    YY_BUFFER_STATE buffer = yy_scan_string(input_str.c_str(), scanner);
+
+    // Parse
+    ParseContext parse_ctx;
+    yypstate* ps = yypstate_new();
+
+    int status;
+    YYSTYPE yylval;
+    YYLTYPE yylloc = {1, 1, 1, 1};
+
+    do {
+        int token = yylex(&yylval, &yylloc, scanner);
+        status = yypush_parse(ps, token, &yylval, &yylloc, scanner, &parse_ctx);
+    } while (status == YYPUSH_MORE);
+
+    yypstate_delete(ps);
+    yy_delete_buffer(buffer, scanner);
+    yylex_destroy(scanner);
+
+    if (status != 0 || !parse_ctx.statements) {
+        std::ostringstream oss;
+        oss << "Parse error at column " << parse_ctx.error_col << ": " << parse_ctx.error;
+        oss << "\n  Input: " << input;
+        if (parse_ctx.error_col > 0 && parse_ctx.error_col <= static_cast<int>(input.size())) {
+            oss << "\n         " << std::string(parse_ctx.error_col - 1, ' ') << "^";
+        }
+        throw std::runtime_error(oss.str());
+    }
+
+    // Convert statement AST nodes to ParsedStatements
+    std::vector<ParsedStatement> result;
+    for (const ASTNode* stmt_node : *parse_ctx.statements) {
+        ParsedStatement stmt;
+
+        // Determine statement kind
+        switch (stmt_node->type) {
+            case ASTNode::AxiomStmt:
+                stmt.kind = ParsedStatement::Kind::Axiom;
+                break;
+            case ASTNode::ClaimStmt:
+                stmt.kind = ParsedStatement::Kind::Claim;
+                break;
+            default:
+                throw std::runtime_error("Invalid statement AST node type");
+        }
+
+        stmt.name = stmt_node->name;
+
+        // Convert the formula body
+        FormulaBuilder builder(ctx);
+        ASTConverter converter(ctx, builder);
+        FormulaHandle root = converter.convert(stmt_node->body);
+
+        // Build sentence - this checks for free variables
+        SentenceHandle sh = builder.build_sentence(root);
+        if (!sh.valid()) {
+            throw std::runtime_error("Statement '" + stmt.name + "' formula has free variables");
+        }
+
+        stmt.formula = sh;
+
+        // Register axioms in GlobalContext (claims are NOT registered until proven)
+        if (stmt.kind == ParsedStatement::Kind::Axiom) {
+            ctx.add_axiom(stmt.name, stmt.formula);
+        }
+
+        result.push_back(std::move(stmt));
+    }
+
+    return result;
+}
+
+std::vector<ParsedStatement> try_parse_statements(std::string_view input, GlobalContext& ctx,
+                                                   std::string* error) {
+    try {
+        return parse_statements(input, ctx);
+    } catch (const std::exception& e) {
+        if (error) *error = e.what();
+        return {};
+    }
+}
+
 }  // namespace logic

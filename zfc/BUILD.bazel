@@ -1,0 +1,4 @@
+exports_files([
+    "axioms.fol",
+    "ordered_pair.fol",
+])

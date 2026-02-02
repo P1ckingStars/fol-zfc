@@ -33,13 +33,15 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 }
 
 %token <str> IDENTIFIER
-%token LPAREN RPAREN COMMA DOT
+%token LPAREN RPAREN COMMA DOT COLON
 %token AND OR NOT IMPLIES IFF BOTTOM
 %token FORALL EXISTS
+%token AXIOM CLAIM
 
 %type <node> formula iff_formula implies_formula or_formula and_formula
 %type <node> unary_formula atom predicate term
-%type <node_list> term_list
+%type <node> statement
+%type <node_list> term_list statement_list
 
 /* Precedence: lowest to highest */
 %left IFF
@@ -58,6 +60,29 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 
 input
     : formula { ctx->result = $1; }
+    | statement_list { ctx->statements = $1; }
+    ;
+
+statement_list
+    : statement {
+        $$ = new std::vector<ASTNode*>();
+        $$->push_back($1);
+    }
+    | statement_list statement {
+        $$ = $1;
+        $$->push_back($2);
+    }
+    ;
+
+statement
+    : AXIOM IDENTIFIER COLON formula {
+        $$ = ASTNode::make_statement(ASTNode::AxiomStmt, *$2, $4);
+        delete $2;
+    }
+    | CLAIM IDENTIFIER COLON formula {
+        $$ = ASTNode::make_statement(ASTNode::ClaimStmt, *$2, $4);
+        delete $2;
+    }
     ;
 
 formula

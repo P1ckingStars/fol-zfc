@@ -20,7 +20,10 @@ struct ASTNode {
         // Atoms
         Bottom,
         Predicate,
-        Term
+        Term,
+        // Statements
+        AxiomStmt,
+        ClaimStmt
     };
 
     Type type;
@@ -51,6 +54,15 @@ struct ASTNode {
     ASTNode(Type t, const std::string& n)
         : type(t), name(n) {}
 
+    // Statement (axiom/claim with name and body formula)
+    // Note: Uses same constructor signature as Quantifier but for statement types
+    static ASTNode* make_statement(Type t, const std::string& stmt_name, ASTNode* formula_body) {
+        auto* node = new ASTNode(t);
+        node->name = stmt_name;
+        node->body = formula_body;
+        return node;
+    }
+
     ~ASTNode() {
         delete left;
         delete right;
@@ -68,11 +80,16 @@ struct ASTNode {
 
 // Parse context passed to bison
 struct ParseContext {
-    ASTNode* result = nullptr;
+    ASTNode* result = nullptr;                  // For single formula parsing
+    std::vector<ASTNode*>* statements = nullptr; // For statement list parsing
     std::string error;
     int error_col = 0;
 
     ~ParseContext() {
         delete result;
+        if (statements) {
+            for (auto* s : *statements) delete s;
+            delete statements;
+        }
     }
 };
