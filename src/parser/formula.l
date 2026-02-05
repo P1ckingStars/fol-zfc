@@ -46,6 +46,41 @@ static int col = 1;
 "claim"         { return CLAIM; }
 "theorem"       { return CLAIM; }
 ":"             { return COLON; }
+"="             { return EQUALS; }
+
+"proof"         { return PROOF; }
+"fix"           { return FIX; }
+"assume"        { return ASSUME; }
+"let"           { return LET; }
+"qed"           { return QED; }
+"use"           { return USE; }
+"and_intro"     { return AND_INTRO; }
+"and_elim_l"    { return AND_ELIM_L; }
+"and_elim_r"    { return AND_ELIM_R; }
+"or_intro_l"    { return OR_INTRO_L; }
+"or_intro_r"    { return OR_INTRO_R; }
+"or_elim"       { return OR_ELIM; }
+"implies_intro" { return IMPLIES_INTRO; }
+"implies_elim"  { return IMPLIES_ELIM; }
+"not_intro"     { return NOT_INTRO; }
+"not_elim"      { return NOT_ELIM; }
+"bottom_elim"   { return BOTTOM_ELIM; }
+"iff_intro"     { return IFF_INTRO; }
+"iff_elim_l"    { return IFF_ELIM_L; }
+"iff_elim_r"    { return IFF_ELIM_R; }
+"forall_intro"  { return FORALL_INTRO; }
+"forall_elim"   { return FORALL_ELIM; }
+"exists_intro"  { return EXISTS_INTRO; }
+"exists_elim"   { return EXISTS_ELIM; }
+"double_neg_elim" { return DOUBLE_NEG_ELIM; }
+"excluded_middle" { return EXCLUDED_MIDDLE; }
+"include"       { return INCLUDE; }
+
+\"[^"]*\"       {
+    // String literal - strip quotes
+    yylval->str = new std::string(yytext + 1, yyleng - 2);
+    return STRING_LITERAL;
+}
 
 [a-zA-Z_][a-zA-Z0-9_]*  {
     yylval->str = new std::string(yytext);

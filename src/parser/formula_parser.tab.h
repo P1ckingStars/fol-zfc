@@ -65,21 +65,50 @@ typedef void* yyscan_t;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     IDENTIFIER = 258,              /* IDENTIFIER  */
-    LPAREN = 259,                  /* LPAREN  */
-    RPAREN = 260,                  /* RPAREN  */
-    COMMA = 261,                   /* COMMA  */
-    DOT = 262,                     /* DOT  */
-    COLON = 263,                   /* COLON  */
-    AND = 264,                     /* AND  */
-    OR = 265,                      /* OR  */
-    NOT = 266,                     /* NOT  */
-    IMPLIES = 267,                 /* IMPLIES  */
-    IFF = 268,                     /* IFF  */
-    BOTTOM = 269,                  /* BOTTOM  */
-    FORALL = 270,                  /* FORALL  */
-    EXISTS = 271,                  /* EXISTS  */
-    AXIOM = 272,                   /* AXIOM  */
-    CLAIM = 273                    /* CLAIM  */
+    STRING_LITERAL = 259,          /* STRING_LITERAL  */
+    LPAREN = 260,                  /* LPAREN  */
+    RPAREN = 261,                  /* RPAREN  */
+    COMMA = 262,                   /* COMMA  */
+    DOT = 263,                     /* DOT  */
+    COLON = 264,                   /* COLON  */
+    EQUALS = 265,                  /* EQUALS  */
+    AND = 266,                     /* AND  */
+    OR = 267,                      /* OR  */
+    NOT = 268,                     /* NOT  */
+    IMPLIES = 269,                 /* IMPLIES  */
+    IFF = 270,                     /* IFF  */
+    BOTTOM = 271,                  /* BOTTOM  */
+    FORALL = 272,                  /* FORALL  */
+    EXISTS = 273,                  /* EXISTS  */
+    AXIOM = 274,                   /* AXIOM  */
+    CLAIM = 275,                   /* CLAIM  */
+    PROOF = 276,                   /* PROOF  */
+    INCLUDE = 277,                 /* INCLUDE  */
+    FIX = 278,                     /* FIX  */
+    ASSUME = 279,                  /* ASSUME  */
+    QED = 280,                     /* QED  */
+    USE = 281,                     /* USE  */
+    LET = 282,                     /* LET  */
+    AND_INTRO = 283,               /* AND_INTRO  */
+    AND_ELIM_L = 284,              /* AND_ELIM_L  */
+    AND_ELIM_R = 285,              /* AND_ELIM_R  */
+    OR_INTRO_L = 286,              /* OR_INTRO_L  */
+    OR_INTRO_R = 287,              /* OR_INTRO_R  */
+    OR_ELIM = 288,                 /* OR_ELIM  */
+    IMPLIES_INTRO = 289,           /* IMPLIES_INTRO  */
+    IMPLIES_ELIM = 290,            /* IMPLIES_ELIM  */
+    NOT_INTRO = 291,               /* NOT_INTRO  */
+    NOT_ELIM = 292,                /* NOT_ELIM  */
+    BOTTOM_ELIM = 293,             /* BOTTOM_ELIM  */
+    IFF_INTRO = 294,               /* IFF_INTRO  */
+    IFF_ELIM_L = 295,              /* IFF_ELIM_L  */
+    IFF_ELIM_R = 296,              /* IFF_ELIM_R  */
+    FORALL_INTRO = 297,            /* FORALL_INTRO  */
+    FORALL_ELIM = 298,             /* FORALL_ELIM  */
+    EXISTS_INTRO = 299,            /* EXISTS_INTRO  */
+    EXISTS_ELIM = 300,             /* EXISTS_ELIM  */
+    DOUBLE_NEG_ELIM = 301,         /* DOUBLE_NEG_ELIM  */
+    EXCLUDED_MIDDLE = 302          /* EXCLUDED_MIDDLE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -94,7 +123,7 @@ union YYSTYPE
     ASTNode* node;
     std::vector<ASTNode*>* node_list;
 
-#line 98 "formula_parser.tab.h"
+#line 127 "formula_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -138,6 +167,6 @@ void yypstate_delete (yypstate *ps);
 
 void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg);
 
-#line 142 "formula_parser.tab.h"
+#line 171 "formula_parser.tab.h"
 
 #endif /* !YY_YY_FORMULA_PARSER_TAB_H_INCLUDED  */

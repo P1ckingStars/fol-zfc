@@ -12,12 +12,51 @@
 
 namespace logic {
 
+// ==================== AST Cloning ====================
+
+// Deep clone an AST node (for deferred parsing)
+static ASTNode* clone_ast_impl(const ASTNode* node) {
+    if (!node) return nullptr;
+
+    ASTNode* cloned = new ASTNode(node->type);
+    cloned->name = node->name;
+    cloned->rule_name = node->rule_name;
+    cloned->left = clone_ast_impl(node->left);
+    cloned->right = clone_ast_impl(node->right);
+    cloned->body = clone_ast_impl(node->body);
+
+    if (node->args) {
+        cloned->args = new std::vector<ASTNode*>();
+        for (const auto* arg : *node->args) {
+            cloned->args->push_back(clone_ast_impl(arg));
+        }
+    }
+    if (node->steps) {
+        cloned->steps = new std::vector<ASTNode*>();
+        for (const auto* step : *node->steps) {
+            cloned->steps->push_back(clone_ast_impl(step));
+        }
+    }
+
+    return cloned;
+}
+
+// Wrap in shared_ptr for automatic cleanup
+static std::shared_ptr<ASTNode> clone_ast(const ASTNode* node) {
+    return std::shared_ptr<ASTNode>(clone_ast_impl(node));
+}
+
 // ==================== AST to Formula Conversion ====================
 
 class ASTConverter {
 public:
     ASTConverter(GlobalContext& ctx, FormulaBuilder& builder)
         : ctx_(ctx), builder_(builder) {}
+
+    // Set external variables (e.g., fixed variables in proofs)
+    void set_external_vars(const std::unordered_map<std::string, Term>& vars) {
+        external_vars_ = vars;
+    }
 
     FormulaHandle convert(const ASTNode* node) {
         switch (node->type) {
@@ -87,24 +126,22 @@ private:
 
         const std::string& name = node->name;
 
-        // First check if it's a bound variable (fixed during construction)
+        // Check if it's a bound variable (from quantifier scope)
         auto term = lookup_var(name);
         if (term) {
             return *term;
         }
 
-        // Not a bound variable - check if it looks like a variable name
-        // Convention: x, y, z, u, v, w (and their variants) are variables
-        // Single letters a-t are treated as constants
-        if (name.size() == 1) {
-            char c = name[0];
-            if (c >= 'u' && c <= 'z') {
-                throw std::runtime_error("Free variable '" + name + "' not allowed in sentence");
-            }
+        // Check if it's an external variable (e.g., fixed variable in proof)
+        auto ext_it = external_vars_.find(name);
+        if (ext_it != external_vars_.end()) {
+            return ext_it->second;
         }
 
-        // Otherwise treat as constant
-        return Term::constant(get_or_create_constant(name));
+        // Not a bound variable - this is a free variable, which is not allowed
+        // All variables in axioms/claims must be bound by quantifiers
+        throw std::runtime_error("Free variable '" + name + "' not allowed in sentence. "
+                                 "All variables must be bound by quantifiers (forall/exists).");
     }
 
     std::optional<Term> lookup_var(const std::string& name) const {
@@ -127,21 +164,11 @@ private:
         return h;
     }
 
-    ConstantHandle get_or_create_constant(const std::string& name) {
-        auto it = constants_.find(name);
-        if (it != constants_.end()) {
-            return it->second;
-        }
-        ConstantHandle h = ctx_.add_constant(name);
-        constants_[name] = h;
-        return h;
-    }
-
     GlobalContext& ctx_;
     FormulaBuilder& builder_;
     std::vector<std::pair<std::string, Term>> var_scopes_;
     std::unordered_map<std::string, PredicateHandle> predicates_;
-    std::unordered_map<std::string, ConstantHandle> constants_;
+    std::unordered_map<std::string, Term> external_vars_;
 };
 
 // ==================== Parser Implementation ====================
@@ -251,6 +278,11 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
     // Convert statement AST nodes to ParsedStatements
     std::vector<ParsedStatement> result;
     for (const ASTNode* stmt_node : *parse_ctx.statements) {
+        // Skip proof blocks in this function (use parse_with_proofs for proofs)
+        if (stmt_node->type == ASTNode::ProofBlock) {
+            continue;
+        }
+
         ParsedStatement stmt;
 
         // Determine statement kind
@@ -280,9 +312,11 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
 
         stmt.formula = sh;
 
-        // Register axioms in GlobalContext (claims are NOT registered until proven)
+        // Register statements in GlobalContext
         if (stmt.kind == ParsedStatement::Kind::Axiom) {
             ctx.add_axiom(stmt.name, stmt.formula);
+        } else if (stmt.kind == ParsedStatement::Kind::Claim) {
+            ctx.add_claim(stmt.name, stmt.formula);
         }
 
         result.push_back(std::move(stmt));
@@ -299,6 +333,197 @@ std::vector<ParsedStatement> try_parse_statements(std::string_view input, Global
         if (error) *error = e.what();
         return {};
     }
+}
+
+// ==================== Proof Parser Implementation ====================
+
+// Helper to convert proof step AST to ParsedProofStep
+ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx) {
+    ParsedProofStep step;
+
+    switch (step_node->type) {
+        case ASTNode::ProofStepFix:
+            step.kind = ParsedProofStep::Kind::Fix;
+            step.result_name = step_node->rule_name;  // Variable name stored in rule_name
+            step.args.push_back(step_node->rule_name);
+            break;
+
+        case ASTNode::ProofStepAssume:
+            step.kind = ParsedProofStep::Kind::Assume;
+            step.result_name = step_node->name;
+            // Store AST for deferred parsing (will be parsed during execution with fixed vars)
+            if (step_node->body) {
+                step.formula_ast = clone_ast(step_node->body);
+            }
+            break;
+
+        case ASTNode::ProofStepLet:
+            step.kind = ParsedProofStep::Kind::Let;
+            step.result_name = step_node->name;
+            // Store AST for deferred parsing (will be parsed during execution with fixed vars)
+            if (step_node->body) {
+                step.formula_ast = clone_ast(step_node->body);
+            }
+            break;
+
+        case ASTNode::ProofStepUse:
+            step.kind = ParsedProofStep::Kind::Use;
+            step.result_name = step_node->name;
+            step.rule_name = step_node->rule_name;  // Axiom/theorem name
+            step.args.push_back(step_node->rule_name);
+            break;
+
+        case ASTNode::ProofStepRule:
+            step.kind = ParsedProofStep::Kind::Rule;
+            step.result_name = step_node->name;
+            step.rule_name = step_node->rule_name;
+            // Convert args (Term nodes with names)
+            if (step_node->args) {
+                for (const ASTNode* arg : *step_node->args) {
+                    step.args.push_back(arg->name);
+                }
+            }
+            break;
+
+        case ASTNode::ProofStepQed:
+            step.kind = ParsedProofStep::Kind::Qed;
+            step.args.push_back(step_node->rule_name);  // Handle name
+            break;
+
+        default:
+            throw std::runtime_error("Invalid proof step AST node type");
+    }
+
+    return step;
+}
+
+// Convert proof block AST to ParsedProof
+ParsedProof convert_proof_block(const ASTNode* proof_node, GlobalContext& ctx) {
+    ParsedProof proof;
+    proof.claim_name = proof_node->name;
+
+    if (proof_node->steps) {
+        for (const ASTNode* step_node : *proof_node->steps) {
+            proof.steps.push_back(convert_proof_step(step_node, ctx));
+        }
+    }
+
+    return proof;
+}
+
+ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
+    // Initialize scanner
+    yyscan_t scanner;
+    if (yylex_init(&scanner) != 0) {
+        throw std::runtime_error("Failed to initialize lexer");
+    }
+
+    // Set up input buffer
+    std::string input_str(input);
+    YY_BUFFER_STATE buffer = yy_scan_string(input_str.c_str(), scanner);
+
+    // Parse
+    ParseContext parse_ctx;
+    yypstate* ps = yypstate_new();
+
+    int status;
+    YYSTYPE yylval;
+    YYLTYPE yylloc = {1, 1, 1, 1};
+
+    do {
+        int token = yylex(&yylval, &yylloc, scanner);
+        status = yypush_parse(ps, token, &yylval, &yylloc, scanner, &parse_ctx);
+    } while (status == YYPUSH_MORE);
+
+    yypstate_delete(ps);
+    yy_delete_buffer(buffer, scanner);
+    yylex_destroy(scanner);
+
+    if (status != 0 || !parse_ctx.statements) {
+        std::ostringstream oss;
+        oss << "Parse error at column " << parse_ctx.error_col << ": " << parse_ctx.error;
+        oss << "\n  Input: " << input;
+        if (parse_ctx.error_col > 0 && parse_ctx.error_col <= static_cast<int>(input.size())) {
+            oss << "\n         " << std::string(parse_ctx.error_col - 1, ' ') << "^";
+        }
+        throw std::runtime_error(oss.str());
+    }
+
+    // Convert statement AST nodes
+    ParseResult result;
+    for (const ASTNode* stmt_node : *parse_ctx.statements) {
+        if (stmt_node->type == ASTNode::ProofBlock) {
+            // Convert proof block
+            result.proofs.push_back(convert_proof_block(stmt_node, ctx));
+        } else if (stmt_node->type == ASTNode::IncludeStmt) {
+            // Convert include statement
+            ParsedInclude inc;
+            inc.path = stmt_node->name;
+            result.includes.push_back(std::move(inc));
+        } else {
+            // Convert axiom/claim statement
+            ParsedStatement stmt;
+
+            switch (stmt_node->type) {
+                case ASTNode::AxiomStmt:
+                    stmt.kind = ParsedStatement::Kind::Axiom;
+                    break;
+                case ASTNode::ClaimStmt:
+                    stmt.kind = ParsedStatement::Kind::Claim;
+                    break;
+                default:
+                    throw std::runtime_error("Invalid statement AST node type");
+            }
+
+            stmt.name = stmt_node->name;
+
+            // Convert the formula body
+            FormulaBuilder builder(ctx);
+            ASTConverter converter(ctx, builder);
+            FormulaHandle root = converter.convert(stmt_node->body);
+
+            SentenceHandle sh = builder.build_sentence(root);
+            if (!sh.valid()) {
+                throw std::runtime_error("Statement '" + stmt.name + "' formula has free variables");
+            }
+
+            stmt.formula = sh;
+
+            // Register statements in GlobalContext
+            if (stmt.kind == ParsedStatement::Kind::Axiom) {
+                ctx.add_axiom(stmt.name, stmt.formula);
+            } else if (stmt.kind == ParsedStatement::Kind::Claim) {
+                ctx.add_claim(stmt.name, stmt.formula);
+            }
+
+            result.statements.push_back(std::move(stmt));
+        }
+    }
+
+    return result;
+}
+
+ParseResult try_parse_with_proofs(std::string_view input, GlobalContext& ctx,
+                                   std::string* error) {
+    try {
+        return parse_with_proofs(input, ctx);
+    } catch (const std::exception& e) {
+        if (error) *error = e.what();
+        return {};
+    }
+}
+
+// ==================== Parse Formula with External Variables ====================
+
+FormulaHandle parse_formula_with_vars(
+    const ASTNode* ast,
+    GlobalContext& ctx,
+    FormulaBuilder& builder,
+    const std::unordered_map<std::string, Term>& external_vars) {
+
+    ASTConverter converter(ctx, builder);
+    converter.set_external_vars(external_vars);
+    return converter.convert(ast);
 }
 
 }  // namespace logic

@@ -1,10 +1,13 @@
 #pragma once
 
 #include "../core/formula.h"
+#include "formula_ast.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace logic {
@@ -27,6 +30,49 @@ struct ParsedStatement {
     SentenceHandle formula;
 };
 
+// Represents a single proof step
+struct ParsedProofStep {
+    enum class Kind {
+        Fix,      // fix x - introduces eigenvariable
+        Assume,   // h = assume formula
+        Let,      // h = let formula - create formula handle without assuming
+        Use,      // h = use axiom_name
+        Rule,     // h = rule_name args
+        Qed       // qed h - completes proof
+    };
+    Kind kind;
+    std::string result_name;          // Name of step result (e.g., "h1")
+    std::string rule_name;            // Rule name for Rule kind, or axiom name for Use
+    std::vector<std::string> args;    // Arguments (step names or term identifiers)
+    SentenceHandle formula;           // For Assume/Let kind (when no free vars)
+    std::shared_ptr<ASTNode> formula_ast;  // For Assume/Let kind (deferred parsing)
+};
+
+// Parse a formula with external variables (for proof steps)
+FormulaHandle parse_formula_with_vars(
+    const ASTNode* ast,
+    GlobalContext& ctx,
+    FormulaBuilder& builder,
+    const std::unordered_map<std::string, Term>& external_vars);
+
+// Represents a complete proof block
+struct ParsedProof {
+    std::string claim_name;
+    std::vector<ParsedProofStep> steps;
+};
+
+// Represents an include directive
+struct ParsedInclude {
+    std::string path;
+};
+
+// Result of parsing a file with statements and proofs
+struct ParseResult {
+    std::vector<ParsedStatement> statements;
+    std::vector<ParsedProof> proofs;
+    std::vector<ParsedInclude> includes;
+};
+
 // Parse multiple statements from input
 // Axioms are automatically added to ctx's known set
 // Returns list of statements in order
@@ -37,5 +83,14 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
 // If error is non-null, the error message is stored there
 std::vector<ParsedStatement> try_parse_statements(std::string_view input, GlobalContext& ctx,
                                                    std::string* error = nullptr);
+
+// Parse statements and proofs from input
+// Returns both statements and proof blocks
+// Throws std::runtime_error on parse failure
+ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx);
+
+// Try to parse statements and proofs, returning empty result on failure
+ParseResult try_parse_with_proofs(std::string_view input, GlobalContext& ctx,
+                                   std::string* error = nullptr);
 
 }  // namespace logic

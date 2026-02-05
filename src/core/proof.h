@@ -24,8 +24,8 @@ public:
 
 class FixVarScope {
     std::unordered_set<FormulaHandle> derived_;
-    std::unique_ptr<QuantifierBuilder> qbuilder_;
-    FormulaHandle result_;  // Where QuantifierBuilder stores the result
+    std::unique_ptr<FormulaHandle> result_;  // Heap-allocated so reference survives moves
+    std::unique_ptr<QuantifierBuilder> qbuilder_;  // Must be after result_ since it depends on it
 
 public:
     FixVarScope(FormulaBuilder& builder, Op op = Op::Forall);  // Creates QuantifierBuilder with Op::Forall

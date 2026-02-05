@@ -1,15 +1,37 @@
-# Basic ZFC proofs
-# All claims must be sentences (no free variables)
+# Basic proofs demonstrating the proof syntax
+# All axioms and claims must be sentences (no free variables)
 
-# Subset reflexivity: every set is a subset of itself
-# A ⊆ A means forall x. (x ∈ A -> x ∈ A)
-claim forall x. forall A. (elem(x, A) -> elem(x, A))
+# Axiom: P holds for all x
+axiom all_P: forall x. P(x)
 
-# Identity on membership
-claim forall x. forall y. (elem(x, y) -> elem(x, y))
+# Axiom: P implies Q for all x
+axiom all_P_impl_Q: forall x. (P(x) -> Q(x))
 
-# Identity on equality
-claim forall x. forall y. (eq(x, y) -> eq(x, y))
+# Claim: Q holds for all x (modus ponens with quantifiers)
+claim all_Q: forall x. Q(x)
 
-# Propositional tautologies (as sentences with dummy quantifiers)
-claim forall x. (elem(x, x) -> elem(x, x))
+# Proof using fix, forall_elim, implies_elim, and forall_intro
+proof all_Q:
+    fix x
+    h1 = use all_P
+    h2 = forall_elim h1, x
+    h3 = use all_P_impl_Q
+    h4 = forall_elim h3, x
+    h5 = implies_elim h4, h2
+    h6 = forall_intro h5
+    qed h6
+
+# Conjunction introduction example
+axiom all_A: forall x. A(x)
+axiom all_B: forall x. B(x)
+claim all_AB: forall x. (A(x) & B(x))
+
+proof all_AB:
+    fix x
+    h1 = use all_A
+    h2 = forall_elim h1, x
+    h3 = use all_B
+    h4 = forall_elim h3, x
+    h5 = and_intro h2, h4
+    h6 = forall_intro h5
+    qed h6

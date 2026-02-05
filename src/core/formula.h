@@ -18,7 +18,6 @@ namespace logic {
 // Forward declarations for Handle types
 class Formula;
 class Predicate;
-class Constant;
 class Sentence;
 class FormulaBuilder;
 class QuantifierBuilder;
@@ -26,7 +25,6 @@ class QuantifierBuilder;
 // Handle types - external code uses these, not raw IDs
 using FormulaHandle = util::Handle<Formula>;
 using PredicateHandle = util::Handle<Predicate>;
-using ConstantHandle = util::Handle<Constant>;
 using SentenceHandle = util::Handle<Sentence>;
 
 using var_index = size_t;  // Local variable index within a sentence
@@ -58,52 +56,24 @@ public:
     }
 };
 
-// Global constant (e.g., 0, ∅, specific sets)
-class Constant {
-    std::string name_;
-
-public:
-    explicit Constant(std::string name) : name_(std::move(name)) {}
-
-    bool operator==(const Constant& other) const {
-        return name_ == other.name_;
-    }
-
-    const std::string& get_name() const { return name_; }
-
-    // Key for KeyedRegistry - constants are keyed by name
-    std::string get_key() const { return name_; }
-};
-
-struct ConstantHash {
-    size_t operator()(const Constant& c) const {
-        return std::hash<std::string>{}(c.get_name());
-    }
-};
-
 // Tagged wrappers to distinguish variable types in variant
 struct FixedVarTag { var_index idx; bool operator==(const FixedVarTag&) const = default; };
 struct GeneralizedVarTag { var_index idx; bool operator==(const GeneralizedVarTag&) const = default; };
-struct ConstTag { ConstantHandle handle; bool operator==(const ConstTag&) const = default; };
 
-// A term is a generalized var, fixed var, or constant
+// A term is a generalized var or fixed var
 struct Term {
-    std::variant<GeneralizedVarTag, FixedVarTag, ConstTag> data;
+    std::variant<GeneralizedVarTag, FixedVarTag> data;
 
     static Term generalized(var_index idx) { return Term{GeneralizedVarTag{idx}}; }
     static Term fixed(var_index idx) { return Term{FixedVarTag{idx}}; }
-    static Term constant(ConstantHandle h) { return Term{ConstTag{h}}; }
 
     bool is_generalized() const { return std::holds_alternative<GeneralizedVarTag>(data); }
     bool is_fixed() const { return std::holds_alternative<FixedVarTag>(data); }
-    bool is_variable() const { return is_generalized() || is_fixed(); }
-    bool is_constant() const { return std::holds_alternative<ConstTag>(data); }
 
     var_index as_variable() const {
         if (is_generalized()) return std::get<GeneralizedVarTag>(data).idx;
         return std::get<FixedVarTag>(data).idx;
     }
-    ConstantHandle as_constant() const { return std::get<ConstTag>(data).handle; }
 
     bool operator==(const Term& other) const { return data == other.data; }
 };
@@ -235,47 +205,23 @@ struct FormulaHash {
 // Note: Id parameter in KeyedRegistry is vestigial but kept for compatibility
 using FormulaRegistry = util::Registry<Formula, FormulaHash>;
 using PredicateRegistry = util::KeyedRegistry<Predicate, size_t, std::string, std::hash<std::string>>;
-using ConstantRegistry = util::KeyedRegistry<Constant, size_t, std::string, std::hash<std::string>>;
 
 // A sentence is a closed formula (no free variables)
 // All variables are bound by quantifiers
+// Sentences are lightweight - just a handle to the root formula in the shared registry
 class Sentence {
-    // No formula duplications within sentence scope (same formula under different sentence have different meaning)
-    FormulaRegistry formulas_;
     FormulaHandle root_;
-
-    // Helper to remap terms with new variable indices
-    static Term remap_term(const Term& t, const std::unordered_map<var_index, var_index>& var_map);
-
-    // Helper to recursively copy a formula and its subformulas
-    FormulaHandle copy_formula_recursive(
-        const FormulaRegistry& src,
-        FormulaHandle src_handle,
-        std::unordered_map<FormulaHandle, FormulaHandle>& handle_map
-    );
-
-    // Rebind a single formula's internal handles to a new registry
-    static void rebind_formula_handles(Formula& f, FormulaRegistry& new_reg);
 
 public:
     Sentence() = default;
-
-    // Copy constructor - copies registry and rebinds all internal handles
-    Sentence(const Sentence& other);
-    Sentence& operator=(const Sentence&) = delete;
-    // Move constructor - must update root_'s registry pointer
-    Sentence(Sentence&& other) noexcept;
-    Sentence& operator=(Sentence&&) = default;
-
-    // Construct sentence by copying formula tree from a FormulaRegistry
-    // Remaps both formula handles and variable indices to start from 0
-    Sentence(FormulaRegistry& src, FormulaHandle src_root);
+    explicit Sentence(FormulaHandle root) : root_(root) {}
 
     FormulaHandle root() const { return root_; }
     const Formula& get_formula(FormulaHandle h) const { return h.get(); }
 
     bool operator==(const Sentence& other) const {
-        return to_string() == other.to_string();
+        // Compare by root handle (same formula in shared registry = equal)
+        return root_ == other.root_;
     }
 
     std::string to_string() const;
@@ -301,26 +247,29 @@ struct SentenceHandleHash {
 };
 
 class GlobalContext {
+    FormulaRegistry formulas_;  // Single shared formula registry
     SentenceRegistry sentences_;
     PredicateRegistry predicates_;
-    ConstantRegistry constants_;
 
-    // Known axioms and theorems
+    // Known axioms and theorems (proven truths)
     std::unordered_set<SentenceHandle, SentenceHandleHash> known_;
     std::unordered_map<std::string, SentenceHandle> named_axioms_;
     std::unordered_map<std::string, SentenceHandle> named_theorems_;
 
+    // Claims (to be proven)
+    std::unordered_map<std::string, SentenceHandle> named_claims_;
+
 public:
+    // Access the shared formula registry
+    FormulaRegistry& formulas() { return formulas_; }
+    const FormulaRegistry& formulas() const { return formulas_; }
+
     SentenceHandle add_sentence(Sentence s) { return sentences_.register_item(std::move(s)); }
     PredicateHandle add_predicate(std::string name, size_t arity) {
         return predicates_.register_item(Predicate(std::move(name), arity));
     }
-    ConstantHandle add_constant(std::string name) {
-        return constants_.register_item(Constant(std::move(name)));
-    }
     const Sentence& get_sentence(SentenceHandle h) const { return h.get(); }
     const Predicate& get_predicate(PredicateHandle h) const { return h.get(); }
-    const Constant& get_constant(ConstantHandle h) const { return h.get(); }
 
     // Axiom/Theorem API
     void add_axiom(const std::string& name, SentenceHandle sentence) {
@@ -353,6 +302,17 @@ public:
         if (auto ax = find_axiom(name)) return ax;
         return find_theorem(name);
     }
+
+    // Claim API (for theorems to be proven)
+    void add_claim(const std::string& name, SentenceHandle sentence) {
+        named_claims_[name] = sentence;
+    }
+
+    std::optional<SentenceHandle> find_claim(const std::string& name) const {
+        auto it = named_claims_.find(name);
+        if (it != named_claims_.end()) return it->second;
+        return std::nullopt;
+    }
 };
 
 // FormulaBuilder builds formulas and tracks variable scope.
@@ -361,12 +321,14 @@ public:
 // A formula is a sentence if used_vars_ >= start depth (no free vars from parent scope)
 class FormulaBuilder {
     GlobalContext& ctx_;
-    FormulaRegistry formulas_;
     var_index local_vars_{0};  // Current depth / next var index
     var_index used_vars_{static_cast<var_index>(-1)};  // Min var used (init to max)
 
 public:
     explicit FormulaBuilder(GlobalContext& ctx) : ctx_(ctx) {}
+
+    // Access the global context
+    GlobalContext& context() { return ctx_; }
 
     // Scope management for QuantifierBuilder
     var_index enter_scope() { return local_vars_++; }
@@ -383,14 +345,15 @@ public:
         return used_vars_ >= start;
     }
 
-    // Formula creation
+    // Formula creation - uses the global registry
     FormulaHandle add_formula(Formula f) {
-        return formulas_.register_item(std::move(f));
+        return ctx_.formulas().register_item(std::move(f));
     }
 
     FormulaHandle predicate(PredicateHandle pred, std::vector<Term> args) {
         for (const auto& t : args) {
-            if (t.is_variable()) use_var(t.as_variable());
+            // All terms are variables now (generalized or fixed)
+            use_var(t.as_variable());
         }
         return add_formula(Formula(PredicateInstance(pred, std::move(args))));
     }
@@ -401,7 +364,12 @@ public:
     FormulaHandle make_iff(FormulaHandle l, FormulaHandle r) { return add_formula(Formula(Compound{Op::Iff, l, r})); }
     FormulaHandle make_not(FormulaHandle f) { return add_formula(Formula(Compound{Op::Not, f, FormulaHandle{}})); }
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
-    FormulaHandle add_sentence(SentenceHandle s) { return add_formula(Formula(s)); }
+
+    // Add a sentence's root formula to the builder (for using theorems in proofs)
+    FormulaHandle add_sentence(SentenceHandle s) {
+        // Just return the sentence's root - it's already in the global registry
+        return s.get().root();
+    }
 
     // Generalize a fixed variable: replace Term::fixed(var_idx) with Term::generalized(var_idx)
     // Returns a new formula handle with the transformation applied
@@ -442,14 +410,14 @@ public:
             }
             return h;
         }
-        // SentenceHandle: already closed, no transformation needed
+        // Already a sentence reference - no transformation needed
         return h;
     }
 
     // Build sentence if formula is closed
     SentenceHandle build_sentence(FormulaHandle root, var_index start = 0) {
         if (!is_closed_since(start)) return SentenceHandle{};
-        return ctx_.add_sentence(Sentence(formulas_, root));
+        return ctx_.add_sentence(Sentence(root));
     }
 };
 
@@ -482,9 +450,9 @@ public:
             var_index gen_idx = body_.get().next_gen_var_idx_;
             FormulaHandle generalized_body = builder_.translate_term(body_, var(), Term::generalized(gen_idx));
             handle_ = builder_.add_formula(Formula(Quantified{op_, gen_idx, generalized_body}));
-            if (SentenceHandle sentence = builder_.build_sentence(handle_, start_depth_); sentence.valid()) {
-                handle_ = builder_.add_formula(Formula(sentence));
-            }
+            // If this is a closed formula (sentence), register it but keep handle_ as the formula
+            // Don't wrap in SentenceHandle - the formula itself is what we work with
+            builder_.build_sentence(handle_, start_depth_);
         }
     }
 

@@ -30,11 +30,9 @@ std::string term_to_string(const Term& t) {
     if (t.is_generalized()) {
         // Generalized variables are bound by quantifiers - use same x_N format
         return "x_" + std::to_string(t.as_variable());
-    } else if (t.is_fixed()) {
+    } else {
         // Fixed (instantiated) variables - use distinct f_N format
         return "f_" + std::to_string(t.as_variable());
-    } else {
-        return t.as_constant().get().get_name();
     }
 }
 
@@ -138,112 +136,6 @@ std::string Formula::to_string() const {
 }
 
 // ==================== Sentence ====================
-
-Term Sentence::remap_term(const Term& t, const std::unordered_map<var_index, var_index>& var_map) {
-    if (t.is_variable()) {
-        auto it = var_map.find(t.as_variable());
-        if (it != var_map.end()) {
-            // Preserve the variable type (generalized or fixed)
-            if (!t.is_generalized()) {
-                LOG_FATAL << "All term in sentence must be bounded by quantifier";
-            }
-            return Term::generalized(it->second);
-        }
-        return t;  // Variable not in map (shouldn't happen in well-formed sentence)
-    }
-    return t;  // Constants don't need remapping
-}
-
-FormulaHandle Sentence::copy_formula_recursive(
-    const FormulaRegistry& src,
-    FormulaHandle src_handle,
-    std::unordered_map<FormulaHandle, FormulaHandle>& handle_map
-) {
-    auto it = handle_map.find(src_handle);
-    if (it != handle_map.end()) {
-        return it->second;
-    }
-
-    const Formula& f = src_handle.get();
-    FormulaHandle new_handle;
-
-    if (f.is_predicate()) {
-        const PredicateInstance& p = f.as_predicate();
-        std::vector<Term> new_args = p.args();
-        new_handle = formulas_.register_item(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
-    }
-    else if (f.is_compound()) {
-        const Compound& c = f.as_compound();
-        FormulaHandle new_left;
-        FormulaHandle new_right;
-        if (c.left.valid()) {
-            new_left = copy_formula_recursive(src, c.left, handle_map);
-        }
-        if (c.right.valid()) {
-            new_right = copy_formula_recursive(src, c.right, handle_map);
-        }
-        new_handle = formulas_.register_item(Formula(Compound{c.op, new_left, new_right}));
-    }
-    else if (f.is_quantified()) {
-        const Quantified& q = f.as_quantified();
-        // Recursively copy body with updated var_map
-        FormulaHandle new_body = copy_formula_recursive(src, q.body, handle_map);
-        new_handle = formulas_.register_item(Formula(Quantified{q.op, q.var, new_body}));
-    }
-    else if (f.is_sentence()) {
-        new_handle = formulas_.register_item(Formula(f.as_sentence()));
-    }
-
-    handle_map[src_handle] = new_handle;
-    return new_handle;
-}
-
-Sentence::Sentence(FormulaRegistry& src, FormulaHandle src_root) {
-    std::unordered_map<FormulaHandle, FormulaHandle> handle_map;
-    root_ = copy_formula_recursive(src, src_root, handle_map);
-}
-
-void Sentence::rebind_formula_handles(Formula& f, FormulaRegistry& new_reg) {
-    if (f.is_compound()) {
-        Compound& c = std::get<Compound>(f.data_);
-        if (c.left.valid()) {
-            c.left = new_reg.transfer_owner(c.left);
-        }
-        if (c.right.valid()) {
-            c.right = new_reg.transfer_owner(c.right);
-        }
-    } else if (f.is_quantified()) {
-        Quantified& q = std::get<Quantified>(f.data_);
-        if (q.body.valid()) {
-            q.body = new_reg.transfer_owner(q.body);
-        }
-    }
-    // PredicateInstance and SentenceHandle don't contain FormulaHandles
-}
-
-Sentence::Sentence(const Sentence& other) {
-    formulas_ = other.formulas_;
-    root_ = formulas_.transfer_owner(other.root_);
-    // Rebind all internal FormulaHandles to point to our registry
-    formulas_.for_each_mut([this](Formula& f) {
-        rebind_formula_handles(f, formulas_);
-    });
-    // Rebuild item2id_ since the keys had stale handles
-    formulas_.rebuild_index();
-}
-
-Sentence::Sentence(Sentence&& other) noexcept
-    : formulas_(std::move(other.formulas_)),
-      root_(std::move(other.root_))
-{
-    // After move, root_'s registry_ still points to other.formulas_
-    // We need to update it to point to our formulas_
-    root_ = formulas_.transfer_owner(root_);
-    // Also rebind all internal handles in formulas_
-    formulas_.for_each_mut([this](Formula& f) {
-        rebind_formula_handles(f, formulas_);
-    });
-}
 
 std::string Sentence::to_string() const {
     if (!root_.valid()) return "";

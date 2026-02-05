@@ -98,12 +98,13 @@ bool test_parse_implication() {
     return str == "forall x_0. P(x_0) -> Q(x_0)";
 }
 
-bool test_parse_with_constants() {
+bool test_parse_multiple_quantifiers() {
+    // Test parsing formulas with multiple quantifiers binding different variables
     GlobalContext ctx;
-    auto s = parse_sentence("forall x. R(x, a)", ctx);
+    auto s = parse_sentence("forall x. forall y. R(x, y)", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    return str == "forall x_0. R(x_0, a)";
+    return str == "forall x_1. forall x_0. R(x_1, x_0)";
 }
 
 bool test_reject_free_variable() {
@@ -177,12 +178,12 @@ bool test_parse_single_axiom() {
 
 bool test_parse_single_claim() {
     GlobalContext ctx;
-    auto stmts = parse_statements("claim bar: P(a) -> Q(a)", ctx);
+    auto stmts = parse_statements("claim bar: forall x. (P(x) -> Q(x))", ctx);
     if (stmts.size() != 1) return false;
     if (stmts[0].kind != ParsedStatement::Kind::Claim) return false;
     if (stmts[0].name != "bar") return false;
     std::cout << "[" << stmts[0].formula->to_string() << "] ";
-    return stmts[0].formula->to_string() == "P(a) -> Q(a)";
+    return stmts[0].formula->to_string() == "forall x_0. P(x_0) -> Q(x_0)";
 }
 
 bool test_parse_theorem_alias() {
@@ -336,7 +337,7 @@ int main() {
     run_test("Parse nested quantifiers", test_parse_nested_quantifiers);
     run_test("Parse same var name different scope", test_parse_same_var_name_different_scope);
     run_test("Parse implication", test_parse_implication);
-    run_test("Parse with constants", test_parse_with_constants);
+    run_test("Parse multiple quantifiers", test_parse_multiple_quantifiers);
     run_test("Reject free variable", test_reject_free_variable);
     run_test("Parse bottom", test_parse_bottom);
     run_test("Parse negation", test_parse_negation);

@@ -1,0 +1,12 @@
+cc_library(
+    name = "runtime",
+    srcs = ["runtime.cpp"],
+    hdrs = ["runtime.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/core:formula",
+        "//src/core:proof",
+        "//src/parser",
+        "//src/util:error",
+    ],
+)

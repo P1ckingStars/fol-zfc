@@ -26,7 +26,8 @@ void AssumptionScope::derive(FormulaHandle const & handle) {
 // ========== FixVarScope ==========
 
 FixVarScope::FixVarScope(FormulaBuilder& builder, Op op)
-    : qbuilder_(std::make_unique<QuantifierBuilder>(builder, op, result_)) {}
+    : result_(std::make_unique<FormulaHandle>()),
+      qbuilder_(std::make_unique<QuantifierBuilder>(builder, op, *result_)) {}
 
 Term FixVarScope::var_term() const {
     return qbuilder_->var();
@@ -43,7 +44,7 @@ void FixVarScope::derive(FormulaHandle const & handle) {
 FormulaHandle FixVarScope::finalize(FormulaHandle body) {
     qbuilder_->set_body(body);
     qbuilder_.reset();  // Destroy QuantifierBuilder, triggers formula creation
-    return result_;
+    return *result_;
 }
 
 // ========== ProofStack ==========
@@ -102,23 +103,17 @@ void ProofStack::derive_in_scope(FormulaHandle const& formula, int scope_idx) {
 }
 
 int ProofStack::find_scope_for_term(Term const& t) const {
-    // Constants belong to base level
-    if (t.is_constant()) {
-        return -1;
-    }
     // Generalized vars shouldn't appear in proof terms
     if (t.is_generalized()) {
         return -1;
     }
     // Fixed vars: find the FixVarScope that introduced it
-    if (t.is_fixed()) {
-        var_index var_idx = t.as_variable();
-        for (size_t i = 0; i < scopes.size(); ++i) {
-            if (std::holds_alternative<FixVarScope>(scopes[i])) {
-                const auto& fix_scope = std::get<FixVarScope>(scopes[i]);
-                if (fix_scope.var_term().as_variable() == var_idx) {
-                    return static_cast<int>(i);
-                }
+    var_index var_idx = t.as_variable();
+    for (size_t i = 0; i < scopes.size(); ++i) {
+        if (std::holds_alternative<FixVarScope>(scopes[i])) {
+            const auto& fix_scope = std::get<FixVarScope>(scopes[i]);
+            if (fix_scope.var_term().as_variable() == var_idx) {
+                return static_cast<int>(i);
             }
         }
     }
@@ -126,19 +121,12 @@ int ProofStack::find_scope_for_term(Term const& t) const {
 }
 
 bool ProofStack::is_term_accessible(Term const& t) const {
-    // Constants are always accessible
-    if (t.is_constant()) {
-        return true;
-    }
     // Generalized vars shouldn't appear in proof terms
     if (t.is_generalized()) {
         return false;
     }
     // Fixed vars must be introduced by an enclosing FixVarScope
-    if (t.is_fixed()) {
-        return find_scope_for_term(t) >= 0;
-    }
-    return false;
+    return find_scope_for_term(t) >= 0;
 }
 
 bool ProofStack::formula_contains_fixed_var(FormulaHandle const& h, var_index var_idx) const {

@@ -518,7 +518,7 @@ extern int yylex \
 #undef yyTABLES_NAME
 #endif
 
-#line 57 "formula.l"
+#line 92 "formula.l"
 
 
 #line 524 "formula_lexer.h"

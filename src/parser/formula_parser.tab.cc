@@ -106,35 +106,69 @@ enum yysymbol_kind_t
   YYSYMBOL_YYerror = 1,                    /* error  */
   YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
   YYSYMBOL_IDENTIFIER = 3,                 /* IDENTIFIER  */
-  YYSYMBOL_LPAREN = 4,                     /* LPAREN  */
-  YYSYMBOL_RPAREN = 5,                     /* RPAREN  */
-  YYSYMBOL_COMMA = 6,                      /* COMMA  */
-  YYSYMBOL_DOT = 7,                        /* DOT  */
-  YYSYMBOL_COLON = 8,                      /* COLON  */
-  YYSYMBOL_AND = 9,                        /* AND  */
-  YYSYMBOL_OR = 10,                        /* OR  */
-  YYSYMBOL_NOT = 11,                       /* NOT  */
-  YYSYMBOL_IMPLIES = 12,                   /* IMPLIES  */
-  YYSYMBOL_IFF = 13,                       /* IFF  */
-  YYSYMBOL_BOTTOM = 14,                    /* BOTTOM  */
-  YYSYMBOL_FORALL = 15,                    /* FORALL  */
-  YYSYMBOL_EXISTS = 16,                    /* EXISTS  */
-  YYSYMBOL_AXIOM = 17,                     /* AXIOM  */
-  YYSYMBOL_CLAIM = 18,                     /* CLAIM  */
-  YYSYMBOL_YYACCEPT = 19,                  /* $accept  */
-  YYSYMBOL_input = 20,                     /* input  */
-  YYSYMBOL_statement_list = 21,            /* statement_list  */
-  YYSYMBOL_statement = 22,                 /* statement  */
-  YYSYMBOL_formula = 23,                   /* formula  */
-  YYSYMBOL_iff_formula = 24,               /* iff_formula  */
-  YYSYMBOL_implies_formula = 25,           /* implies_formula  */
-  YYSYMBOL_or_formula = 26,                /* or_formula  */
-  YYSYMBOL_and_formula = 27,               /* and_formula  */
-  YYSYMBOL_unary_formula = 28,             /* unary_formula  */
-  YYSYMBOL_atom = 29,                      /* atom  */
-  YYSYMBOL_predicate = 30,                 /* predicate  */
-  YYSYMBOL_term_list = 31,                 /* term_list  */
-  YYSYMBOL_term = 32                       /* term  */
+  YYSYMBOL_STRING_LITERAL = 4,             /* STRING_LITERAL  */
+  YYSYMBOL_LPAREN = 5,                     /* LPAREN  */
+  YYSYMBOL_RPAREN = 6,                     /* RPAREN  */
+  YYSYMBOL_COMMA = 7,                      /* COMMA  */
+  YYSYMBOL_DOT = 8,                        /* DOT  */
+  YYSYMBOL_COLON = 9,                      /* COLON  */
+  YYSYMBOL_EQUALS = 10,                    /* EQUALS  */
+  YYSYMBOL_AND = 11,                       /* AND  */
+  YYSYMBOL_OR = 12,                        /* OR  */
+  YYSYMBOL_NOT = 13,                       /* NOT  */
+  YYSYMBOL_IMPLIES = 14,                   /* IMPLIES  */
+  YYSYMBOL_IFF = 15,                       /* IFF  */
+  YYSYMBOL_BOTTOM = 16,                    /* BOTTOM  */
+  YYSYMBOL_FORALL = 17,                    /* FORALL  */
+  YYSYMBOL_EXISTS = 18,                    /* EXISTS  */
+  YYSYMBOL_AXIOM = 19,                     /* AXIOM  */
+  YYSYMBOL_CLAIM = 20,                     /* CLAIM  */
+  YYSYMBOL_PROOF = 21,                     /* PROOF  */
+  YYSYMBOL_INCLUDE = 22,                   /* INCLUDE  */
+  YYSYMBOL_FIX = 23,                       /* FIX  */
+  YYSYMBOL_ASSUME = 24,                    /* ASSUME  */
+  YYSYMBOL_QED = 25,                       /* QED  */
+  YYSYMBOL_USE = 26,                       /* USE  */
+  YYSYMBOL_LET = 27,                       /* LET  */
+  YYSYMBOL_AND_INTRO = 28,                 /* AND_INTRO  */
+  YYSYMBOL_AND_ELIM_L = 29,                /* AND_ELIM_L  */
+  YYSYMBOL_AND_ELIM_R = 30,                /* AND_ELIM_R  */
+  YYSYMBOL_OR_INTRO_L = 31,                /* OR_INTRO_L  */
+  YYSYMBOL_OR_INTRO_R = 32,                /* OR_INTRO_R  */
+  YYSYMBOL_OR_ELIM = 33,                   /* OR_ELIM  */
+  YYSYMBOL_IMPLIES_INTRO = 34,             /* IMPLIES_INTRO  */
+  YYSYMBOL_IMPLIES_ELIM = 35,              /* IMPLIES_ELIM  */
+  YYSYMBOL_NOT_INTRO = 36,                 /* NOT_INTRO  */
+  YYSYMBOL_NOT_ELIM = 37,                  /* NOT_ELIM  */
+  YYSYMBOL_BOTTOM_ELIM = 38,               /* BOTTOM_ELIM  */
+  YYSYMBOL_IFF_INTRO = 39,                 /* IFF_INTRO  */
+  YYSYMBOL_IFF_ELIM_L = 40,                /* IFF_ELIM_L  */
+  YYSYMBOL_IFF_ELIM_R = 41,                /* IFF_ELIM_R  */
+  YYSYMBOL_FORALL_INTRO = 42,              /* FORALL_INTRO  */
+  YYSYMBOL_FORALL_ELIM = 43,               /* FORALL_ELIM  */
+  YYSYMBOL_EXISTS_INTRO = 44,              /* EXISTS_INTRO  */
+  YYSYMBOL_EXISTS_ELIM = 45,               /* EXISTS_ELIM  */
+  YYSYMBOL_DOUBLE_NEG_ELIM = 46,           /* DOUBLE_NEG_ELIM  */
+  YYSYMBOL_EXCLUDED_MIDDLE = 47,           /* EXCLUDED_MIDDLE  */
+  YYSYMBOL_YYACCEPT = 48,                  /* $accept  */
+  YYSYMBOL_input = 49,                     /* input  */
+  YYSYMBOL_statement_list = 50,            /* statement_list  */
+  YYSYMBOL_statement = 51,                 /* statement  */
+  YYSYMBOL_formula = 52,                   /* formula  */
+  YYSYMBOL_iff_formula = 53,               /* iff_formula  */
+  YYSYMBOL_implies_formula = 54,           /* implies_formula  */
+  YYSYMBOL_or_formula = 55,                /* or_formula  */
+  YYSYMBOL_and_formula = 56,               /* and_formula  */
+  YYSYMBOL_unary_formula = 57,             /* unary_formula  */
+  YYSYMBOL_atom = 58,                      /* atom  */
+  YYSYMBOL_predicate = 59,                 /* predicate  */
+  YYSYMBOL_term_list = 60,                 /* term_list  */
+  YYSYMBOL_term = 61,                      /* term  */
+  YYSYMBOL_proof_block = 62,               /* proof_block  */
+  YYSYMBOL_proof_step_list = 63,           /* proof_step_list  */
+  YYSYMBOL_proof_step = 64,                /* proof_step  */
+  YYSYMBOL_rule_call = 65,                 /* rule_call  */
+  YYSYMBOL_id_list = 66                    /* id_list  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -439,21 +473,21 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  27
+#define YYFINAL  32
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   48
+#define YYLAST   115
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  19
+#define YYNTOKENS  48
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  14
+#define YYNNTS  19
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  29
+#define YYNRULES  62
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  53
+#define YYNSTATES  118
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   273
+#define YYMAXUTOK   302
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -494,16 +528,23 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18
+      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
+      25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
+      35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
+      45,    46,    47
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_int16 yyrline[] =
 {
-       0,    62,    62,    63,    67,    71,    78,    82,    89,    93,
-      96,   100,   103,   107,   110,   114,   117,   121,   124,   128,
-     132,   136,   139,   142,   146,   150,   154,   161,   165,   172
+       0,    70,    70,    71,    75,    79,    86,    90,    94,    95,
+     102,   106,   109,   113,   116,   120,   123,   127,   130,   134,
+     137,   141,   145,   149,   152,   155,   159,   163,   167,   174,
+     178,   185,   193,   200,   204,   211,   215,   219,   223,   227,
+     232,   239,   242,   248,   254,   257,   260,   263,   269,   272,
+     278,   281,   284,   287,   290,   293,   299,   302,   308,   314,
+     320,   329,   334
 };
 #endif
 
@@ -519,12 +560,19 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "\"end of file\"", "error", "\"invalid token\"", "IDENTIFIER", "LPAREN",
-  "RPAREN", "COMMA", "DOT", "COLON", "AND", "OR", "NOT", "IMPLIES", "IFF",
-  "BOTTOM", "FORALL", "EXISTS", "AXIOM", "CLAIM", "$accept", "input",
+  "\"end of file\"", "error", "\"invalid token\"", "IDENTIFIER",
+  "STRING_LITERAL", "LPAREN", "RPAREN", "COMMA", "DOT", "COLON", "EQUALS",
+  "AND", "OR", "NOT", "IMPLIES", "IFF", "BOTTOM", "FORALL", "EXISTS",
+  "AXIOM", "CLAIM", "PROOF", "INCLUDE", "FIX", "ASSUME", "QED", "USE",
+  "LET", "AND_INTRO", "AND_ELIM_L", "AND_ELIM_R", "OR_INTRO_L",
+  "OR_INTRO_R", "OR_ELIM", "IMPLIES_INTRO", "IMPLIES_ELIM", "NOT_INTRO",
+  "NOT_ELIM", "BOTTOM_ELIM", "IFF_INTRO", "IFF_ELIM_L", "IFF_ELIM_R",
+  "FORALL_INTRO", "FORALL_ELIM", "EXISTS_INTRO", "EXISTS_ELIM",
+  "DOUBLE_NEG_ELIM", "EXCLUDED_MIDDLE", "$accept", "input",
   "statement_list", "statement", "formula", "iff_formula",
   "implies_formula", "or_formula", "and_formula", "unary_formula", "atom",
-  "predicate", "term_list", "term", YY_NULLPTR
+  "predicate", "term_list", "term", "proof_block", "proof_step_list",
+  "proof_step", "rule_call", "id_list", YY_NULLPTR
 };
 
 static const char *
@@ -534,7 +582,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-11)
+#define YYPACT_NINF (-24)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -548,12 +596,18 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-       0,    -3,     9,     9,   -11,    19,    25,    26,    27,    32,
-      -8,   -11,   -11,    20,   -11,    -5,    31,   -11,   -11,   -11,
-       3,    29,   -11,    28,    34,    35,    36,   -11,   -11,     9,
-       9,     9,     9,   -11,   -11,    21,   -11,   -11,     9,     9,
-       9,     9,   -11,    31,   -11,   -11,   -11,    39,   -11,   -11,
-     -11,   -11,   -11
+      35,    26,    56,    56,   -24,    32,    55,    57,    59,    60,
+      42,    64,     7,   -24,   -24,    50,   -24,    20,    67,   -24,
+     -24,   -24,   -24,    27,    61,   -24,    62,    63,    71,    77,
+      79,   -24,   -24,   -24,    56,    56,    56,    56,   -24,   -24,
+      43,   -24,   -24,    56,    56,    56,    56,    22,   -24,    67,
+     -24,   -24,   -24,    86,   -24,   -24,   -24,   -24,    80,    88,
+      89,    22,   -24,   -24,   -23,   -24,   -24,   -24,    56,    90,
+      56,    91,    92,    93,    91,    91,    91,    94,    91,    95,
+      91,    91,    91,    91,    91,    96,    91,    97,    98,    99,
+     100,   -24,   -24,   -24,   -24,   -24,   101,   -24,   -24,   101,
+     101,   101,   -24,   101,   -24,   101,   101,   101,   101,   101,
+     -24,   101,   -24,   -24,   -24,   -24,   102,   -24
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -561,26 +615,32 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       0,    26,     0,     0,    21,     0,     0,     0,     0,     0,
-       3,     4,     2,     8,    10,    12,    14,    16,    20,    23,
-       0,     0,    17,     0,     0,     0,     0,     1,     5,     0,
-       0,     0,     0,    29,    25,     0,    27,    22,     0,     0,
-       0,     0,     9,    13,    11,    15,    24,     0,    18,    19,
-       6,     7,    28
+       0,    28,     0,     0,    23,     0,     0,     0,     0,     0,
+       0,     0,     3,     4,     2,    10,    12,    14,    16,    18,
+      22,    25,     8,     0,     0,    19,     0,     0,     0,     0,
+       0,     9,     1,     5,     0,     0,     0,     0,    31,    27,
+       0,    29,    24,     0,     0,     0,     0,     0,    11,    15,
+      13,    17,    26,     0,    20,    21,     6,     7,     0,     0,
+       0,    32,    33,    30,     0,    35,    40,    34,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,    39,    36,    38,    37,    61,    41,    42,    43,    44,
+      45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
+      55,    56,    57,    58,    59,    60,     0,    62
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -11,   -11,   -11,    37,    -2,   -11,   -10,   -11,    15,    -1,
-     -11,   -11,   -11,     1
+     -24,   -24,   -24,   103,    -2,   -24,     3,   -24,    69,    -1,
+     -24,   -24,   -24,    53,   -24,   -24,    46,   -24,     1
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     9,    10,    11,    12,    13,    14,    15,    16,    17,
-      18,    19,    35,    36
+       0,    11,    12,    13,    14,    15,    16,    17,    18,    19,
+      20,    21,    40,    41,    22,    61,    62,    91,    96
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -588,48 +648,76 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      21,    20,    22,     1,     2,    30,    33,    31,    34,     7,
-       8,     3,     1,     2,     4,     5,     6,     7,     8,    42,
-       3,    44,    23,     4,     5,     6,    46,    47,    24,    25,
-      26,    45,    27,    29,    37,    38,    48,    49,    50,    51,
-      32,    39,    33,    40,    41,    43,     0,    28,    52
+      24,    68,    25,    69,    70,    71,    72,    73,    74,    75,
+      76,    77,    78,    79,    80,    81,    82,    83,    84,    85,
+      86,    87,    88,    89,    90,    58,     7,     8,     9,    10,
+      38,    23,    35,    39,    36,    26,    51,    48,     1,    50,
+       2,    54,    55,    56,    57,    59,    31,    60,     3,    52,
+      53,     4,     5,     6,     7,     8,     9,    10,    27,     1,
+      28,     2,    29,    30,    32,    34,    92,    42,    94,     3,
+      43,    44,     4,     5,     6,    99,   100,   101,    37,   103,
+      45,   105,   106,   107,   108,   109,    46,   111,    47,    38,
+      64,    65,    66,    93,    95,    97,    98,   102,   104,   110,
+     112,   113,   114,   115,    49,   117,    63,    67,   116,     0,
+       0,     0,     0,     0,     0,    33
 };
 
 static const yytype_int8 yycheck[] =
 {
-       2,     4,     3,     3,     4,    10,     3,    12,     5,    17,
-      18,    11,     3,     4,    14,    15,    16,    17,    18,    29,
-      11,    31,     3,    14,    15,    16,     5,     6,     3,     3,
-       3,    32,     0,    13,     5,     7,    38,    39,    40,    41,
-       9,     7,     3,     8,     8,    30,    -1,    10,    47
+       2,    24,     3,    26,    27,    28,    29,    30,    31,    32,
+      33,    34,    35,    36,    37,    38,    39,    40,    41,    42,
+      43,    44,    45,    46,    47,     3,    19,    20,    21,    22,
+       3,     5,    12,     6,    14,     3,    37,    34,     3,    36,
+       5,    43,    44,    45,    46,    23,     4,    25,    13,     6,
+       7,    16,    17,    18,    19,    20,    21,    22,     3,     3,
+       3,     5,     3,     3,     0,    15,    68,     6,    70,    13,
+       8,     8,    16,    17,    18,    74,    75,    76,    11,    78,
+       9,    80,    81,    82,    83,    84,     9,    86,     9,     3,
+      10,     3,     3,     3,     3,     3,     3,     3,     3,     3,
+       3,     3,     3,     3,    35,     3,    53,    61,     7,    -1,
+      -1,    -1,    -1,    -1,    -1,    12
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,     4,    11,    14,    15,    16,    17,    18,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    29,    30,
-       4,    23,    28,     3,     3,     3,     3,     0,    22,    13,
-      10,    12,     9,     3,     5,    31,    32,     5,     7,     7,
-       8,     8,    25,    27,    25,    28,     5,     6,    23,    23,
-      23,    23,    32
+       0,     3,     5,    13,    16,    17,    18,    19,    20,    21,
+      22,    49,    50,    51,    52,    53,    54,    55,    56,    57,
+      58,    59,    62,     5,    52,    57,     3,     3,     3,     3,
+       3,     4,     0,    51,    15,    12,    14,    11,     3,     6,
+      60,    61,     6,     8,     8,     9,     9,     9,    54,    56,
+      54,    57,     6,     7,    52,    52,    52,    52,     3,    23,
+      25,    63,    64,    61,    10,     3,     3,    64,    24,    26,
+      27,    28,    29,    30,    31,    32,    33,    34,    35,    36,
+      37,    38,    39,    40,    41,    42,    43,    44,    45,    46,
+      47,    65,    52,     3,    52,     3,    66,     3,     3,    66,
+      66,    66,     3,    66,     3,    66,    66,    66,    66,    66,
+       3,    66,     3,     3,     3,     3,     7,     3
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    19,    20,    20,    21,    21,    22,    22,    23,    24,
-      24,    25,    25,    26,    26,    27,    27,    28,    28,    28,
-      28,    29,    29,    29,    30,    30,    30,    31,    31,    32
+       0,    48,    49,    49,    50,    50,    51,    51,    51,    51,
+      52,    53,    53,    54,    54,    55,    55,    56,    56,    57,
+      57,    57,    57,    58,    58,    58,    59,    59,    59,    60,
+      60,    61,    62,    63,    63,    64,    64,    64,    64,    64,
+      64,    65,    65,    65,    65,    65,    65,    65,    65,    65,
+      65,    65,    65,    65,    65,    65,    65,    65,    65,    65,
+      65,    66,    66
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     1,     1,     1,     2,     4,     4,     1,     3,
-       1,     3,     1,     3,     1,     3,     1,     2,     4,     4,
-       1,     1,     3,     1,     4,     3,     1,     1,     3,     1
+       0,     2,     1,     1,     1,     2,     4,     4,     1,     2,
+       1,     3,     1,     3,     1,     3,     1,     3,     1,     2,
+       4,     4,     1,     1,     3,     1,     4,     3,     1,     1,
+       3,     1,     4,     1,     2,     2,     4,     4,     4,     3,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     1,     3
 };
 
 
@@ -1234,81 +1322,117 @@ yydestruct (const char *yymsg,
   switch (yykind)
     {
     case YYSYMBOL_IDENTIFIER: /* IDENTIFIER  */
-#line 53 "formula.y"
+#line 61 "formula.y"
             { delete ((*yyvaluep).str); }
-#line 1240 "formula_parser.tab.cc"
+#line 1328 "formula_parser.tab.cc"
+        break;
+
+    case YYSYMBOL_STRING_LITERAL: /* STRING_LITERAL  */
+#line 61 "formula.y"
+            { delete ((*yyvaluep).str); }
+#line 1334 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_statement_list: /* statement_list  */
-#line 55 "formula.y"
+#line 63 "formula.y"
             { for (auto* n : *((*yyvaluep).node_list)) delete n; delete ((*yyvaluep).node_list); }
-#line 1246 "formula_parser.tab.cc"
+#line 1340 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_statement: /* statement  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1252 "formula_parser.tab.cc"
+#line 1346 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_formula: /* formula  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1258 "formula_parser.tab.cc"
+#line 1352 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_iff_formula: /* iff_formula  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1264 "formula_parser.tab.cc"
+#line 1358 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_implies_formula: /* implies_formula  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1270 "formula_parser.tab.cc"
+#line 1364 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_or_formula: /* or_formula  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1276 "formula_parser.tab.cc"
+#line 1370 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_and_formula: /* and_formula  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1282 "formula_parser.tab.cc"
+#line 1376 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_unary_formula: /* unary_formula  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1288 "formula_parser.tab.cc"
+#line 1382 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_atom: /* atom  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1294 "formula_parser.tab.cc"
+#line 1388 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_predicate: /* predicate  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1300 "formula_parser.tab.cc"
+#line 1394 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_term_list: /* term_list  */
-#line 55 "formula.y"
+#line 63 "formula.y"
             { for (auto* n : *((*yyvaluep).node_list)) delete n; delete ((*yyvaluep).node_list); }
-#line 1306 "formula_parser.tab.cc"
+#line 1400 "formula_parser.tab.cc"
         break;
 
     case YYSYMBOL_term: /* term  */
-#line 54 "formula.y"
+#line 62 "formula.y"
             { delete ((*yyvaluep).node); }
-#line 1312 "formula_parser.tab.cc"
+#line 1406 "formula_parser.tab.cc"
+        break;
+
+    case YYSYMBOL_proof_block: /* proof_block  */
+#line 62 "formula.y"
+            { delete ((*yyvaluep).node); }
+#line 1412 "formula_parser.tab.cc"
+        break;
+
+    case YYSYMBOL_proof_step_list: /* proof_step_list  */
+#line 63 "formula.y"
+            { for (auto* n : *((*yyvaluep).node_list)) delete n; delete ((*yyvaluep).node_list); }
+#line 1418 "formula_parser.tab.cc"
+        break;
+
+    case YYSYMBOL_proof_step: /* proof_step  */
+#line 62 "formula.y"
+            { delete ((*yyvaluep).node); }
+#line 1424 "formula_parser.tab.cc"
+        break;
+
+    case YYSYMBOL_rule_call: /* rule_call  */
+#line 62 "formula.y"
+            { delete ((*yyvaluep).node); }
+#line 1430 "formula_parser.tab.cc"
+        break;
+
+    case YYSYMBOL_id_list: /* id_list  */
+#line 63 "formula.y"
+            { for (auto* n : *((*yyvaluep).node_list)) delete n; delete ((*yyvaluep).node_list); }
+#line 1436 "formula_parser.tab.cc"
         break;
 
       default:
@@ -1675,225 +1799,529 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* input: formula  */
-#line 62 "formula.y"
+#line 70 "formula.y"
               { ctx->result = (yyvsp[0].node); }
-#line 1681 "formula_parser.tab.cc"
+#line 1805 "formula_parser.tab.cc"
     break;
 
   case 3: /* input: statement_list  */
-#line 63 "formula.y"
+#line 71 "formula.y"
                      { ctx->statements = (yyvsp[0].node_list); }
-#line 1687 "formula_parser.tab.cc"
+#line 1811 "formula_parser.tab.cc"
     break;
 
   case 4: /* statement_list: statement  */
-#line 67 "formula.y"
+#line 75 "formula.y"
                 {
         (yyval.node_list) = new std::vector<ASTNode*>();
         (yyval.node_list)->push_back((yyvsp[0].node));
     }
-#line 1696 "formula_parser.tab.cc"
+#line 1820 "formula_parser.tab.cc"
     break;
 
   case 5: /* statement_list: statement_list statement  */
-#line 71 "formula.y"
+#line 79 "formula.y"
                                {
         (yyval.node_list) = (yyvsp[-1].node_list);
         (yyval.node_list)->push_back((yyvsp[0].node));
     }
-#line 1705 "formula_parser.tab.cc"
+#line 1829 "formula_parser.tab.cc"
     break;
 
   case 6: /* statement: AXIOM IDENTIFIER COLON formula  */
-#line 78 "formula.y"
+#line 86 "formula.y"
                                      {
         (yyval.node) = ASTNode::make_statement(ASTNode::AxiomStmt, *(yyvsp[-2].str), (yyvsp[0].node));
         delete (yyvsp[-2].str);
     }
-#line 1714 "formula_parser.tab.cc"
+#line 1838 "formula_parser.tab.cc"
     break;
 
   case 7: /* statement: CLAIM IDENTIFIER COLON formula  */
-#line 82 "formula.y"
+#line 90 "formula.y"
                                      {
         (yyval.node) = ASTNode::make_statement(ASTNode::ClaimStmt, *(yyvsp[-2].str), (yyvsp[0].node));
         delete (yyvsp[-2].str);
     }
-#line 1723 "formula_parser.tab.cc"
+#line 1847 "formula_parser.tab.cc"
     break;
 
-  case 8: /* formula: iff_formula  */
-#line 89 "formula.y"
+  case 8: /* statement: proof_block  */
+#line 94 "formula.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 1729 "formula_parser.tab.cc"
+#line 1853 "formula_parser.tab.cc"
     break;
 
-  case 9: /* iff_formula: iff_formula IFF implies_formula  */
-#line 93 "formula.y"
+  case 9: /* statement: INCLUDE STRING_LITERAL  */
+#line 95 "formula.y"
+                             {
+        (yyval.node) = ASTNode::make_include(*(yyvsp[0].str));
+        delete (yyvsp[0].str);
+    }
+#line 1862 "formula_parser.tab.cc"
+    break;
+
+  case 10: /* formula: iff_formula  */
+#line 102 "formula.y"
+                  { (yyval.node) = (yyvsp[0].node); }
+#line 1868 "formula_parser.tab.cc"
+    break;
+
+  case 11: /* iff_formula: iff_formula IFF implies_formula  */
+#line 106 "formula.y"
                                       {
         (yyval.node) = new ASTNode(ASTNode::Iff, (yyvsp[-2].node), (yyvsp[0].node));
     }
-#line 1737 "formula_parser.tab.cc"
+#line 1876 "formula_parser.tab.cc"
     break;
 
-  case 10: /* iff_formula: implies_formula  */
-#line 96 "formula.y"
+  case 12: /* iff_formula: implies_formula  */
+#line 109 "formula.y"
                       { (yyval.node) = (yyvsp[0].node); }
-#line 1743 "formula_parser.tab.cc"
+#line 1882 "formula_parser.tab.cc"
     break;
 
-  case 11: /* implies_formula: or_formula IMPLIES implies_formula  */
-#line 100 "formula.y"
+  case 13: /* implies_formula: or_formula IMPLIES implies_formula  */
+#line 113 "formula.y"
                                          {
         (yyval.node) = new ASTNode(ASTNode::Implies, (yyvsp[-2].node), (yyvsp[0].node));
     }
-#line 1751 "formula_parser.tab.cc"
+#line 1890 "formula_parser.tab.cc"
     break;
 
-  case 12: /* implies_formula: or_formula  */
-#line 103 "formula.y"
+  case 14: /* implies_formula: or_formula  */
+#line 116 "formula.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1757 "formula_parser.tab.cc"
+#line 1896 "formula_parser.tab.cc"
     break;
 
-  case 13: /* or_formula: or_formula OR and_formula  */
-#line 107 "formula.y"
+  case 15: /* or_formula: or_formula OR and_formula  */
+#line 120 "formula.y"
                                 {
         (yyval.node) = new ASTNode(ASTNode::Or, (yyvsp[-2].node), (yyvsp[0].node));
     }
-#line 1765 "formula_parser.tab.cc"
+#line 1904 "formula_parser.tab.cc"
     break;
 
-  case 14: /* or_formula: and_formula  */
-#line 110 "formula.y"
+  case 16: /* or_formula: and_formula  */
+#line 123 "formula.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 1771 "formula_parser.tab.cc"
+#line 1910 "formula_parser.tab.cc"
     break;
 
-  case 15: /* and_formula: and_formula AND unary_formula  */
-#line 114 "formula.y"
+  case 17: /* and_formula: and_formula AND unary_formula  */
+#line 127 "formula.y"
                                     {
         (yyval.node) = new ASTNode(ASTNode::And, (yyvsp[-2].node), (yyvsp[0].node));
     }
-#line 1779 "formula_parser.tab.cc"
+#line 1918 "formula_parser.tab.cc"
     break;
 
-  case 16: /* and_formula: unary_formula  */
-#line 117 "formula.y"
+  case 18: /* and_formula: unary_formula  */
+#line 130 "formula.y"
                     { (yyval.node) = (yyvsp[0].node); }
-#line 1785 "formula_parser.tab.cc"
+#line 1924 "formula_parser.tab.cc"
     break;
 
-  case 17: /* unary_formula: NOT unary_formula  */
-#line 121 "formula.y"
+  case 19: /* unary_formula: NOT unary_formula  */
+#line 134 "formula.y"
                         {
         (yyval.node) = new ASTNode(ASTNode::Not, (yyvsp[0].node));
     }
-#line 1793 "formula_parser.tab.cc"
+#line 1932 "formula_parser.tab.cc"
     break;
 
-  case 18: /* unary_formula: FORALL IDENTIFIER DOT formula  */
-#line 124 "formula.y"
+  case 20: /* unary_formula: FORALL IDENTIFIER DOT formula  */
+#line 137 "formula.y"
                                     {
         (yyval.node) = new ASTNode(ASTNode::Forall, *(yyvsp[-2].str), (yyvsp[0].node));
         delete (yyvsp[-2].str);
     }
-#line 1802 "formula_parser.tab.cc"
+#line 1941 "formula_parser.tab.cc"
     break;
 
-  case 19: /* unary_formula: EXISTS IDENTIFIER DOT formula  */
-#line 128 "formula.y"
+  case 21: /* unary_formula: EXISTS IDENTIFIER DOT formula  */
+#line 141 "formula.y"
                                     {
         (yyval.node) = new ASTNode(ASTNode::Exists, *(yyvsp[-2].str), (yyvsp[0].node));
         delete (yyvsp[-2].str);
     }
-#line 1811 "formula_parser.tab.cc"
+#line 1950 "formula_parser.tab.cc"
     break;
 
-  case 20: /* unary_formula: atom  */
-#line 132 "formula.y"
+  case 22: /* unary_formula: atom  */
+#line 145 "formula.y"
            { (yyval.node) = (yyvsp[0].node); }
-#line 1817 "formula_parser.tab.cc"
+#line 1956 "formula_parser.tab.cc"
     break;
 
-  case 21: /* atom: BOTTOM  */
-#line 136 "formula.y"
+  case 23: /* atom: BOTTOM  */
+#line 149 "formula.y"
              {
         (yyval.node) = new ASTNode(ASTNode::Bottom);
     }
-#line 1825 "formula_parser.tab.cc"
+#line 1964 "formula_parser.tab.cc"
     break;
 
-  case 22: /* atom: LPAREN formula RPAREN  */
-#line 139 "formula.y"
+  case 24: /* atom: LPAREN formula RPAREN  */
+#line 152 "formula.y"
                             {
         (yyval.node) = (yyvsp[-1].node);
     }
-#line 1833 "formula_parser.tab.cc"
+#line 1972 "formula_parser.tab.cc"
     break;
 
-  case 23: /* atom: predicate  */
-#line 142 "formula.y"
+  case 25: /* atom: predicate  */
+#line 155 "formula.y"
                 { (yyval.node) = (yyvsp[0].node); }
-#line 1839 "formula_parser.tab.cc"
+#line 1978 "formula_parser.tab.cc"
     break;
 
-  case 24: /* predicate: IDENTIFIER LPAREN term_list RPAREN  */
-#line 146 "formula.y"
+  case 26: /* predicate: IDENTIFIER LPAREN term_list RPAREN  */
+#line 159 "formula.y"
                                          {
         (yyval.node) = new ASTNode(ASTNode::Predicate, *(yyvsp[-3].str), (yyvsp[-1].node_list));
         delete (yyvsp[-3].str);
     }
-#line 1848 "formula_parser.tab.cc"
+#line 1987 "formula_parser.tab.cc"
     break;
 
-  case 25: /* predicate: IDENTIFIER LPAREN RPAREN  */
-#line 150 "formula.y"
+  case 27: /* predicate: IDENTIFIER LPAREN RPAREN  */
+#line 163 "formula.y"
                                {
         (yyval.node) = new ASTNode(ASTNode::Predicate, *(yyvsp[-2].str), new std::vector<ASTNode*>());
         delete (yyvsp[-2].str);
     }
-#line 1857 "formula_parser.tab.cc"
+#line 1996 "formula_parser.tab.cc"
     break;
 
-  case 26: /* predicate: IDENTIFIER  */
-#line 154 "formula.y"
+  case 28: /* predicate: IDENTIFIER  */
+#line 167 "formula.y"
                  {
         (yyval.node) = new ASTNode(ASTNode::Predicate, *(yyvsp[0].str), new std::vector<ASTNode*>());
         delete (yyvsp[0].str);
     }
-#line 1866 "formula_parser.tab.cc"
+#line 2005 "formula_parser.tab.cc"
     break;
 
-  case 27: /* term_list: term  */
-#line 161 "formula.y"
+  case 29: /* term_list: term  */
+#line 174 "formula.y"
            {
         (yyval.node_list) = new std::vector<ASTNode*>();
         (yyval.node_list)->push_back((yyvsp[0].node));
     }
-#line 1875 "formula_parser.tab.cc"
+#line 2014 "formula_parser.tab.cc"
     break;
 
-  case 28: /* term_list: term_list COMMA term  */
-#line 165 "formula.y"
+  case 30: /* term_list: term_list COMMA term  */
+#line 178 "formula.y"
                            {
         (yyval.node_list) = (yyvsp[-2].node_list);
         (yyval.node_list)->push_back((yyvsp[0].node));
     }
-#line 1884 "formula_parser.tab.cc"
+#line 2023 "formula_parser.tab.cc"
     break;
 
-  case 29: /* term: IDENTIFIER  */
-#line 172 "formula.y"
+  case 31: /* term: IDENTIFIER  */
+#line 185 "formula.y"
                  {
         (yyval.node) = new ASTNode(ASTNode::Term, *(yyvsp[0].str));
         delete (yyvsp[0].str);
     }
-#line 1893 "formula_parser.tab.cc"
+#line 2032 "formula_parser.tab.cc"
+    break;
+
+  case 32: /* proof_block: PROOF IDENTIFIER COLON proof_step_list  */
+#line 193 "formula.y"
+                                             {
+        (yyval.node) = ASTNode::make_proof_block(*(yyvsp[-2].str), (yyvsp[0].node_list));
+        delete (yyvsp[-2].str);
+    }
+#line 2041 "formula_parser.tab.cc"
+    break;
+
+  case 33: /* proof_step_list: proof_step  */
+#line 200 "formula.y"
+                 {
+        (yyval.node_list) = new std::vector<ASTNode*>();
+        (yyval.node_list)->push_back((yyvsp[0].node));
+    }
+#line 2050 "formula_parser.tab.cc"
+    break;
+
+  case 34: /* proof_step_list: proof_step_list proof_step  */
+#line 204 "formula.y"
+                                 {
+        (yyval.node_list) = (yyvsp[-1].node_list);
+        (yyval.node_list)->push_back((yyvsp[0].node));
+    }
+#line 2059 "formula_parser.tab.cc"
+    break;
+
+  case 35: /* proof_step: FIX IDENTIFIER  */
+#line 211 "formula.y"
+                     {
+        (yyval.node) = ASTNode::make_proof_step(ASTNode::ProofStepFix, "", *(yyvsp[0].str), nullptr, nullptr);
+        delete (yyvsp[0].str);
+    }
+#line 2068 "formula_parser.tab.cc"
+    break;
+
+  case 36: /* proof_step: IDENTIFIER EQUALS ASSUME formula  */
+#line 215 "formula.y"
+                                       {
+        (yyval.node) = ASTNode::make_proof_step(ASTNode::ProofStepAssume, *(yyvsp[-3].str), "", (yyvsp[0].node), nullptr);
+        delete (yyvsp[-3].str);
+    }
+#line 2077 "formula_parser.tab.cc"
+    break;
+
+  case 37: /* proof_step: IDENTIFIER EQUALS LET formula  */
+#line 219 "formula.y"
+                                    {
+        (yyval.node) = ASTNode::make_proof_step(ASTNode::ProofStepLet, *(yyvsp[-3].str), "", (yyvsp[0].node), nullptr);
+        delete (yyvsp[-3].str);
+    }
+#line 2086 "formula_parser.tab.cc"
+    break;
+
+  case 38: /* proof_step: IDENTIFIER EQUALS USE IDENTIFIER  */
+#line 223 "formula.y"
+                                       {
+        (yyval.node) = ASTNode::make_proof_step(ASTNode::ProofStepUse, *(yyvsp[-3].str), *(yyvsp[0].str), nullptr, nullptr);
+        delete (yyvsp[-3].str); delete (yyvsp[0].str);
+    }
+#line 2095 "formula_parser.tab.cc"
+    break;
+
+  case 39: /* proof_step: IDENTIFIER EQUALS rule_call  */
+#line 227 "formula.y"
+                                  {
+        (yyvsp[0].node)->name = *(yyvsp[-2].str);  /* Set result name on rule node */
+        (yyval.node) = (yyvsp[0].node);
+        delete (yyvsp[-2].str);
+    }
+#line 2105 "formula_parser.tab.cc"
+    break;
+
+  case 40: /* proof_step: QED IDENTIFIER  */
+#line 232 "formula.y"
+                     {
+        (yyval.node) = ASTNode::make_proof_step(ASTNode::ProofStepQed, "", *(yyvsp[0].str), nullptr, nullptr);
+        delete (yyvsp[0].str);
+    }
+#line 2114 "formula_parser.tab.cc"
+    break;
+
+  case 41: /* rule_call: AND_INTRO id_list  */
+#line 239 "formula.y"
+                        {
+        (yyval.node) = ASTNode::make_rule_step("and_intro", (yyvsp[0].node_list));
+    }
+#line 2122 "formula_parser.tab.cc"
+    break;
+
+  case 42: /* rule_call: AND_ELIM_L IDENTIFIER  */
+#line 242 "formula.y"
+                            {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("and_elim_l", args);
+        delete (yyvsp[0].str);
+    }
+#line 2133 "formula_parser.tab.cc"
+    break;
+
+  case 43: /* rule_call: AND_ELIM_R IDENTIFIER  */
+#line 248 "formula.y"
+                            {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("and_elim_r", args);
+        delete (yyvsp[0].str);
+    }
+#line 2144 "formula_parser.tab.cc"
+    break;
+
+  case 44: /* rule_call: OR_INTRO_L id_list  */
+#line 254 "formula.y"
+                         {
+        (yyval.node) = ASTNode::make_rule_step("or_intro_l", (yyvsp[0].node_list));
+    }
+#line 2152 "formula_parser.tab.cc"
+    break;
+
+  case 45: /* rule_call: OR_INTRO_R id_list  */
+#line 257 "formula.y"
+                         {
+        (yyval.node) = ASTNode::make_rule_step("or_intro_r", (yyvsp[0].node_list));
+    }
+#line 2160 "formula_parser.tab.cc"
+    break;
+
+  case 46: /* rule_call: OR_ELIM id_list  */
+#line 260 "formula.y"
+                      {
+        (yyval.node) = ASTNode::make_rule_step("or_elim", (yyvsp[0].node_list));
+    }
+#line 2168 "formula_parser.tab.cc"
+    break;
+
+  case 47: /* rule_call: IMPLIES_INTRO IDENTIFIER  */
+#line 263 "formula.y"
+                               {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("implies_intro", args);
+        delete (yyvsp[0].str);
+    }
+#line 2179 "formula_parser.tab.cc"
+    break;
+
+  case 48: /* rule_call: IMPLIES_ELIM id_list  */
+#line 269 "formula.y"
+                           {
+        (yyval.node) = ASTNode::make_rule_step("implies_elim", (yyvsp[0].node_list));
+    }
+#line 2187 "formula_parser.tab.cc"
+    break;
+
+  case 49: /* rule_call: NOT_INTRO IDENTIFIER  */
+#line 272 "formula.y"
+                           {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("not_intro", args);
+        delete (yyvsp[0].str);
+    }
+#line 2198 "formula_parser.tab.cc"
+    break;
+
+  case 50: /* rule_call: NOT_ELIM id_list  */
+#line 278 "formula.y"
+                       {
+        (yyval.node) = ASTNode::make_rule_step("not_elim", (yyvsp[0].node_list));
+    }
+#line 2206 "formula_parser.tab.cc"
+    break;
+
+  case 51: /* rule_call: BOTTOM_ELIM id_list  */
+#line 281 "formula.y"
+                          {
+        (yyval.node) = ASTNode::make_rule_step("bottom_elim", (yyvsp[0].node_list));
+    }
+#line 2214 "formula_parser.tab.cc"
+    break;
+
+  case 52: /* rule_call: IFF_INTRO id_list  */
+#line 284 "formula.y"
+                        {
+        (yyval.node) = ASTNode::make_rule_step("iff_intro", (yyvsp[0].node_list));
+    }
+#line 2222 "formula_parser.tab.cc"
+    break;
+
+  case 53: /* rule_call: IFF_ELIM_L id_list  */
+#line 287 "formula.y"
+                         {
+        (yyval.node) = ASTNode::make_rule_step("iff_elim_l", (yyvsp[0].node_list));
+    }
+#line 2230 "formula_parser.tab.cc"
+    break;
+
+  case 54: /* rule_call: IFF_ELIM_R id_list  */
+#line 290 "formula.y"
+                         {
+        (yyval.node) = ASTNode::make_rule_step("iff_elim_r", (yyvsp[0].node_list));
+    }
+#line 2238 "formula_parser.tab.cc"
+    break;
+
+  case 55: /* rule_call: FORALL_INTRO IDENTIFIER  */
+#line 293 "formula.y"
+                              {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("forall_intro", args);
+        delete (yyvsp[0].str);
+    }
+#line 2249 "formula_parser.tab.cc"
+    break;
+
+  case 56: /* rule_call: FORALL_ELIM id_list  */
+#line 299 "formula.y"
+                          {
+        (yyval.node) = ASTNode::make_rule_step("forall_elim", (yyvsp[0].node_list));
+    }
+#line 2257 "formula_parser.tab.cc"
+    break;
+
+  case 57: /* rule_call: EXISTS_INTRO IDENTIFIER  */
+#line 302 "formula.y"
+                              {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("exists_intro", args);
+        delete (yyvsp[0].str);
+    }
+#line 2268 "formula_parser.tab.cc"
+    break;
+
+  case 58: /* rule_call: EXISTS_ELIM IDENTIFIER  */
+#line 308 "formula.y"
+                             {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("exists_elim", args);
+        delete (yyvsp[0].str);
+    }
+#line 2279 "formula_parser.tab.cc"
+    break;
+
+  case 59: /* rule_call: DOUBLE_NEG_ELIM IDENTIFIER  */
+#line 314 "formula.y"
+                                 {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("double_neg_elim", args);
+        delete (yyvsp[0].str);
+    }
+#line 2290 "formula_parser.tab.cc"
+    break;
+
+  case 60: /* rule_call: EXCLUDED_MIDDLE IDENTIFIER  */
+#line 320 "formula.y"
+                                 {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        (yyval.node) = ASTNode::make_rule_step("excluded_middle", args);
+        delete (yyvsp[0].str);
+    }
+#line 2301 "formula_parser.tab.cc"
+    break;
+
+  case 61: /* id_list: IDENTIFIER  */
+#line 329 "formula.y"
+                 {
+        (yyval.node_list) = new std::vector<ASTNode*>();
+        (yyval.node_list)->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        delete (yyvsp[0].str);
+    }
+#line 2311 "formula_parser.tab.cc"
+    break;
+
+  case 62: /* id_list: id_list COMMA IDENTIFIER  */
+#line 334 "formula.y"
+                               {
+        (yyval.node_list) = (yyvsp[-2].node_list);
+        (yyval.node_list)->push_back(new ASTNode(ASTNode::Term, *(yyvsp[0].str)));
+        delete (yyvsp[0].str);
+    }
+#line 2321 "formula_parser.tab.cc"
     break;
 
 
-#line 1897 "formula_parser.tab.cc"
+#line 2325 "formula_parser.tab.cc"
 
       default: break;
     }
@@ -2138,7 +2566,7 @@ yypushreturn:
 #undef yyls
 #undef yylsp
 #undef yystacksize
-#line 178 "formula.y"
+#line 341 "formula.y"
 
 
 void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg) {

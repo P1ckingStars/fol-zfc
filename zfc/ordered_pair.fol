@@ -89,32 +89,87 @@ claim doubleton_in_pair: forall p. forall a. forall b. forall d.
     ((pair(p, a, b) & doubleton(d, a, b)) -> elem(d, p))
 
 # ============================================================
-# Proof Sketch for pair_injective:
+# Proofs
 # ============================================================
-#
-# Given: (a, b) = (c, d), i.e., {{a}, {a,b}} = {{c}, {c,d}}
-#
-# Case 1: a = b
-#   Then {a} = {a, b}, so (a, b) = {{a}} (a singleton containing {a})
-#   Since (a, b) = (c, d), we have {{a}} = {{c}, {c, d}}
-#   This means {c} = {c, d} = {a}
-#   From {c} = {a}: c = a
-#   From {c, d} = {a} and c = a: d = a
-#   Therefore a = c and b = a = d, so b = d ✓
-#
-# Case 2: a ≠ b
-#   Then {a} ≠ {a, b} (singleton vs proper doubleton)
-#   Since {{a}, {a,b}} = {{c}, {c,d}}, the element {a} must equal
-#   either {c} or {c, d}
-#
-#   Subcase 2a: {a} = {c, d}
-#     Then c = d = a, so {c} = {a} and {c, d} = {a}
-#     But then {{c}, {c,d}} = {{a}}, a singleton
-#     And {{a}, {a,b}} has two distinct elements, contradiction
-#
-#   Subcase 2b: {a} = {c}
-#     From singleton equality: a = c ✓
-#     Then {a, b} must equal {c, d} = {a, d}
-#     Since a ≠ b and {a, b} = {a, d}, we have b = d ✓
-#
-# QED
+
+# Proof of pair_elems: An element of an ordered pair satisfies the membership condition
+proof pair_elems:
+    fix p
+    fix a
+    fix b
+    fix z
+    h = assume pair(p, a, b) & elem(z, p)
+    h_pair = and_elim_l h
+    h_elem = and_elim_r h
+    pdef = use pair_def
+    pdef1 = forall_elim pdef, p
+    pdef2 = forall_elim pdef1, a
+    pdef3 = forall_elim pdef2, b
+    h_all_z = iff_elim_l pdef3, h_pair
+    h_z_iff = forall_elim h_all_z, z
+    h_disj = iff_elim_l h_z_iff, h_elem
+    h_impl = implies_intro h_disj
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of singleton_in_pair: The singleton {a} is an element of (a, b)
+proof singleton_in_pair:
+    fix p
+    fix a
+    fix b
+    fix s
+    h = assume pair(p, a, b) & singleton(s, a)
+    h_pair = and_elim_l h
+    h_sing = and_elim_r h
+    pdef = use pair_def
+    pdef1 = forall_elim pdef, p
+    pdef2 = forall_elim pdef1, a
+    pdef3 = forall_elim pdef2, b
+    h_all_z = iff_elim_l pdef3, h_pair
+    h_s_iff = forall_elim h_all_z, s
+    sdef = use singleton_def
+    sdef1 = forall_elim sdef, s
+    sdef2 = forall_elim sdef1, a
+    h_d1 = iff_elim_l sdef2, h_sing
+    d2 = let forall w. (elem(w, s) <-> (eq(w, a) | eq(w, b)))
+    h_disj = or_intro_l h_d1, d2
+    elem_s_p = iff_elim_r h_s_iff, h_disj
+    h_impl = implies_intro elem_s_p
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of doubleton_in_pair: The doubleton {a, b} is an element of (a, b)
+proof doubleton_in_pair:
+    fix p
+    fix a
+    fix b
+    fix d
+    h = assume pair(p, a, b) & doubleton(d, a, b)
+    h_pair = and_elim_l h
+    h_doub = and_elim_r h
+    pdef = use pair_def
+    pdef1 = forall_elim pdef, p
+    pdef2 = forall_elim pdef1, a
+    pdef3 = forall_elim pdef2, b
+    h_all_z = iff_elim_l pdef3, h_pair
+    h_d_iff = forall_elim h_all_z, d
+    ddef = use doubleton_def
+    ddef1 = forall_elim ddef, d
+    ddef2 = forall_elim ddef1, a
+    ddef3 = forall_elim ddef2, b
+    h_d2 = iff_elim_l ddef3, h_doub
+    d1 = let forall w. (elem(w, d) <-> eq(w, a))
+    h_disj = or_intro_r d1, h_d2
+    elem_d_p = iff_elim_r h_d_iff, h_disj
+    h_impl = implies_intro elem_d_p
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

@@ -11,21 +11,22 @@ cc_test(
     ],
 )
 
-# runtime_test disabled - uses old API incompatible with current codebase
-# cc_test(
-#     name = "runtime_test",
-#     srcs = ["runtime_test.cpp"],
-#     deps = [
-#         "//src/core:formula",
-#         "//src/core:proof",
-#         "//src/parser",
-#         "//src/runtime",
-#     ],
-# )
+cc_test(
+    name = "runtime_test",
+    srcs = ["runtime_test.cpp"],
+    data = [
+        "//zfc:axioms.fol",
+        "//zfc:ordered_pair.fol",
+    ],
+    deps = [
+        "//src/runtime",
+    ],
+)
 
 test_suite(
     name = "all_tests",
     tests = [
         ":core_test",
+        ":runtime_test",
     ],
 )

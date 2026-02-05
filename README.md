@@ -59,14 +59,24 @@ Precedence (lowest to highest): `<->` < `->` < `|` < `&` < `~` < quantifiers
 
 ## Script Syntax
 
-The script runner (`//src:run`) executes proof scripts:
+Proof scripts use `.fol` files with axioms, claims, and proofs:
 
-```
-# Declare a constant with an axiom
-declare empty : forall x. ~elem(x, empty)
+```fol
+# All axioms and claims must be sentences (no free variables)
+axiom all_P: forall x. P(x)
+axiom all_P_impl_Q: forall x. (P(x) -> Q(x))
+claim all_Q: forall x. Q(x)
 
-# Prove a claim
-claim forall A. forall x. (elem(x, A) -> elem(x, A))
+# Proof block with natural deduction rules
+proof all_Q:
+    fix x
+    h1 = use all_P
+    h2 = forall_elim h1, x
+    h3 = use all_P_impl_Q
+    h4 = forall_elim h3, x
+    h5 = implies_elim h4, h2
+    h6 = forall_intro h5
+    qed h6
 ```
 
 Run with:

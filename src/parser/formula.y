@@ -32,16 +32,24 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
     std::vector<ASTNode*>* node_list;
 }
 
-%token <str> IDENTIFIER
-%token LPAREN RPAREN COMMA DOT COLON
+%token <str> IDENTIFIER STRING_LITERAL
+%token LPAREN RPAREN COMMA DOT COLON EQUALS
 %token AND OR NOT IMPLIES IFF BOTTOM
 %token FORALL EXISTS
-%token AXIOM CLAIM
+%token AXIOM CLAIM PROOF INCLUDE
+%token FIX ASSUME QED USE LET
+%token AND_INTRO AND_ELIM_L AND_ELIM_R
+%token OR_INTRO_L OR_INTRO_R OR_ELIM
+%token IMPLIES_INTRO IMPLIES_ELIM
+%token NOT_INTRO NOT_ELIM BOTTOM_ELIM
+%token IFF_INTRO IFF_ELIM_L IFF_ELIM_R
+%token FORALL_INTRO FORALL_ELIM EXISTS_INTRO EXISTS_ELIM
+%token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE
 
 %type <node> formula iff_formula implies_formula or_formula and_formula
 %type <node> unary_formula atom predicate term
-%type <node> statement
-%type <node_list> term_list statement_list
+%type <node> statement proof_block proof_step rule_call
+%type <node_list> term_list statement_list proof_step_list id_list
 
 /* Precedence: lowest to highest */
 %left IFF
@@ -81,6 +89,11 @@ statement
     }
     | CLAIM IDENTIFIER COLON formula {
         $$ = ASTNode::make_statement(ASTNode::ClaimStmt, *$2, $4);
+        delete $2;
+    }
+    | proof_block { $$ = $1; }
+    | INCLUDE STRING_LITERAL {
+        $$ = ASTNode::make_include(*$2);
         delete $2;
     }
     ;
@@ -172,6 +185,156 @@ term
     : IDENTIFIER {
         $$ = new ASTNode(ASTNode::Term, *$1);
         delete $1;
+    }
+    ;
+
+/* Proof blocks */
+proof_block
+    : PROOF IDENTIFIER COLON proof_step_list {
+        $$ = ASTNode::make_proof_block(*$2, $4);
+        delete $2;
+    }
+    ;
+
+proof_step_list
+    : proof_step {
+        $$ = new std::vector<ASTNode*>();
+        $$->push_back($1);
+    }
+    | proof_step_list proof_step {
+        $$ = $1;
+        $$->push_back($2);
+    }
+    ;
+
+proof_step
+    : FIX IDENTIFIER {
+        $$ = ASTNode::make_proof_step(ASTNode::ProofStepFix, "", *$2, nullptr, nullptr);
+        delete $2;
+    }
+    | IDENTIFIER EQUALS ASSUME formula {
+        $$ = ASTNode::make_proof_step(ASTNode::ProofStepAssume, *$1, "", $4, nullptr);
+        delete $1;
+    }
+    | IDENTIFIER EQUALS LET formula {
+        $$ = ASTNode::make_proof_step(ASTNode::ProofStepLet, *$1, "", $4, nullptr);
+        delete $1;
+    }
+    | IDENTIFIER EQUALS USE IDENTIFIER {
+        $$ = ASTNode::make_proof_step(ASTNode::ProofStepUse, *$1, *$4, nullptr, nullptr);
+        delete $1; delete $4;
+    }
+    | IDENTIFIER EQUALS rule_call {
+        $3->name = *$1;  /* Set result name on rule node */
+        $$ = $3;
+        delete $1;
+    }
+    | QED IDENTIFIER {
+        $$ = ASTNode::make_proof_step(ASTNode::ProofStepQed, "", *$2, nullptr, nullptr);
+        delete $2;
+    }
+    ;
+
+rule_call
+    : AND_INTRO id_list {
+        $$ = ASTNode::make_rule_step("and_intro", $2);
+    }
+    | AND_ELIM_L IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("and_elim_l", args);
+        delete $2;
+    }
+    | AND_ELIM_R IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("and_elim_r", args);
+        delete $2;
+    }
+    | OR_INTRO_L id_list {
+        $$ = ASTNode::make_rule_step("or_intro_l", $2);
+    }
+    | OR_INTRO_R id_list {
+        $$ = ASTNode::make_rule_step("or_intro_r", $2);
+    }
+    | OR_ELIM id_list {
+        $$ = ASTNode::make_rule_step("or_elim", $2);
+    }
+    | IMPLIES_INTRO IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("implies_intro", args);
+        delete $2;
+    }
+    | IMPLIES_ELIM id_list {
+        $$ = ASTNode::make_rule_step("implies_elim", $2);
+    }
+    | NOT_INTRO IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("not_intro", args);
+        delete $2;
+    }
+    | NOT_ELIM id_list {
+        $$ = ASTNode::make_rule_step("not_elim", $2);
+    }
+    | BOTTOM_ELIM id_list {
+        $$ = ASTNode::make_rule_step("bottom_elim", $2);
+    }
+    | IFF_INTRO id_list {
+        $$ = ASTNode::make_rule_step("iff_intro", $2);
+    }
+    | IFF_ELIM_L id_list {
+        $$ = ASTNode::make_rule_step("iff_elim_l", $2);
+    }
+    | IFF_ELIM_R id_list {
+        $$ = ASTNode::make_rule_step("iff_elim_r", $2);
+    }
+    | FORALL_INTRO IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("forall_intro", args);
+        delete $2;
+    }
+    | FORALL_ELIM id_list {
+        $$ = ASTNode::make_rule_step("forall_elim", $2);
+    }
+    | EXISTS_INTRO IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("exists_intro", args);
+        delete $2;
+    }
+    | EXISTS_ELIM IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("exists_elim", args);
+        delete $2;
+    }
+    | DOUBLE_NEG_ELIM IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("double_neg_elim", args);
+        delete $2;
+    }
+    | EXCLUDED_MIDDLE IDENTIFIER {
+        auto* args = new std::vector<ASTNode*>();
+        args->push_back(new ASTNode(ASTNode::Term, *$2));
+        $$ = ASTNode::make_rule_step("excluded_middle", args);
+        delete $2;
+    }
+    ;
+
+id_list
+    : IDENTIFIER {
+        $$ = new std::vector<ASTNode*>();
+        $$->push_back(new ASTNode(ASTNode::Term, *$1));
+        delete $1;
+    }
+    | id_list COMMA IDENTIFIER {
+        $$ = $1;
+        $$->push_back(new ASTNode(ASTNode::Term, *$3));
+        delete $3;
     }
     ;
 
