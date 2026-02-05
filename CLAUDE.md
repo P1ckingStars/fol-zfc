@@ -7,9 +7,9 @@ A C++ implementation of a natural deduction proof system for first-order logic, 
 ## Build Commands
 
 ```bash
-bazel build //src:main    # Demo binary with example proofs
-bazel build //src:run     # Script runner binary
-bazel test //test:zfc_test  # Run tests
+bazel test //test:core_test       # Core logic tests
+bazel test //test:runtime_test    # Runtime and proof execution tests
+bazel test //test:all_tests       # Run all tests
 ```
 
 ## Architecture
@@ -18,36 +18,34 @@ bazel test //test:zfc_test  # Run tests
 
 ```
 src/
-├── logic/                 # Core logic system
+├── core/                  # Core logic system
 │   ├── formula.h/cpp      # Formula representation (predicates, compounds, quantifiers)
-│   ├── proof.h/cpp        # Natural deduction proof system
-│   ├── scope.h            # RAII scope classes (AssumptionScope, EigenvariableScope)
-│   ├── theory.h/cpp       # Global theory (axioms + theorems database)
-│   ├── prover.h/cpp       # Automated backward-chaining prover
-│   └── zfc.h/cpp          # ZFC axioms initialization
+│   └── proof.h            # Natural deduction proof system and scope management
 ├── runtime/               # Interactive proving runtime
-│   ├── runtime.h/cpp      # Runtime and ProofContext classes
-│   ├── SPEC.md            # Requirements specification
-│   └── DESIGN.md          # Design document
+│   └── runtime.h/cpp      # Runtime and ProofContext classes
 ├── parser/                # Formula parser (Flex/Bison)
 │   ├── formula.l          # Flex lexer specification
 │   ├── formula.y          # Bison grammar specification
 │   ├── formula_ast.h      # AST nodes for parser
 │   ├── parser.h           # Parser interface (parse_formula)
-│   ├── parser_bison.cpp   # AST to formula_id conversion
+│   ├── parser_bison.cpp   # AST to formula conversion
 │   ├── formula_lexer.h/cc       # Pre-generated lexer
 │   └── formula_parser.tab.h/cc  # Pre-generated parser
 ├── util/
-│   └── registry.h         # Generic registry utilities (IndexedStore, KeyedRegistry)
-├── script.h/cpp           # Script runner for batch proofs
-├── main.cpp               # Interactive demo
-└── run.cpp                # Script runner entry point
+│   ├── registry.h         # Generic registry utilities (IndexedStore, KeyedRegistry)
+│   ├── error.h            # Error handling utilities
+│   └── logging.h          # Logging utilities
 
 test/
-└── zfc_test.cpp           # Unit tests
+├── core_test.cpp          # Core logic tests
+└── runtime_test.cpp       # Runtime and proof execution tests
+
+zfc/
+├── axioms.fol             # ZFC axioms
+└── ordered_pair.fol       # Kuratowski ordered pair proofs
 ```
 
-### Key Types (logic/)
+### Key Types (core/)
 
 **formula.h:**
 - `FormulaHandle`, `PredicateHandle`, `SentenceHandle` - Handle types for registry items
@@ -57,24 +55,10 @@ test/
 - `Op` - Operators: And, Or, Implies, Iff, Not, Bottom, Forall, Exists
 - `GlobalContext` - Central storage for all formulas, predicates, sentences
 
-**theory.h:**
-- `Theory` - Global store for axioms and theorems, owns the shared `ProofDatabase`
-  - `db()` - Access the formula database
-  - `add_axiom(f, name)` / `add_theorem(f, name)` - Register known truths
-  - `is_known(f)` - Check if formula is axiom or theorem
-  - `create_proof()` - Create a new proof context
-
-**proof.h / scope.h:**
-- `step_id`, `assumption_id` - Proof step identifiers
-- `Rule` - Natural deduction rules (AndIntro, ImpliesElim, ForallIntro, etc.)
-- `Proof` - Proof construction with step management
-- `AssumptionScope` - RAII for assumption management (implies_intro, not_intro, etc.)
-- `EigenvariableScope` - RAII for eigenvariable soundness (forall_intro, exists_elim)
-
-**prover.h:**
-- `ProverConfig` - Settings (max_depth, max_steps, verbose)
-- `ProverResult` - Proof attempt result (success, proof, stats)
-- `ZFCProver` - Backward-chaining automated prover, takes `Theory&`
+**proof.h:**
+- `FormulaHandle` - Reference to a formula in a proof
+- Natural deduction rules (and_intro, implies_elim, forall_intro, etc.)
+- RAII scope management for assumptions and eigenvariables
 
 **runtime/runtime.h:**
 - `Runtime` - Stores axioms/theorems as strings, creates proof contexts
@@ -97,36 +81,6 @@ test/
 ### First-Order
 - **Universal**: `forall_intro` (requires eigenvariable), `forall_elim` (instantiate)
 - **Existential**: `exists_intro`, `exists_elim` (requires eigenvariable)
-
-## RAII Scoping System
-
-Ensures soundness of quantifier rules by tracking eigenvariables.
-
-### AssumptionScope
-```cpp
-Proof proof = theory.create_proof();
-formula_id impl;
-{
-    AssumptionScope scope(proof, A);  // Assume A
-    auto step1 = scope.assumption_step();
-    // ... derive B from A ...
-    impl = proof.implies_intro(step1, step_deriving_B);
-}  // Assumption discharged
-```
-
-### EigenvariableScope
-```cpp
-{
-    EigenvariableScope x_scope(proof, 0);  // x is fresh eigenvariable
-    auto step = proof.forall_elim(forall_step, Term::var(0));
-    // ... derive P(x) ...
-    proof.forall_intro(step_n, 0);  // OK: x is eigenvariable
-}  // x retired
-```
-
-### Soundness Checks
-- `forall_intro`: Variable must be eigenvariable AND not free in active assumptions
-- `exists_elim`: Witness variable must be eigenvariable AND not free in conclusion
 
 ## Parser (Flex/Bison)
 
@@ -158,9 +112,10 @@ Quantified: forall x. P(x), exists x. P(x)
 
 ## ZFC Axioms
 
+ZFC axioms are defined in `zfc/axioms.fol`:
+
 Predicates: `elem(x, y)` (membership), `eq(x, y)` (equality)
 
-Axioms initialized via `zfc::init_zfc(db)`:
 1. **Extensionality** - Sets equal iff same members
 2. **Empty Set** - Exists set with no members
 3. **Pairing** - For any a,b exists {a,b}
@@ -170,39 +125,7 @@ Axioms initialized via `zfc::init_zfc(db)`:
 7. **Foundation** - No infinite descending membership chains
 8. **Choice** - Every collection of non-empty sets has choice function
 
-## Example Usage
-
-### API
-```cpp
-#include "logic/theory.h"
-#include "logic/prover.h"
-#include "parser/parser.h"
-
-using namespace logic;
-
-Theory theory;
-auto A = parse_formula("A", theory.db());
-auto A_impl_B = parse_formula("A -> B", theory.db());
-auto B = parse_formula("B", theory.db());
-
-theory.add_axiom(A, "A");
-theory.add_axiom(A_impl_B, "A -> B");
-
-ZFCProver prover(theory);
-auto result = prover.prove(B);
-// result.success == true
-```
-
-### Script File
-```
-# ZFC axioms and theorems
-axiom ext: forall x. forall y. ((forall z. (elem(z, x) <-> elem(z, y))) -> eq(x, y))
-
-# Prove claims
-claim identity: forall x. (elem(x, A) -> elem(x, A))
-```
-
-### .fol File Syntax
+## .fol File Syntax
 ```fol
 # Axioms and claims (must be sentences - no free variables)
 axiom all_P: forall x. P(x)
@@ -227,17 +150,11 @@ include "base.fol"
 ## Build Dependencies
 
 ```
-src/logic:formula    <- //src/util:registry
-src/logic:scope      <- src/logic:formula (header-only)
-src/logic:proof      <- src/logic:formula, src/logic:scope
-src/logic:theory     <- src/logic:formula, src/logic:proof
-src/logic:zfc        <- src/logic:formula
-src/logic:prover     <- src/logic:formula, src/logic:proof, src/logic:theory, src/parser:parser
-src/parser:parser    <- src/logic:formula
-src/runtime:runtime  <- src/logic:formula, src/logic:proof, src/parser:parser
-//src:script         <- src/logic:*, src/parser:parser
-//src:main           <- src/logic:*, src/parser:parser
-//src:run            <- //src:script
+src/core:formula     <- //src/util:registry, //src/util:error
+src/parser           <- //src/core:formula
+src/runtime          <- //src/core:formula, //src/parser
+test:core_test       <- //src/core:formula, //src/parser
+test:runtime_test    <- //src/runtime
 ```
 
 ## Proof Syntax

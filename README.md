@@ -5,25 +5,22 @@ A natural deduction theorem prover for first-order logic with ZFC set theory axi
 ## Features
 
 - **First-Order Logic**: Full support for universal and existential quantifiers
-- **ZFC Set Theory**: All standard ZFC axioms (extensionality, empty set, pairing, union, power set, infinity, foundation, choice)
+- **ZFC Set Theory**: ZFC axioms for set-theoretic proofs
 - **Formula Parser**: Flex/Bison parser supporting multiple syntax styles
-- **Automated Proof Search**: Backward-chaining algorithm with configurable depth/step limits
 - **Natural Deduction**: Complete rule set for propositional and first-order logic
-- **Script Runner**: Run proof scripts with declarations and claims
+- **Proof Scripts**: Write and verify proofs in `.fol` files with declarative syntax
 
 ## Building
 
 Requires Bazel 7+, C++20 compiler, flex, and bison.
 
 ```bash
-# Build the interactive prover
-bazel build //src:main
+# Run all tests
+bazel test //test:all_tests
 
-# Build the script runner
-bazel build //src:run
-
-# Run tests
-bazel test //test:zfc_test
+# Or run individual test suites
+bazel test //test:core_test       # Core logic tests
+bazel test //test:runtime_test    # Runtime and proof execution tests
 ```
 
 ## Formula Syntax
@@ -62,58 +59,89 @@ Precedence (lowest to highest): `<->` < `->` < `|` < `&` < `~` < quantifiers
 Proof scripts use `.fol` files with axioms, claims, and proofs:
 
 ```fol
-# All axioms and claims must be sentences (no free variables)
+# Include other files
+include "base_axioms.fol"
+
+# Axioms and claims must be sentences (no free variables)
 axiom all_P: forall x. P(x)
 axiom all_P_impl_Q: forall x. (P(x) -> Q(x))
 claim all_Q: forall x. Q(x)
 
 # Proof block with natural deduction rules
 proof all_Q:
-    fix x
-    h1 = use all_P
-    h2 = forall_elim h1, x
+    fix x                           # Introduce eigenvariable
+    h1 = use all_P                  # Get axiom as premise
+    h2 = forall_elim h1, x          # Instantiate with fixed var
     h3 = use all_P_impl_Q
     h4 = forall_elim h3, x
-    h5 = implies_elim h4, h2
-    h6 = forall_intro h5
+    h5 = implies_elim h4, h2        # Modus ponens
+    h6 = forall_intro h5            # Generalize over x
     qed h6
 ```
 
-Run with:
-```bash
-bazel run //src:run -- path/to/script.zfc
-```
+### Proof Step Syntax
 
-Options:
-- `-v, --verbose`: Enable verbose output
-- `-d, --depth N`: Set max proof search depth (default: 20)
-- `-s, --steps N`: Set max proof search steps (default: 10000)
+| Step | Description |
+|------|-------------|
+| `fix x` | Introduce eigenvariable for universal intro/existential elim |
+| `h = use name` | Get axiom or proven theorem as premise |
+| `h = assume φ` | Assume formula (for implies_intro, not_intro) |
+| `h = let φ` | Create formula handle without assuming (for or_intro) |
+| `h = rule args` | Apply inference rule |
+| `qed h` | Complete proof with final step |
+
+### Example: Proof with Fixed Variables
+
+Fixed variables introduced by `fix` can be referenced in `assume` and `let` formulas:
+
+```fol
+axiom singleton_def: forall s. forall x. (singleton(s, x) <-> forall z. (elem(z, s) <-> eq(z, x)))
+
+claim singleton_in_pair: forall p. forall a. forall b. forall s.
+    ((pair(p, a, b) & singleton(s, a)) -> elem(s, p))
+
+proof singleton_in_pair:
+    fix p
+    fix a
+    fix b
+    fix s
+    h = assume pair(p, a, b) & singleton(s, a)    # References fixed vars
+    h_pair = and_elim_l h
+    h_sing = and_elim_r h
+    # ... proof steps ...
+    d2 = let forall w. (elem(w, s) <-> (eq(w, a) | eq(w, b)))  # For or_intro
+    h_disj = or_intro_l h_d1, d2
+    # ...
+    qed result
+```
 
 ## Project Structure
 
 ```
 src/
-├── logic/
+├── core/
 │   ├── formula.h/.cpp    # Formula AST and database
-│   ├── proof.h/.cpp      # Proof construction and steps
-│   ├── scope.h           # RAII scope management for proofs
-│   ├── theory.h/.cpp     # Global theory (axioms + theorems)
-│   ├── prover.h/.cpp     # Backward-chaining proof search
-│   └── zfc.h/.cpp        # ZFC axiom initialization
+│   └── proof.h           # Proof construction and steps
 ├── parser/
 │   ├── formula.l         # Flex lexer specification
 │   ├── formula.y         # Bison parser specification
 │   ├── formula_ast.h     # Parser AST nodes
 │   ├── parser.h          # Parser API
 │   └── parser_bison.cpp  # AST to formula conversion
+├── runtime/
+│   └── runtime.h/.cpp    # Runtime and ProofContext classes
 ├── util/
-│   └── registry.h        # Arena-style registry for formulas
-├── script.h/.cpp         # Script runner
-├── main.cpp              # Interactive demo
-└── run.cpp               # Script runner entry point
+│   ├── registry.h        # Arena-style registry for formulas
+│   ├── error.h           # Error handling utilities
+│   └── logging.h         # Logging utilities
 
 test/
-└── zfc_test.cpp          # Unit tests
+├── core_test.cpp         # Core logic tests
+└── runtime_test.cpp      # Runtime and proof execution tests
+
+zfc/
+├── axioms.fol            # ZFC axioms
+└── ordered_pair.fol      # Kuratowski ordered pair proofs
 ```
 
 ## Inference Rules
@@ -159,32 +187,25 @@ The prover includes all standard ZFC axioms:
 ## API Usage
 
 ```cpp
-#include "logic/theory.h"
-#include "logic/prover.h"
-#include "parser/parser.h"
+#include "runtime/runtime.h"
 
 using namespace logic;
 
-// Create a theory (includes formula database)
-Theory theory;
+// Create runtime and load axioms
+Runtime rt;
+rt.load(R"(
+    axiom all_P: forall x. P(x)
+    axiom all_P_impl_Q: forall x. (P(x) -> Q(x))
+    claim all_Q: forall x. Q(x)
+)");
 
-// Parse and add axioms
-auto axiom = parse_formula("A -> B", theory.db());
-theory.add_axiom(axiom, "my axiom");
+// Or load from file
+rt.load_file("zfc/axioms.fol");
 
-// Configure prover
-ProverConfig config;
-config.max_depth = 25;
-config.max_steps = 10000;
-
-ZFCProver prover(theory, config);
-
-// Prove a goal
-auto goal = parse_formula("A -> B", theory.db());
-auto result = prover.prove(goal);
-
-if (result.success) {
-    std::cout << "Proof found!\n";
+// Execute proofs from a file
+auto result = rt.load_file_with_proofs("zfc/ordered_pair.fol");
+if (result.ok()) {
+    rt.execute_all_proofs(result.value());
 }
 ```
 
