@@ -259,7 +259,7 @@ static FormulaResult execute_rule(
         return ctx.exists_intro(body);
     }
     if (rule == "exists_elim") {
-        if (args.size() != 1) return MAKE_ERROR << "exists_elim requires 1 argument";
+        if (args.size() < 1 || args.size() > 2) return MAKE_ERROR << "exists_elim requires 1-2 arguments";
         TRY_ASSIGN(f, get_step(args[0]));
         return ctx.exists_elim(f);
     }
@@ -274,6 +274,14 @@ static FormulaResult execute_rule(
         if (args.size() != 1) return MAKE_ERROR << "excluded_middle requires 1 argument";
         TRY_ASSIGN(f, get_step(args[0]));
         return ctx.excluded_middle(f);
+    }
+
+    // Equality substitution
+    if (rule == "eq_subst") {
+        if (args.size() != 2) return MAKE_ERROR << "eq_subst requires 2 arguments";
+        TRY_ASSIGN(eq, get_step(args[0]));
+        TRY_ASSIGN(target, get_step(args[1]));
+        return ctx.eq_subst(eq, target);
     }
 
     return MAKE_ERROR << "Unknown rule: " << rule;
@@ -341,6 +349,13 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                                       << result.error().to_string();
                 }
                 steps[step.result_name] = result.value();
+                // Store witness variable for exists_elim with named witness
+                if (step.rule_name == "exists_elim" && step.args.size() == 2) {
+                    auto witness = pctx.last_witness();
+                    if (witness.has_value()) {
+                        fixed_vars[step.args[1]] = witness.value();
+                    }
+                }
                 break;
             }
 
@@ -481,6 +496,11 @@ FormulaResult ProofContext::exists_elim(FormulaHandle const& f) {
     return stack_.exists_elim(f);
 }
 
+// Equality
+FormulaResult ProofContext::eq_subst(FormulaHandle const& eq, FormulaHandle const& target) {
+    return stack_.eq_subst(eq, target);
+}
+
 // Classical extensions
 FormulaResult ProofContext::double_neg_elim(FormulaHandle const& dn) {
     return stack_.double_neg_elim(dn);
@@ -498,6 +518,11 @@ FormulaResult ProofContext::peirce(FormulaHandle const& a, FormulaHandle const& 
 util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
     if (completed_) {
         return MAKE_ERROR << "Proof already completed";
+    }
+
+    // Check that the formula is actually derived (not just created via let)
+    if (!stack_.is_derived(derived)) {
+        return MAKE_ERROR << "qed: formula not derived: " << derived.get().to_string();
     }
 
     // Check that derived matches goal (by string comparison for now)

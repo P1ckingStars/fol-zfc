@@ -1,3 +1,5 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 # Parser library using pre-generated flex/bison files
 # To regenerate after editing formula.l or formula.y:
 #   flex --header-file=formula_lexer.h -o formula_lexer.cc formula.l

@@ -74,6 +74,7 @@ static int col = 1;
 "exists_elim"   { return EXISTS_ELIM; }
 "double_neg_elim" { return DOUBLE_NEG_ELIM; }
 "excluded_middle" { return EXCLUDED_MIDDLE; }
+"eq_subst"      { return EQ_SUBST; }
 "include"       { return INCLUDE; }
 
 \"[^"]*\"       {

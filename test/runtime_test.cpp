@@ -96,15 +96,15 @@ bool test_runtime_load() {
 
 bool test_runtime_load_file() {
     Runtime rt;
-    auto result = rt.load_file("zfc/ordered_pair.fol");
+    auto result = rt.load_file_recursive("zfc/ordered_pair.fol");
 
     if (!result.ok()) {
         std::cout << "[" << result.error() << "] ";
         return false;
     }
 
-    auto stmts = result.value();
-    std::cout << "[" << stmts.size() << " statements] ";
+    auto& parsed = result.value();
+    std::cout << "[" << parsed.statements.size() << " statements] ";
 
     // Check some axioms are loaded
     if (!rt.context().find_axiom("singleton_def").has_value()) {
@@ -521,6 +521,35 @@ bool test_proof_with_fix_and_forall_intro() {
     return true;
 }
 
+bool test_let_does_not_derive() {
+    // let should only create a formula handle, not derive it.
+    // A proof using only let + qed must fail.
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        claim fake: forall x. Q(x)
+
+        proof fake:
+            h = let forall x. Q(x)
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec_result = rt.execute_all_proofs(result.value());
+    if (exec_result.ok()) {
+        std::cout << "[SOUNDNESS BUG: let formula accepted by qed without derivation] ";
+        return false;
+    }
+
+    // The proof should fail because the let formula is not derived
+    std::cout << "[correctly rejected: " << exec_result.error() << "] ";
+    return true;
+}
+
 // ==================== Ordered Pair Proofs ====================
 
 // Helper to load ordered pair axioms
@@ -528,7 +557,7 @@ Runtime& load_ordered_pair_axioms() {
     static Runtime rt;
     static bool loaded = false;
     if (!loaded) {
-        auto result = rt.load_file("zfc/ordered_pair.fol");
+        auto result = rt.load_file_recursive("zfc/ordered_pair.fol");
         if (!result.ok()) {
             throw std::runtime_error("Failed to load ordered_pair.fol: " + result.error().to_string());
         }
@@ -560,11 +589,9 @@ Runtime& load_ordered_pair_axioms() {
 bool test_ordered_pair_axioms_loaded() {
     Runtime& rt = load_ordered_pair_axioms();
 
-    // Verify all axioms are present
+    // Verify all axioms are present (definitions + extensionality from axioms.fol)
     std::vector<std::string> required_axioms = {
-        "singleton_def", "doubleton_def", "pair_def",
-        "eq_refl", "eq_sym", "eq_trans",
-        "eq_elem_l", "eq_elem_r", "extensionality"
+        "singleton_def", "doubleton_def", "pair_def", "extensionality"
     };
 
     for (const auto& name : required_axioms) {
@@ -576,6 +603,7 @@ bool test_ordered_pair_axioms_loaded() {
 
     // Verify claims are registered
     std::vector<std::string> claims = {
+        "eq_refl", "eq_sym", "eq_trans", "eq_elem_l", "eq_elem_r",
         "pair_injective", "singleton_injective", "singleton_eq_doubleton",
         "doubleton_eq", "pair_elems", "singleton_in_pair", "doubleton_in_pair"
     };
@@ -587,15 +615,15 @@ bool test_ordered_pair_axioms_loaded() {
         }
     }
 
-    std::cout << "[9 axioms, 7 claims loaded] ";
+    std::cout << "[axioms and claims loaded] ";
     return true;
 }
 
 bool test_execute_ordered_pair_proofs() {
     Runtime rt;
 
-    // Load the ordered_pair.fol file with proofs
-    auto result = rt.load_file_with_proofs("zfc/ordered_pair.fol");
+    // Load the ordered_pair.fol file with proofs (recursive to handle includes)
+    auto result = rt.load_file_recursive("zfc/ordered_pair.fol");
     if (!result.ok()) {
         std::cout << "[load error: " << result.error() << "] ";
         return false;
@@ -614,7 +642,8 @@ bool test_execute_ordered_pair_proofs() {
 
     // Check that proofs registered theorems
     std::vector<std::string> expected_theorems = {
-        "pair_elems", "singleton_in_pair", "doubleton_in_pair"
+        "eq_refl", "eq_elem_l", "pair_elems", "singleton_in_pair", "singleton_injective", "singleton_eq_doubleton", "doubleton_eq", "doubleton_in_pair",
+        "pair_first_eq", "pair_second_neq", "pair_second_degenerate", "pair_injective"
     };
 
     for (const auto& name : expected_theorems) {
@@ -622,6 +651,29 @@ bool test_execute_ordered_pair_proofs() {
             std::cout << "[" << name << " not proven] ";
             return false;
         }
+    }
+
+    std::cout << "[all proofs verified] ";
+    return true;
+}
+
+bool test_fol_test_file() {
+    Runtime rt;
+
+    auto result = rt.load_file_recursive("zfc/test.fol");
+    if (!result.ok()) {
+        std::cout << "[load error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto& parsed = result.value();
+    std::cout << "[" << parsed.statements.size() << " statements, "
+              << parsed.proofs.size() << " proofs] ";
+
+    auto exec_result = rt.execute_all_proofs(parsed);
+    if (!exec_result.ok()) {
+        std::cout << "[execution error: " << exec_result.error() << "] ";
+        return false;
     }
 
     std::cout << "[all proofs verified] ";
@@ -654,11 +706,16 @@ int main() {
     run_test("Proof with forall_elim", test_proof_with_forall);
     run_test("Proof with and_intro", test_proof_with_and);
     run_test("Proof with fix and forall_intro", test_proof_with_fix_and_forall_intro);
+    run_test("Let does not derive (soundness)", test_let_does_not_derive);
 
     // Ordered pair proofs
     std::cout << "\n── Ordered Pair Proofs ──\n";
     run_test("Load ordered pair axioms and claims", test_ordered_pair_axioms_loaded);
     run_test("Execute ordered pair proofs", test_execute_ordered_pair_proofs);
+
+    // test.fol integration test
+    std::cout << "\n── test.fol ──\n";
+    run_test("Load and verify test.fol", test_fol_test_file);
 
     // Print summary
     print_summary();

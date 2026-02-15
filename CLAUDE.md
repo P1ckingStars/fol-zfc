@@ -82,6 +82,9 @@ zfc/
 - **Universal**: `forall_intro` (requires eigenvariable), `forall_elim` (instantiate)
 - **Existential**: `exists_intro`, `exists_elim` (requires eigenvariable)
 
+### Equality
+- **Substitution**: `eq_subst` (Leibniz substitution: from `eq(a,b)` and `φ(a)`, derive `φ(b)`)
+
 ## Parser (Flex/Bison)
 
 Pre-generated files in `src/parser/`. To regenerate after editing `.l` or `.y`:
@@ -232,9 +235,27 @@ forall_elim h, term     # ∀x.P(x), t ⊢ P(t)
 exists_intro h          # P(t) ⊢ ∃x.P(x)
 exists_elim h           # ∃x.P(x) ⊢ opens witness scope
 
+# Equality
+eq_subst h_eq, h_phi    # eq(a,b), φ(a) ⊢ φ(b) (replaces all a with b)
+
 # Classical
 double_neg_elim h       # ¬¬A ⊢ A
 excluded_middle h       # ⊢ A ∨ ¬A
+```
+
+### eq_subst Details
+
+`eq_subst` implements Leibniz substitution as a built-in rule. Given a derived `eq(a, b)` and a derived formula `φ(a)`, it produces `φ(b)` by replacing **all** occurrences of term `a` with term `b` in the target formula.
+
+- The first argument must be a derived formula of the form `eq(a, b)` (the predicate must be named `eq` with exactly 2 arguments)
+- The second argument must be a derived formula containing term `a`
+- For the reverse direction (replace `b` with `a`), use `eq_sym` first to get `eq(b, a)`, then `eq_subst`
+
+```fol
+# Example: from eq(x,y) and elem(x,s), derive elem(y,s)
+h_eq = ...          # eq(x, y) - derived
+h_elem = ...        # elem(x, s) - derived
+h_result = eq_subst h_eq, h_elem   # elem(y, s)
 ```
 
 ## Writing Tests

@@ -44,7 +44,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %token NOT_INTRO NOT_ELIM BOTTOM_ELIM
 %token IFF_INTRO IFF_ELIM_L IFF_ELIM_R
 %token FORALL_INTRO FORALL_ELIM EXISTS_INTRO EXISTS_ELIM
-%token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE
+%token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE EQ_SUBST
 
 %type <node> formula iff_formula implies_formula or_formula and_formula
 %type <node> unary_formula atom predicate term
@@ -305,11 +305,8 @@ rule_call
         $$ = ASTNode::make_rule_step("exists_intro", args);
         delete $2;
     }
-    | EXISTS_ELIM IDENTIFIER {
-        auto* args = new std::vector<ASTNode*>();
-        args->push_back(new ASTNode(ASTNode::Term, *$2));
-        $$ = ASTNode::make_rule_step("exists_elim", args);
-        delete $2;
+    | EXISTS_ELIM id_list {
+        $$ = ASTNode::make_rule_step("exists_elim", $2);
     }
     | DOUBLE_NEG_ELIM IDENTIFIER {
         auto* args = new std::vector<ASTNode*>();
@@ -322,6 +319,9 @@ rule_call
         args->push_back(new ASTNode(ASTNode::Term, *$2));
         $$ = ASTNode::make_rule_step("excluded_middle", args);
         delete $2;
+    }
+    | EQ_SUBST id_list {
+        $$ = ASTNode::make_rule_step("eq_subst", $2);
     }
     ;
 

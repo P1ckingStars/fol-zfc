@@ -45,6 +45,7 @@ protected:
     std::vector<Scope> scopes;
     std::unordered_set<FormulaHandle> derived_;
     FormulaBuilder formula_builder_;
+    std::optional<Term> last_witness_var_;
 
     // Helper to derive formula in current scope
     void derive_in_current_scope(FormulaHandle const& formula);
@@ -130,6 +131,12 @@ public:
     FormulaResult exists_intro(FormulaHandle const &body, std::optional<Term> witness = std::nullopt);
     // Opens Exists scope with fresh witness, returns φ(c) from ∃x.φ(x)
     FormulaResult exists_elim(FormulaHandle const &formula);
+    // Returns the witness variable from the last exists_elim call
+    std::optional<Term> last_witness_var() const { return last_witness_var_; }
+
+    // ========== Equality Substitution ==========
+    // From eq(a, b) and φ(a), derive φ(b) by replacing a with b
+    FormulaResult eq_subst(FormulaHandle const &eq_formula, FormulaHandle const &target);
 
     // Access formula builder for creating formulas
     FormulaBuilder& builder() { return formula_builder_; }

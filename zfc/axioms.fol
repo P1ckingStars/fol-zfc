@@ -2,9 +2,9 @@
 # Predicates: elem(x, y) means x is an element of y
 #             eq(x, y) means x equals y
 
-# 1. Extensionality
+# 1. Extensionality (definition of equality)
 # Two sets are equal iff they have the same elements
-axiom extensionality: forall x. forall y. ((forall z. (elem(z, x) <-> elem(z, y))) -> eq(x, y))
+axiom extensionality: forall x. forall y. (eq(x, y) <-> forall z. (elem(z, x) <-> elem(z, y)))
 
 # 2. Empty Set
 # There exists a set with no elements
@@ -37,15 +37,5 @@ axiom foundation: forall A. ((exists x. elem(x, A)) -> exists y. (elem(y, A) & f
 # Example instance for a unary predicate P:
 axiom separation_P: forall A. exists B. forall x. (elem(x, B) <-> (elem(x, A) & P(x)))
 
-# 9. Replacement Schema (instance)
-# If F is a functional relation on A, then F[A] is a set
-# Note: This is a schema - we express a specific instance
-# Example instance for binary predicate F representing a function:
-axiom replacement_F: forall A. ((forall x. (elem(x, A) -> exists y. F(x, y))) -> exists B. forall y. (elem(y, B) <-> exists x. (elem(x, A) & F(x, y))))
-
-# 10. Choice
-# Every set of non-empty sets has a choice function
-axiom choice: forall A. ((forall x. (elem(x, A) -> exists y. elem(y, x))) -> exists f. forall x. (elem(x, A) -> exists y. (elem(y, x) & C(f, x, y))))
-
-# Note: C(f, x, y) represents "f chooses y from x"
-# A more rigorous formulation would define functions as sets of ordered pairs
+# Note: Replacement and Choice axioms are omitted until functions
+# (sets of ordered pairs) are defined.

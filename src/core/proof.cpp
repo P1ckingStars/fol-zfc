@@ -591,11 +591,37 @@ FormulaResult ProofStack::exists_elim(FormulaHandle const &formula) {
     auto generalized_term = formula->as_quantified().get_var_term();
     scopes.push_back(FixVarScope(formula_builder_, Op::Exists));
     Term var = std::get<FixVarScope>(scopes.back()).var_term();
+    last_witness_var_ = var;
     auto f = formula_builder_.translate_term(formula->as_quantified().body, generalized_term, var);
 
     // derive in child scope
     derive_in_current_scope(f);
     return f;
+}
+
+// ========== Equality Substitution ==========
+
+FormulaResult ProofStack::eq_subst(FormulaHandle const &eq_formula, FormulaHandle const &target) {
+    if (!is_derived(eq_formula))
+        return MAKE_ERROR << "eq_subst: equality not derived: " << eq_formula.get();
+    if (!is_derived(target))
+        return MAKE_ERROR << "eq_subst: target not derived: " << target.get();
+
+    // Check eq_formula is eq(a, b)
+    const Formula& f = eq_formula.get();
+    if (!f.is_predicate())
+        return MAKE_ERROR << "eq_subst: expected predicate, got: " << f;
+    const PredicateInstance& pred = f.as_predicate();
+    if (pred.predicate().get().get_name() != "eq" || pred.args().size() != 2)
+        return MAKE_ERROR << "eq_subst: expected eq(a, b), got: " << f;
+
+    Term a = pred.args()[0];
+    Term b = pred.args()[1];
+
+    // Replace a with b in target
+    auto result = formula_builder_.translate_term(target, a, b);
+    derive_in_current_scope(result);
+    return result;
 }
 
 // ========== Classical Logic Extensions ==========

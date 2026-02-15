@@ -117,6 +117,10 @@ public:
     FormulaResult forall_elim(FormulaHandle const& formula, Term const& var);
     FormulaResult exists_intro(FormulaHandle const& body, std::optional<Term> witness = std::nullopt);
     FormulaResult exists_elim(FormulaHandle const& formula);
+    std::optional<Term> last_witness() const { return stack_.last_witness_var(); }
+
+    // ========== Equality ==========
+    FormulaResult eq_subst(FormulaHandle const& eq_formula, FormulaHandle const& target);
 
     // ========== Classical Extensions ==========
     FormulaResult double_neg_elim(FormulaHandle const& double_neg);

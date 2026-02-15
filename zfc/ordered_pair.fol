@@ -1,3 +1,5 @@
+include "axioms.fol"
+
 # Ordered Pair Encoding - Kuratowski Definition
 #
 # Definition: (a, b) = {{a}, {a, b}}
@@ -29,23 +31,19 @@ axiom pair_def: forall p. forall a. forall b. (pair(p, a, b) <->
         (forall w. (elem(w, z) <-> eq(w, a))) |
         (forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b))))))
 
-# Axiom: Equality is reflexive
-axiom eq_refl: forall x. eq(x, x)
+# ============================================================
+# Equality properties (derived from extensionality)
+# ============================================================
 
-# Axiom: Equality is symmetric
-axiom eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
+claim eq_refl: forall x. eq(x, x)
 
-# Axiom: Equality is transitive
-axiom eq_trans: forall x. forall y. forall z. ((eq(x, y) & eq(y, z)) -> eq(x, z))
+claim eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
 
-# Axiom: Equality substitution in elem (left)
-axiom eq_elem_l: forall x. forall y. forall s. ((eq(x, y) & elem(x, s)) -> elem(y, s))
+claim eq_trans: forall x. forall y. forall z. ((eq(x, y) & eq(y, z)) -> eq(x, z))
 
-# Axiom: Equality substitution in elem (right)
-axiom eq_elem_r: forall x. forall s. forall t. ((eq(s, t) & elem(x, s)) -> elem(x, t))
+claim eq_elem_l: forall x. forall y. forall s. ((eq(x, y) & elem(x, s)) -> elem(y, s))
 
-# Axiom: Extensionality for sets
-axiom extensionality: forall x. forall y. ((forall z. (elem(z, x) <-> elem(z, y))) -> eq(x, y))
+claim eq_elem_r: forall x. forall s. forall t. ((eq(s, t) & elem(x, s)) -> elem(x, t))
 
 # ============================================================
 # Main Theorem: Ordered pairs are unambiguous
@@ -88,9 +86,144 @@ claim singleton_in_pair: forall p. forall a. forall b. forall s.
 claim doubleton_in_pair: forall p. forall a. forall b. forall d.
     ((pair(p, a, b) & doubleton(d, a, b)) -> elem(d, p))
 
+# Lemma 7: First components of equal ordered pairs are equal
+claim pair_first_eq: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> eq(a, c))
+
+# Lemma 8: Second components match when first components differ
+claim pair_second_neq: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> (~eq(a, b) -> eq(b, d)))
+
+# Lemma 9: Second components match in degenerate case (a = b)
+claim pair_second_degenerate: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> (eq(a, b) -> eq(b, d)))
+
 # ============================================================
 # Proofs
 # ============================================================
+
+# Proof of eq_refl: forall z. (elem(z,x) <-> elem(z,x)) is a tautology,
+# so by extensionality, eq(x, x).
+proof eq_refl:
+    fix x
+    ext = use extensionality
+    ext1 = forall_elim ext, x
+    ext2 = forall_elim ext1, x
+    fix z
+    h1 = assume elem(z, x)
+    h2 = implies_intro h1
+    h3 = assume elem(z, x)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = iff_elim_r ext2, h6
+    h8 = forall_intro h7
+    qed h8
+
+# Proof of eq_sym: from eq(x,y), extract membership biconditional,
+# swap directions, re-apply extensionality to get eq(y,x).
+proof eq_sym:
+    fix x
+    fix y
+    h_eq = assume eq(x, y)
+    # extensionality for (x, y): eq(x,y) <-> forall z. (elem(z,x) <-> elem(z,y))
+    ext = use extensionality
+    ext1 = forall_elim ext, x
+    ext2 = forall_elim ext1, y
+    h_mem = iff_elim_l ext2, h_eq
+    # extensionality for (y, x): eq(y,x) <-> forall z. (elem(z,y) <-> elem(z,x))
+    ext3 = forall_elim ext, y
+    ext4 = forall_elim ext3, x
+    # Build forall z. (elem(z,y) <-> elem(z,x)) by swapping each biconditional
+    fix z
+    h_ziff = forall_elim h_mem, z
+    h_lr = assume elem(z, y)
+    h_lr2 = iff_elim_r h_ziff, h_lr
+    h_lr3 = implies_intro h_lr2
+    h_rl = assume elem(z, x)
+    h_rl2 = iff_elim_l h_ziff, h_rl
+    h_rl3 = implies_intro h_rl2
+    h_swap = iff_intro h_lr3, h_rl3
+    h_all = forall_intro h_swap
+    h_eq_yx = iff_elim_r ext4, h_all
+    h_impl = implies_intro h_eq_yx
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of eq_elem_r: from eq(s,t), extract elem(x,s) <-> elem(x,t), apply forward.
+proof eq_elem_r:
+    fix x
+    fix s
+    fix t
+    h = assume eq(s, t) & elem(x, s)
+    h_eq = and_elim_l h
+    h_elem = and_elim_r h
+    ext = use extensionality
+    ext1 = forall_elim ext, s
+    ext2 = forall_elim ext1, t
+    h_mem = iff_elim_l ext2, h_eq
+    h_xiff = forall_elim h_mem, x
+    h_xt = iff_elim_l h_xiff, h_elem
+    h_impl = implies_intro h_xt
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of eq_elem_l: from eq(x,y) and elem(x,s), derive elem(y,s) via eq_subst.
+proof eq_elem_l:
+    fix x
+    fix y
+    fix s
+    h = assume eq(x, y) & elem(x, s)
+    h_eq = and_elim_l h
+    h_elem = and_elim_r h
+    h_result = eq_subst h_eq, h_elem
+    h_impl = implies_intro h_result
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of eq_trans: chain membership biconditionals from eq(x,y) and eq(y,z).
+proof eq_trans:
+    fix x
+    fix y
+    fix z
+    h = assume eq(x, y) & eq(y, z)
+    h_xy = and_elim_l h
+    h_yz = and_elim_r h
+    # Extract membership biconditionals
+    ext = use extensionality
+    ext_x = forall_elim ext, x
+    ext_xy = forall_elim ext_x, y
+    h_mem_xy = iff_elim_l ext_xy, h_xy
+    ext_y = forall_elim ext, y
+    ext_yz = forall_elim ext_y, z
+    h_mem_yz = iff_elim_l ext_yz, h_yz
+    # Extensionality for (x, z)
+    ext_xz = forall_elim ext_x, z
+    # Chain: elem(w,x) <-> elem(w,y) and elem(w,y) <-> elem(w,z) => elem(w,x) <-> elem(w,z)
+    fix w
+    h_wxy = forall_elim h_mem_xy, w
+    h_wyz = forall_elim h_mem_yz, w
+    h_fwd1 = assume elem(w, x)
+    h_fwd2 = iff_elim_l h_wxy, h_fwd1
+    h_fwd3 = iff_elim_l h_wyz, h_fwd2
+    h_fwd = implies_intro h_fwd3
+    h_bwd1 = assume elem(w, z)
+    h_bwd2 = iff_elim_r h_wyz, h_bwd1
+    h_bwd3 = iff_elim_r h_wxy, h_bwd2
+    h_bwd = implies_intro h_bwd3
+    h_wiff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_wiff
+    h_eq_xz = iff_elim_r ext_xz, h_all
+    h_impl = implies_intro h_eq_xz
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
 
 # Proof of pair_elems: An element of an ordered pair satisfies the membership condition
 proof pair_elems:
@@ -145,6 +278,273 @@ proof singleton_in_pair:
     qed h1
 
 # Proof of doubleton_in_pair: The doubleton {a, b} is an element of (a, b)
+# Proof of singleton_injective: {x} = {y} implies x = y
+# From singleton(s,x), get elem(x,s) via eq_refl. Transfer to elem(x,t) via eq_elem_r.
+# From singleton(t,y), extract eq(x,y).
+proof singleton_injective:
+    fix x
+    fix y
+    fix s
+    fix t
+    h = assume singleton(s, x) & singleton(t, y) & eq(s, t)
+    h_st = and_elim_l h
+    h_eq_st = and_elim_r h
+    h_sing_s = and_elim_l h_st
+    h_sing_t = and_elim_r h_st
+    # Expand singleton(s, x): forall z. (elem(z, s) <-> eq(z, x))
+    sdef = use singleton_def
+    sdef1 = forall_elim sdef, s
+    sdef2 = forall_elim sdef1, x
+    h_s_mem = iff_elim_l sdef2, h_sing_s
+    # Expand singleton(t, y): forall z. (elem(z, t) <-> eq(z, y))
+    sdef3 = forall_elim sdef, t
+    sdef4 = forall_elim sdef3, y
+    h_t_mem = iff_elim_l sdef4, h_sing_t
+    # Get elem(x, s) from eq(x, x) and singleton membership
+    refl = use eq_refl
+    refl_x = forall_elim refl, x
+    h_xs_iff = forall_elim h_s_mem, x
+    h_x_in_s = iff_elim_r h_xs_iff, refl_x
+    # Transfer elem(x, s) to elem(x, t) using eq(s, t)
+    eq_er = use eq_elem_r
+    eq_er1 = forall_elim eq_er, x
+    eq_er2 = forall_elim eq_er1, s
+    eq_er3 = forall_elim eq_er2, t
+    h_conj = and_intro h_eq_st, h_x_in_s
+    h_x_in_t = implies_elim eq_er3, h_conj
+    # Extract eq(x, y) from elem(x, t) and singleton(t, y)
+    h_xt_iff = forall_elim h_t_mem, x
+    h_eq_xy = iff_elim_l h_xt_iff, h_x_in_t
+    # Close scopes
+    h_impl = implies_intro h_eq_xy
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of singleton_eq_doubleton: If {a} = {c, d}, then c = a and d = a.
+# Both c and d are in {c,d} = {a}, hence both equal a.
+proof singleton_eq_doubleton:
+    fix a
+    fix c
+    fix d
+    fix s
+    fix t
+    h = assume singleton(s, a) & doubleton(t, c, d) & eq(s, t)
+    h_sd = and_elim_l h
+    h_eq_st = and_elim_r h
+    h_sing = and_elim_l h_sd
+    h_doub = and_elim_r h_sd
+    # Expand singleton(s, a): forall z. (elem(z, s) <-> eq(z, a))
+    sdef = use singleton_def
+    sdef1 = forall_elim sdef, s
+    sdef2 = forall_elim sdef1, a
+    h_s_mem = iff_elim_l sdef2, h_sing
+    # Expand doubleton(t, c, d): forall z. (elem(z, t) <-> (eq(z, c) | eq(z, d)))
+    ddef = use doubleton_def
+    ddef1 = forall_elim ddef, t
+    ddef2 = forall_elim ddef1, c
+    ddef3 = forall_elim ddef2, d
+    h_t_mem = iff_elim_l ddef3, h_doub
+    # Get eq(t, s) for reverse membership transfer
+    sym = use eq_sym
+    sym1 = forall_elim sym, s
+    sym2 = forall_elim sym1, t
+    h_eq_ts = implies_elim sym2, h_eq_st
+    eq_er = use eq_elem_r
+    refl = use eq_refl
+    # --- Show eq(c, a) ---
+    refl_c = forall_elim refl, c
+    h_c_disj_r = let eq(c, d)
+    h_c_disj = or_intro_l refl_c, h_c_disj_r
+    h_ct_iff = forall_elim h_t_mem, c
+    h_c_in_t = iff_elim_r h_ct_iff, h_c_disj
+    eq_er_c1 = forall_elim eq_er, c
+    eq_er_c2 = forall_elim eq_er_c1, t
+    eq_er_c3 = forall_elim eq_er_c2, s
+    h_conj_c = and_intro h_eq_ts, h_c_in_t
+    h_c_in_s = implies_elim eq_er_c3, h_conj_c
+    h_cs_iff = forall_elim h_s_mem, c
+    h_eq_ca = iff_elim_l h_cs_iff, h_c_in_s
+    # --- Show eq(d, a) ---
+    refl_d = forall_elim refl, d
+    h_d_disj_l = let eq(d, c)
+    h_d_disj = or_intro_r h_d_disj_l, refl_d
+    h_dt_iff = forall_elim h_t_mem, d
+    h_d_in_t = iff_elim_r h_dt_iff, h_d_disj
+    eq_er_d1 = forall_elim eq_er, d
+    eq_er_d2 = forall_elim eq_er_d1, t
+    eq_er_d3 = forall_elim eq_er_d2, s
+    h_conj_d = and_intro h_eq_ts, h_d_in_t
+    h_d_in_s = implies_elim eq_er_d3, h_conj_d
+    h_ds_iff = forall_elim h_s_mem, d
+    h_eq_da = iff_elim_l h_ds_iff, h_d_in_s
+    # Combine and close scopes
+    h_result = and_intro h_eq_ca, h_eq_da
+    h_impl = implies_intro h_result
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of doubleton_eq: {a,b} = {c,d} implies (a=c & b=d) | (a=d & b=c)
+# Strategy: a,b are in {c,d} so eq(a,c)|eq(a,d) and eq(b,c)|eq(b,d).
+# Also d,c are in {a,b}. Nested case analysis on these disjunctions.
+proof doubleton_eq:
+    fix a
+    fix b
+    fix c
+    fix d
+    fix s
+    fix t
+    h = assume doubleton(s, a, b) & doubleton(t, c, d) & eq(s, t)
+    h_sd = and_elim_l h
+    h_eq_st = and_elim_r h
+    h_doub_s = and_elim_l h_sd
+    h_doub_t = and_elim_r h_sd
+    # Expand doubleton definitions
+    ddef = use doubleton_def
+    ddef_s1 = forall_elim ddef, s
+    ddef_s2 = forall_elim ddef_s1, a
+    ddef_s3 = forall_elim ddef_s2, b
+    h_s_mem = iff_elim_l ddef_s3, h_doub_s
+    ddef_t1 = forall_elim ddef, t
+    ddef_t2 = forall_elim ddef_t1, c
+    ddef_t3 = forall_elim ddef_t2, d
+    h_t_mem = iff_elim_l ddef_t3, h_doub_t
+    # Utilities
+    refl = use eq_refl
+    sym = use eq_sym
+    eq_er = use eq_elem_r
+    # eq(t, s) for reverse transfer
+    sym_s1 = forall_elim sym, s
+    sym_s2 = forall_elim sym_s1, t
+    h_eq_ts = implies_elim sym_s2, h_eq_st
+    # --- Derive eq(a, c) | eq(a, d) ---
+    refl_a = forall_elim refl, a
+    h_ab_let = let eq(a, b)
+    h_a_or = or_intro_l refl_a, h_ab_let
+    h_as_iff = forall_elim h_s_mem, a
+    h_a_in_s = iff_elim_r h_as_iff, h_a_or
+    eq_er_a1 = forall_elim eq_er, a
+    eq_er_a2 = forall_elim eq_er_a1, s
+    eq_er_a3 = forall_elim eq_er_a2, t
+    h_a_st = and_intro h_eq_st, h_a_in_s
+    h_a_in_t = implies_elim eq_er_a3, h_a_st
+    h_at_iff = forall_elim h_t_mem, a
+    h_ac_or_ad = iff_elim_l h_at_iff, h_a_in_t
+    # --- Derive eq(b, c) | eq(b, d) ---
+    refl_b = forall_elim refl, b
+    h_ba_let = let eq(b, a)
+    h_b_or = or_intro_r h_ba_let, refl_b
+    h_bs_iff = forall_elim h_s_mem, b
+    h_b_in_s = iff_elim_r h_bs_iff, h_b_or
+    eq_er_b1 = forall_elim eq_er, b
+    eq_er_b2 = forall_elim eq_er_b1, s
+    eq_er_b3 = forall_elim eq_er_b2, t
+    h_b_st = and_intro h_eq_st, h_b_in_s
+    h_b_in_t = implies_elim eq_er_b3, h_b_st
+    h_bt_iff = forall_elim h_t_mem, b
+    h_bc_or_bd = iff_elim_l h_bt_iff, h_b_in_t
+    # --- Derive eq(d, a) | eq(d, b) (for sub-cases) ---
+    refl_d = forall_elim refl, d
+    h_dc_let = let eq(d, c)
+    h_d_or = or_intro_r h_dc_let, refl_d
+    h_dt_iff = forall_elim h_t_mem, d
+    h_d_in_t = iff_elim_r h_dt_iff, h_d_or
+    eq_er_d1 = forall_elim eq_er, d
+    eq_er_d2 = forall_elim eq_er_d1, t
+    eq_er_d3 = forall_elim eq_er_d2, s
+    h_d_ts = and_intro h_eq_ts, h_d_in_t
+    h_d_in_s = implies_elim eq_er_d3, h_d_ts
+    h_ds_iff = forall_elim h_s_mem, d
+    h_da_or_db = iff_elim_l h_ds_iff, h_d_in_s
+    # --- Derive eq(c, a) | eq(c, b) (for sub-cases) ---
+    refl_c = forall_elim refl, c
+    h_cd_let = let eq(c, d)
+    h_c_or = or_intro_l refl_c, h_cd_let
+    h_ct_iff = forall_elim h_t_mem, c
+    h_c_in_t = iff_elim_r h_ct_iff, h_c_or
+    eq_er_c1 = forall_elim eq_er, c
+    eq_er_c2 = forall_elim eq_er_c1, t
+    eq_er_c3 = forall_elim eq_er_c2, s
+    h_c_ts = and_intro h_eq_ts, h_c_in_t
+    h_c_in_s = implies_elim eq_er_c3, h_c_ts
+    h_cs_iff = forall_elim h_s_mem, c
+    h_ca_or_cb = iff_elim_l h_cs_iff, h_c_in_s
+    # Goal formula handles for or_intro
+    g_left = let eq(a, c) & eq(b, d)
+    g_right = let eq(a, d) & eq(b, c)
+    # =============== CASE ANALYSIS ===============
+    # === Case eq(a, c) ===
+    case_ac = assume eq(a, c)
+        # -- Sub-case eq(b, c): need deeper case split on eq(d,a)|eq(d,b) --
+        case_bc = assume eq(b, c)
+            case_da = assume eq(d, a)
+                sym_da1 = forall_elim sym, d
+                sym_da2 = forall_elim sym_da1, a
+                h_ad = implies_elim sym_da2, case_da
+                h_r1 = and_intro h_ad, case_bc
+                g1 = or_intro_r g_left, h_r1
+            impl_da = implies_intro g1
+            case_db = assume eq(d, b)
+                sym_db1 = forall_elim sym, d
+                sym_db2 = forall_elim sym_db1, b
+                h_bd = implies_elim sym_db2, case_db
+                h_l1 = and_intro case_ac, h_bd
+                g2 = or_intro_l h_l1, g_right
+            impl_db = implies_intro g2
+            g3 = or_elim h_da_or_db, impl_da, impl_db
+        impl_bc = implies_intro g3
+        # -- Sub-case eq(b, d): direct --
+        case_bd = assume eq(b, d)
+            h_l2 = and_intro case_ac, case_bd
+            g4 = or_intro_l h_l2, g_right
+        impl_bd = implies_intro g4
+        g5 = or_elim h_bc_or_bd, impl_bc, impl_bd
+    impl_ac = implies_intro g5
+    # === Case eq(a, d) ===
+    case_ad = assume eq(a, d)
+        # -- Sub-case eq(b, c): direct --
+        case_bc2 = assume eq(b, c)
+            h_r2 = and_intro case_ad, case_bc2
+            g6 = or_intro_r g_left, h_r2
+        impl_bc2 = implies_intro g6
+        # -- Sub-case eq(b, d): need deeper case split on eq(c,a)|eq(c,b) --
+        case_bd2 = assume eq(b, d)
+            case_ca = assume eq(c, a)
+                sym_ca1 = forall_elim sym, c
+                sym_ca2 = forall_elim sym_ca1, a
+                h_ac2 = implies_elim sym_ca2, case_ca
+                h_l3 = and_intro h_ac2, case_bd2
+                g7 = or_intro_l h_l3, g_right
+            impl_ca = implies_intro g7
+            case_cb = assume eq(c, b)
+                sym_cb1 = forall_elim sym, c
+                sym_cb2 = forall_elim sym_cb1, b
+                h_bc3 = implies_elim sym_cb2, case_cb
+                h_r3 = and_intro case_ad, h_bc3
+                g8 = or_intro_r g_left, h_r3
+            impl_cb = implies_intro g8
+            g9 = or_elim h_ca_or_cb, impl_ca, impl_cb
+        impl_bd2 = implies_intro g9
+        g10 = or_elim h_bc_or_bd, impl_bc2, impl_bd2
+    impl_ad = implies_intro g10
+    # Final combination
+    result = or_elim h_ac_or_ad, impl_ac, impl_ad
+    # Close scopes
+    h_impl = implies_intro result
+    h6 = forall_intro h_impl
+    h5 = forall_intro h6
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
 proof doubleton_in_pair:
     fix p
     fix a
@@ -173,3 +573,461 @@ proof doubleton_in_pair:
     h2 = forall_intro h3
     h1 = forall_intro h2
     qed h1
+
+# Proof of pair_first_eq: (a,b) = (c,d) implies a = c
+# Strategy: construct {a} from pairing(a,a), show singleton(sa,a),
+# transfer sa to q via eq(p,q), case split on pair_elems.
+proof pair_first_eq:
+    fix a
+    fix b
+    fix c
+    fix d
+    fix p
+    fix q
+    h = assume pair(p, a, b) & pair(q, c, d) & eq(p, q)
+    h_pq = and_elim_l h
+    h_eq_pq = and_elim_r h
+    h_pair_p = and_elim_l h_pq
+    h_pair_q = and_elim_r h_pq
+    # Construct {a} from pairing(a, a)
+    pair_ax = use pairing
+    pa1 = forall_elim pair_ax, a
+    pa2 = forall_elim pa1, a
+    h_mem = exists_elim pa2, sa
+    # h_mem: forall x. (elem(x, sa) <-> (eq(x, a) | eq(x, a)))
+    # Convert to singleton(sa, a) via OR-idempotency
+    sdef = use singleton_def
+    sd1 = forall_elim sdef, sa
+    sd2 = forall_elim sd1, a
+    fix z
+    h_z = forall_elim h_mem, z
+    # Forward: elem(z, sa) -> eq(z, a)
+    hf1 = assume elem(z, sa)
+    hf2 = iff_elim_l h_z, hf1
+    hf3 = assume eq(z, a)
+    hf4 = implies_intro hf3
+    hf5 = or_elim hf2, hf4, hf4
+    hfwd = implies_intro hf5
+    # Backward: eq(z, a) -> elem(z, sa)
+    hb1 = assume eq(z, a)
+    hb2 = let eq(z, a)
+    hb3 = or_intro_l hb1, hb2
+    hb4 = iff_elim_r h_z, hb3
+    hbwd = implies_intro hb4
+    h_iff = iff_intro hfwd, hbwd
+    h_all = forall_intro h_iff
+    h_sing = iff_elim_r sd2, h_all
+    # elem(sa, p) via singleton_in_pair
+    sip = use singleton_in_pair
+    sip1 = forall_elim sip, p
+    sip2 = forall_elim sip1, a
+    sip3 = forall_elim sip2, b
+    sip4 = forall_elim sip3, sa
+    h_sp = and_intro h_pair_p, h_sing
+    h_sa_in_p = implies_elim sip4, h_sp
+    # Transfer to elem(sa, q) via eq(p, q)
+    eer = use eq_elem_r
+    eer1 = forall_elim eer, sa
+    eer2 = forall_elim eer1, p
+    eer3 = forall_elim eer2, q
+    h_er = and_intro h_eq_pq, h_sa_in_p
+    h_sa_in_q = implies_elim eer3, h_er
+    # pair_elems on q: D1_c(sa) | D2_cd(sa)
+    pe = use pair_elems
+    pe1 = forall_elim pe, q
+    pe2 = forall_elim pe1, c
+    pe3 = forall_elim pe2, d
+    pe4 = forall_elim pe3, sa
+    h_pe = and_intro h_pair_q, h_sa_in_q
+    h_disj2 = implies_elim pe4, h_pe
+    # Utilities for both cases
+    refl = use eq_refl
+    refl_sa = forall_elim refl, sa
+    # Case D1: singleton(sa, c) -> singleton_injective -> eq(a, c)
+    case_d1 = assume forall w. (elem(w, sa) <-> eq(w, c))
+        sd3 = forall_elim sdef, sa
+        sd4 = forall_elim sd3, c
+        h_sc = iff_elim_r sd4, case_d1
+        si = use singleton_injective
+        si1 = forall_elim si, a
+        si2 = forall_elim si1, c
+        si3 = forall_elim si2, sa
+        si4 = forall_elim si3, sa
+        h_si = and_intro h_sing, h_sc
+        h_si2 = and_intro h_si, refl_sa
+        h_ac1 = implies_elim si4, h_si2
+    impl_d1 = implies_intro h_ac1
+    # Case D2: doubleton(sa, c, d) -> singleton_eq_doubleton -> eq(c, a) -> eq(a, c)
+    case_d2 = assume forall w. (elem(w, sa) <-> (eq(w, c) | eq(w, d)))
+        ddef2 = use doubleton_def
+        dd1 = forall_elim ddef2, sa
+        dd2 = forall_elim dd1, c
+        dd3 = forall_elim dd2, d
+        h_doub2 = iff_elim_r dd3, case_d2
+        sed = use singleton_eq_doubleton
+        sed1 = forall_elim sed, a
+        sed2 = forall_elim sed1, c
+        sed3 = forall_elim sed2, d
+        sed4 = forall_elim sed3, sa
+        sed5 = forall_elim sed4, sa
+        h_sd = and_intro h_sing, h_doub2
+        h_sd2 = and_intro h_sd, refl_sa
+        h_ca_da = implies_elim sed5, h_sd2
+        h_ca = and_elim_l h_ca_da
+        sym = use eq_sym
+        sym1 = forall_elim sym, c
+        sym2 = forall_elim sym1, a
+        h_ac2 = implies_elim sym2, h_ca
+    impl_d2 = implies_intro h_ac2
+    h_ac = or_elim h_disj2, impl_d1, impl_d2
+    # Close exists scope (eq(a,c) doesn't contain sa)
+    h_final = exists_intro h_ac
+    h_impl2 = implies_intro h_final
+    r6 = forall_intro h_impl2
+    r5 = forall_intro r6
+    r4 = forall_intro r5
+    r3 = forall_intro r4
+    r2 = forall_intro r3
+    r1 = forall_intro r2
+    qed r1
+
+# Proof of pair_second_neq: (a,b)=(c,d) & ~eq(a,b) implies eq(b,d)
+# Strategy: construct {a,b} from pairing, transfer to q, case split.
+# D1 (singleton) case: contradiction with ~eq(a,b).
+# D2 (doubleton) case: doubleton_eq gives eq(b,d) or contradiction.
+proof pair_second_neq:
+    fix a
+    fix b
+    fix c
+    fix d
+    fix p
+    fix q
+    h = assume pair(p, a, b) & pair(q, c, d) & eq(p, q)
+    h_pq = and_elim_l h
+    h_eq_pq = and_elim_r h
+    h_pair_p = and_elim_l h_pq
+    h_pair_q = and_elim_r h_pq
+    # Get eq(a, c) and eq(c, a) from pair_first_eq
+    pfe = use pair_first_eq
+    pfe1 = forall_elim pfe, a
+    pfe2 = forall_elim pfe1, b
+    pfe3 = forall_elim pfe2, c
+    pfe4 = forall_elim pfe3, d
+    pfe5 = forall_elim pfe4, p
+    pfe6 = forall_elim pfe5, q
+    h_ac = implies_elim pfe6, h
+    sym = use eq_sym
+    sym_ac1 = forall_elim sym, a
+    sym_ac2 = forall_elim sym_ac1, c
+    h_ca = implies_elim sym_ac2, h_ac
+    h_neq = assume ~eq(a, b)
+    # Construct {a, b} from pairing(a, b)
+    pair_ax = use pairing
+    pab1 = forall_elim pair_ax, a
+    pab2 = forall_elim pab1, b
+    h_mem = exists_elim pab2, sab
+    # doubleton(sab, a, b) directly from membership condition
+    ddef = use doubleton_def
+    dab1 = forall_elim ddef, sab
+    dab2 = forall_elim dab1, a
+    dab3 = forall_elim dab2, b
+    h_doub_ab = iff_elim_r dab3, h_mem
+    # elem(sab, p) via doubleton_in_pair
+    dip = use doubleton_in_pair
+    dip1 = forall_elim dip, p
+    dip2 = forall_elim dip1, a
+    dip3 = forall_elim dip2, b
+    dip4 = forall_elim dip3, sab
+    h_dp = and_intro h_pair_p, h_doub_ab
+    h_sab_in_p = implies_elim dip4, h_dp
+    # Transfer to elem(sab, q)
+    eer = use eq_elem_r
+    eer1 = forall_elim eer, sab
+    eer2 = forall_elim eer1, p
+    eer3 = forall_elim eer2, q
+    h_er = and_intro h_eq_pq, h_sab_in_p
+    h_sab_in_q = implies_elim eer3, h_er
+    # pair_elems on q: D1_c(sab) | D2_cd(sab)
+    pe = use pair_elems
+    pe1 = forall_elim pe, q
+    pe2 = forall_elim pe1, c
+    pe3 = forall_elim pe2, d
+    pe4 = forall_elim pe3, sab
+    h_pe = and_intro h_pair_q, h_sab_in_q
+    h_disj = implies_elim pe4, h_pe
+    # Utilities for both cases
+    refl = use eq_refl
+    refl_sab = forall_elim refl, sab
+    eq_trans_thm = use eq_trans
+    # Case D1: singleton(sab, c) with doubleton(sab, a, b)
+    # singleton_eq_doubleton gives eq(a,c) & eq(b,c)
+    # eq_trans(eq(b,c), eq(c,a)) = eq(b,a) -> eq_sym -> eq(a,b) -> contradiction
+    case_d1 = assume forall w. (elem(w, sab) <-> eq(w, c))
+        sdef = use singleton_def
+        sdc1 = forall_elim sdef, sab
+        sdc2 = forall_elim sdc1, c
+        h_sing_c = iff_elim_r sdc2, case_d1
+        sed = use singleton_eq_doubleton
+        sed1 = forall_elim sed, c
+        sed2 = forall_elim sed1, a
+        sed3 = forall_elim sed2, b
+        sed4 = forall_elim sed3, sab
+        sed5 = forall_elim sed4, sab
+        h_sed1 = and_intro h_sing_c, h_doub_ab
+        h_sed2 = and_intro h_sed1, refl_sab
+        h_ac_bc = implies_elim sed5, h_sed2
+        h_bc = and_elim_r h_ac_bc
+        et1 = forall_elim eq_trans_thm, b
+        et2 = forall_elim et1, c
+        et3 = forall_elim et2, a
+        h_bc_ca = and_intro h_bc, h_ca
+        h_ba = implies_elim et3, h_bc_ca
+        sym_ba1 = forall_elim sym, b
+        sym_ba2 = forall_elim sym_ba1, a
+        h_ab = implies_elim sym_ba2, h_ba
+        h_bot = not_elim h_neq, h_ab
+        h_bd_let = let eq(b, d)
+        h_bd_d1 = bottom_elim h_bot, h_bd_let
+    impl_d1 = implies_intro h_bd_d1
+    # Case D2: doubleton(sab, c, d) -> doubleton_eq -> case split
+    case_d2 = assume forall w. (elem(w, sab) <-> (eq(w, c) | eq(w, d)))
+        dcd1 = forall_elim ddef, sab
+        dcd2 = forall_elim dcd1, c
+        dcd3 = forall_elim dcd2, d
+        h_doub_cd = iff_elim_r dcd3, case_d2
+        deq = use doubleton_eq
+        deq1 = forall_elim deq, a
+        deq2 = forall_elim deq1, b
+        deq3 = forall_elim deq2, c
+        deq4 = forall_elim deq3, d
+        deq5 = forall_elim deq4, sab
+        deq6 = forall_elim deq5, sab
+        h_deq1 = and_intro h_doub_ab, h_doub_cd
+        h_deq2 = and_intro h_deq1, refl_sab
+        h_deq_or = implies_elim deq6, h_deq2
+        # Sub-case: eq(a,c) & eq(b,d) -> take eq(b,d)
+        sub1 = assume eq(a, c) & eq(b, d)
+            h_bd_s1 = and_elim_r sub1
+        impl_s1 = implies_intro h_bd_s1
+        # Sub-case: eq(a,d) & eq(b,c) -> contradiction with ~eq(a,b)
+        sub2 = assume eq(a, d) & eq(b, c)
+            h_bc2 = and_elim_r sub2
+            et_s1 = forall_elim eq_trans_thm, b
+            et_s2 = forall_elim et_s1, c
+            et_s3 = forall_elim et_s2, a
+            h_bc_ca2 = and_intro h_bc2, h_ca
+            h_ba2 = implies_elim et_s3, h_bc_ca2
+            sym_ba3 = forall_elim sym, b
+            sym_ba4 = forall_elim sym_ba3, a
+            h_ab2 = implies_elim sym_ba4, h_ba2
+            h_bot2 = not_elim h_neq, h_ab2
+            h_bd_let2 = let eq(b, d)
+            h_bd_s2 = bottom_elim h_bot2, h_bd_let2
+        impl_s2 = implies_intro h_bd_s2
+        h_bd_d2 = or_elim h_deq_or, impl_s1, impl_s2
+    impl_d2 = implies_intro h_bd_d2
+    h_bd = or_elim h_disj, impl_d1, impl_d2
+    # Close exists scope
+    h_bd_final = exists_intro h_bd
+    h_impl_neq = implies_intro h_bd_final
+    h_impl_main = implies_intro h_impl_neq
+    s6 = forall_intro h_impl_main
+    s5 = forall_intro s6
+    s4 = forall_intro s5
+    s3 = forall_intro s4
+    s2 = forall_intro s3
+    s1 = forall_intro s2
+    qed s1
+
+# Proof of pair_second_degenerate: (a,b)=(c,d) & eq(a,b) implies eq(b,d)
+# Strategy: construct {c,d} from pairing, transfer from q to p, case split.
+# D1 (singleton) case: singleton_eq_doubleton + eq(a,b) -> eq(b,d).
+# D2 (doubleton) case: doubleton_eq -> eq(b,d) or eq(b,d) via eq(a,b).
+proof pair_second_degenerate:
+    fix a
+    fix b
+    fix c
+    fix d
+    fix p
+    fix q
+    h = assume pair(p, a, b) & pair(q, c, d) & eq(p, q)
+    h_pq = and_elim_l h
+    h_eq_pq = and_elim_r h
+    h_pair_p = and_elim_l h_pq
+    h_pair_q = and_elim_r h_pq
+    h_eq_ab = assume eq(a, b)
+    # Get eq(q, p) for reverse transfer
+    sym = use eq_sym
+    sym_pq1 = forall_elim sym, p
+    sym_pq2 = forall_elim sym_pq1, q
+    h_eq_qp = implies_elim sym_pq2, h_eq_pq
+    eq_trans_thm = use eq_trans
+    # Construct {c, d} from pairing(c, d)
+    pair_ax = use pairing
+    pcd1 = forall_elim pair_ax, c
+    pcd2 = forall_elim pcd1, d
+    h_mem = exists_elim pcd2, scd
+    # doubleton(scd, c, d)
+    ddef = use doubleton_def
+    dcd1 = forall_elim ddef, scd
+    dcd2 = forall_elim dcd1, c
+    dcd3 = forall_elim dcd2, d
+    h_doub_cd = iff_elim_r dcd3, h_mem
+    # elem(scd, q) via doubleton_in_pair
+    dip = use doubleton_in_pair
+    dip1 = forall_elim dip, q
+    dip2 = forall_elim dip1, c
+    dip3 = forall_elim dip2, d
+    dip4 = forall_elim dip3, scd
+    h_dq = and_intro h_pair_q, h_doub_cd
+    h_scd_in_q = implies_elim dip4, h_dq
+    # Transfer to elem(scd, p) via eq(q, p)
+    eer = use eq_elem_r
+    eer1 = forall_elim eer, scd
+    eer2 = forall_elim eer1, q
+    eer3 = forall_elim eer2, p
+    h_er = and_intro h_eq_qp, h_scd_in_q
+    h_scd_in_p = implies_elim eer3, h_er
+    # pair_elems on p: D1_a(scd) | D2_ab(scd)
+    pe = use pair_elems
+    pe1 = forall_elim pe, p
+    pe2 = forall_elim pe1, a
+    pe3 = forall_elim pe2, b
+    pe4 = forall_elim pe3, scd
+    h_pe = and_intro h_pair_p, h_scd_in_p
+    h_disj = implies_elim pe4, h_pe
+    # Utilities
+    refl = use eq_refl
+    refl_scd = forall_elim refl, scd
+    # Case D1: singleton(scd, a) with doubleton(scd, c, d)
+    # singleton_eq_doubleton -> eq(c,a) & eq(d,a)
+    # eq_trans(eq(d,a), eq(a,b)) -> eq(d,b) -> eq_sym -> eq(b,d)
+    case_d1 = assume forall w. (elem(w, scd) <-> eq(w, a))
+        sdef = use singleton_def
+        sda1 = forall_elim sdef, scd
+        sda2 = forall_elim sda1, a
+        h_sing_a = iff_elim_r sda2, case_d1
+        sed = use singleton_eq_doubleton
+        sed1 = forall_elim sed, a
+        sed2 = forall_elim sed1, c
+        sed3 = forall_elim sed2, d
+        sed4 = forall_elim sed3, scd
+        sed5 = forall_elim sed4, scd
+        h_sed1 = and_intro h_sing_a, h_doub_cd
+        h_sed2 = and_intro h_sed1, refl_scd
+        h_ca_da = implies_elim sed5, h_sed2
+        h_da = and_elim_r h_ca_da
+        et1 = forall_elim eq_trans_thm, d
+        et2 = forall_elim et1, a
+        et3 = forall_elim et2, b
+        h_da_ab = and_intro h_da, h_eq_ab
+        h_db = implies_elim et3, h_da_ab
+        sym_db1 = forall_elim sym, d
+        sym_db2 = forall_elim sym_db1, b
+        h_bd_d1 = implies_elim sym_db2, h_db
+    impl_d1 = implies_intro h_bd_d1
+    # Case D2: doubleton(scd, a, b) with doubleton(scd, c, d)
+    # doubleton_eq -> (eq(a,c)&eq(b,d)) | (eq(a,d)&eq(b,c))
+    case_d2 = assume forall w. (elem(w, scd) <-> (eq(w, a) | eq(w, b)))
+        dab1 = forall_elim ddef, scd
+        dab2 = forall_elim dab1, a
+        dab3 = forall_elim dab2, b
+        h_doub_ab = iff_elim_r dab3, case_d2
+        deq = use doubleton_eq
+        deq1 = forall_elim deq, a
+        deq2 = forall_elim deq1, b
+        deq3 = forall_elim deq2, c
+        deq4 = forall_elim deq3, d
+        deq5 = forall_elim deq4, scd
+        deq6 = forall_elim deq5, scd
+        h_deq1 = and_intro h_doub_ab, h_doub_cd
+        h_deq2 = and_intro h_deq1, refl_scd
+        h_deq_or = implies_elim deq6, h_deq2
+        # Sub-case: eq(a,c) & eq(b,d) -> take eq(b,d)
+        sub1 = assume eq(a, c) & eq(b, d)
+            h_bd_s1 = and_elim_r sub1
+        impl_s1 = implies_intro h_bd_s1
+        # Sub-case: eq(a,d) & eq(b,c)
+        # eq_sym(eq(a,b)) = eq(b,a), eq_trans(eq(b,a), eq(a,d)) = eq(b,d)
+        sub2 = assume eq(a, d) & eq(b, c)
+            h_ad = and_elim_l sub2
+            sym_ab1 = forall_elim sym, a
+            sym_ab2 = forall_elim sym_ab1, b
+            h_ba = implies_elim sym_ab2, h_eq_ab
+            et_s1 = forall_elim eq_trans_thm, b
+            et_s2 = forall_elim et_s1, a
+            et_s3 = forall_elim et_s2, d
+            h_ba_ad = and_intro h_ba, h_ad
+            h_bd_s2 = implies_elim et_s3, h_ba_ad
+        impl_s2 = implies_intro h_bd_s2
+        h_bd_d2 = or_elim h_deq_or, impl_s1, impl_s2
+    impl_d2 = implies_intro h_bd_d2
+    h_bd = or_elim h_disj, impl_d1, impl_d2
+    # Close exists scope
+    h_bd_final = exists_intro h_bd
+    h_impl_eq = implies_intro h_bd_final
+    h_impl_main = implies_intro h_impl_eq
+    t6 = forall_intro h_impl_main
+    t5 = forall_intro t6
+    t4 = forall_intro t5
+    t3 = forall_intro t4
+    t2 = forall_intro t3
+    t1 = forall_intro t2
+    qed t1
+
+# Proof of pair_injective: (a,b)=(c,d) implies a=c & b=d
+# Combines pair_first_eq (for a=c) with excluded_middle + pair_second_neq/degenerate (for b=d)
+proof pair_injective:
+    fix a
+    fix b
+    fix c
+    fix d
+    fix p
+    fix q
+    h = assume pair(p, a, b) & pair(q, c, d) & eq(p, q)
+    # Derive eq(a, c) via pair_first_eq
+    pfe = use pair_first_eq
+    pfe1 = forall_elim pfe, a
+    pfe2 = forall_elim pfe1, b
+    pfe3 = forall_elim pfe2, c
+    pfe4 = forall_elim pfe3, d
+    pfe5 = forall_elim pfe4, p
+    pfe6 = forall_elim pfe5, q
+    h_ac = implies_elim pfe6, h
+    # Derive eq(b, d) via excluded_middle on eq(a, b)
+    h_ab_let = let eq(a, b)
+    h_em = excluded_middle h_ab_let
+    # Case eq(a, b): use pair_second_degenerate
+    case_eq = assume eq(a, b)
+        psd = use pair_second_degenerate
+        psd1 = forall_elim psd, a
+        psd2 = forall_elim psd1, b
+        psd3 = forall_elim psd2, c
+        psd4 = forall_elim psd3, d
+        psd5 = forall_elim psd4, p
+        psd6 = forall_elim psd5, q
+        h_impl_deg = implies_elim psd6, h
+        h_bd_eq = implies_elim h_impl_deg, case_eq
+    impl_eq = implies_intro h_bd_eq
+    # Case ~eq(a, b): use pair_second_neq
+    case_neq = assume ~eq(a, b)
+        psn = use pair_second_neq
+        psn1 = forall_elim psn, a
+        psn2 = forall_elim psn1, b
+        psn3 = forall_elim psn2, c
+        psn4 = forall_elim psn3, d
+        psn5 = forall_elim psn4, p
+        psn6 = forall_elim psn5, q
+        h_impl_neq = implies_elim psn6, h
+        h_bd_neq = implies_elim h_impl_neq, case_neq
+    impl_neq = implies_intro h_bd_neq
+    h_bd = or_elim h_em, impl_eq, impl_neq
+    h_result = and_intro h_ac, h_bd
+    h_impl = implies_intro h_result
+    u6 = forall_intro h_impl
+    u5 = forall_intro u6
+    u4 = forall_intro u5
+    u3 = forall_intro u4
+    u2 = forall_intro u3
+    u1 = forall_intro u2
+    qed u1
