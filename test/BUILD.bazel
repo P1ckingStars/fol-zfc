@@ -18,7 +18,9 @@ cc_test(
     srcs = ["runtime_test.cpp"],
     data = [
         "//zfc:axioms.fol",
+        "//zfc:functions.fol",
         "//zfc:ordered_pair.fol",
+        "//zfc:replacement_choice.fol",
         "//zfc:test.fol",
     ],
     deps = [

@@ -299,11 +299,8 @@ rule_call
     | FORALL_ELIM id_list {
         $$ = ASTNode::make_rule_step("forall_elim", $2);
     }
-    | EXISTS_INTRO IDENTIFIER {
-        auto* args = new std::vector<ASTNode*>();
-        args->push_back(new ASTNode(ASTNode::Term, *$2));
-        $$ = ASTNode::make_rule_step("exists_intro", args);
-        delete $2;
+    | EXISTS_INTRO id_list {
+        $$ = ASTNode::make_rule_step("exists_intro", $2);
     }
     | EXISTS_ELIM id_list {
         $$ = ASTNode::make_rule_step("exists_elim", $2);

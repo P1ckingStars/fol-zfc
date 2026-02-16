@@ -37,5 +37,5 @@ axiom foundation: forall A. ((exists x. elem(x, A)) -> exists y. (elem(y, A) & f
 # Example instance for a unary predicate P:
 axiom separation_P: forall A. exists B. forall x. (elem(x, B) <-> (elem(x, A) & P(x)))
 
-# Note: Replacement and Choice axioms are omitted until functions
-# (sets of ordered pairs) are defined.
+# Note: Replacement and Choice axioms are in replacement_choice.fol,
+# which depends on the function definitions in functions.fol.

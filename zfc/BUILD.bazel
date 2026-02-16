@@ -1,5 +1,7 @@
 exports_files([
     "axioms.fol",
+    "functions.fol",
     "ordered_pair.fol",
+    "replacement_choice.fol",
     "test.fol",
 ])

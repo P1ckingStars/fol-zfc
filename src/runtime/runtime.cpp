@@ -254,9 +254,19 @@ static FormulaResult execute_rule(
         return ctx.forall_elim(f, term.value());
     }
     if (rule == "exists_intro") {
-        if (args.size() != 1) return MAKE_ERROR << "exists_intro requires 1 argument";
-        TRY_ASSIGN(body, get_step(args[0]));
-        return ctx.exists_intro(body);
+        if (args.size() == 1) {
+            TRY_ASSIGN(body, get_step(args[0]));
+            return ctx.exists_intro(body);
+        } else if (args.size() == 2) {
+            TRY_ASSIGN(body, get_step(args[0]));
+            auto term = get_term(args[1]);
+            if (!term.has_value()) {
+                return MAKE_ERROR << "Unknown term/variable: " << args[1];
+            }
+            return ctx.exists_intro(body, term.value());
+        } else {
+            return MAKE_ERROR << "exists_intro requires 1-2 arguments";
+        }
     }
     if (rule == "exists_elim") {
         if (args.size() < 1 || args.size() > 2) return MAKE_ERROR << "exists_elim requires 1-2 arguments";
