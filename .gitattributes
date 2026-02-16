@@ -1,0 +1,4 @@
+# Recognize .fol files as FOL language in GitHub language statistics
+*.fol linguist-detectable linguist-language=FOL
+*.fol.def linguist-detectable linguist-language=FOL
+*.fol.proof linguist-detectable linguist-language=FOL
