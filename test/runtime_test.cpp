@@ -684,12 +684,12 @@ bool test_fol_test_file() {
 // ==================== Split Header/Proof Tests ====================
 
 bool test_split_ordered_pair() {
-    // Test loading ordered_pair.fol.h (header) then ordered_pair.fol.proof (proofs)
+    // Test loading ordered_pair.fol.def (header) then ordered_pair.fol.proof (proofs)
     // This simulates what the proof_checker binary does
     Runtime rt;
 
-    // Load the header (includes axioms.fol.h recursively)
-    auto header_result = rt.load_file_recursive("zfc/ordered_pair.fol.h");
+    // Load the header (includes axioms.fol.def recursively)
+    auto header_result = rt.load_file_recursive("zfc/ordered_pair.fol.def");
     if (!header_result.ok()) {
         std::cout << "[header load error: " << header_result.error() << "] ";
         return false;
@@ -747,12 +747,12 @@ bool test_split_ordered_pair() {
 }
 
 bool test_split_functions() {
-    // Test loading functions.fol.h then functions.fol.proof
+    // Test loading functions.fol.def then functions.fol.proof
     // Functions depends on ordered_pair, which must be loaded first with proofs executed
     Runtime rt;
 
     // Load ordered_pair header + proof first (as a dependency)
-    auto op_header = rt.load_file_recursive("zfc/ordered_pair.fol.h");
+    auto op_header = rt.load_file_recursive("zfc/ordered_pair.fol.def");
     if (!op_header.ok()) {
         std::cout << "[op header load error: " << op_header.error() << "] ";
         return false;
@@ -775,8 +775,8 @@ bool test_split_functions() {
         return false;
     }
 
-    // Now load functions header (#pragma once will skip already-loaded axioms.fol.h and ordered_pair.fol.h)
-    auto func_header = rt.load_file_recursive("zfc/functions.fol.h");
+    // Now load functions header (#pragma once will skip already-loaded axioms.fol.def and ordered_pair.fol.def)
+    auto func_header = rt.load_file_recursive("zfc/functions.fol.def");
     if (!func_header.ok()) {
         std::cout << "[func header load error: " << func_header.error() << "] ";
         return false;
@@ -852,8 +852,8 @@ int main() {
 
     // Split header/proof tests
     std::cout << "\n── Split Header/Proof Tests ──\n";
-    run_test("Split ordered_pair .fol.h + .fol.proof", test_split_ordered_pair);
-    run_test("Split functions .fol.h + .fol.proof", test_split_functions);
+    run_test("Split ordered_pair .fol.def + .fol.proof", test_split_ordered_pair);
+    run_test("Split functions .fol.def + .fol.proof", test_split_functions);
 
     // test.fol integration test
     std::cout << "\n── test.fol ──\n";

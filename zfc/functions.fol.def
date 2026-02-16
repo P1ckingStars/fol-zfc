@@ -1,4 +1,4 @@
-include "ordered_pair.fol.h"
+include "ordered_pair.fol.def"
 
 # ============================================================
 # Functions as Sets of Ordered Pairs

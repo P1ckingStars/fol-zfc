@@ -3,7 +3,7 @@
 FolInfo = provider(
     doc = "Information about FOL header files.",
     fields = {
-        "headers": "depset of .fol.h files (transitive)",
+        "headers": "depset of .fol.def files (transitive)",
     },
 )
 
@@ -21,9 +21,9 @@ fol_library = rule(
     implementation = _fol_library_impl,
     attrs = {
         "header": attr.label(
-            allow_single_file = [".fol.h"],
+            allow_single_file = [".fol.def"],
             mandatory = True,
-            doc = "The .fol.h header file containing axioms and claims.",
+            doc = "The .fol.def header file containing axioms and claims.",
         ),
         "deps": attr.label_list(
             providers = [FolInfo],
@@ -82,9 +82,9 @@ fol_proof = rule(
     implementation = _fol_proof_impl,
     attrs = {
         "header": attr.label(
-            allow_single_file = [".fol.h"],
+            allow_single_file = [".fol.def"],
             mandatory = True,
-            doc = "The .fol.h header file containing axioms and claims.",
+            doc = "The .fol.def header file containing axioms and claims.",
         ),
         "proof": attr.label(
             allow_single_file = [".fol.proof"],
@@ -101,5 +101,5 @@ fol_proof = rule(
             cfg = "exec",
         ),
     },
-    doc = "Verify that all claims in a .fol.h file are proved by the .fol.proof file.",
+    doc = "Verify that all claims in a .fol.def file are proved by the .fol.proof file.",
 )

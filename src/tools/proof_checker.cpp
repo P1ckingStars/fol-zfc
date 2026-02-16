@@ -12,7 +12,7 @@ using namespace logic;
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: proof_checker <header.fol.h> <proof.fol.proof> [dep1.fol.h ...]\n";
+        std::cerr << "Usage: proof_checker <header.fol.def> <proof.fol.proof> [dep1.fol.def ...]\n";
         return 1;
     }
 

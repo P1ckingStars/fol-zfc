@@ -287,9 +287,9 @@ bool test_parse_zfc_axioms() {
 
 bool test_parse_ordered_pair_proof() {
     // Parse ordered pair header (axioms + claims only, no proofs)
-    std::ifstream file("zfc/ordered_pair.fol.h");
+    std::ifstream file("zfc/ordered_pair.fol.def");
     if (!file.is_open()) {
-        std::cout << "[ERROR: Could not open ordered_pair.fol.h] ";
+        std::cout << "[ERROR: Could not open ordered_pair.fol.def] ";
         return false;
     }
 

@@ -5,9 +5,9 @@ cc_test(
     srcs = ["core_test.cpp"],
     data = [
         "//zfc:axioms.fol",
-        "//zfc:axioms.fol.h",
+        "//zfc:axioms.fol.def",
         "//zfc:ordered_pair.fol",
-        "//zfc:ordered_pair.fol.h",
+        "//zfc:ordered_pair.fol.def",
     ],
     deps = [
         "//src/core:formula",
@@ -20,15 +20,15 @@ cc_test(
     srcs = ["runtime_test.cpp"],
     data = [
         "//zfc:axioms.fol",
-        "//zfc:axioms.fol.h",
+        "//zfc:axioms.fol.def",
         "//zfc:functions.fol",
-        "//zfc:functions.fol.h",
+        "//zfc:functions.fol.def",
         "//zfc:functions.fol.proof",
         "//zfc:ordered_pair.fol",
-        "//zfc:ordered_pair.fol.h",
+        "//zfc:ordered_pair.fol.def",
         "//zfc:ordered_pair.fol.proof",
         "//zfc:replacement_choice.fol",
-        "//zfc:replacement_choice.fol.h",
+        "//zfc:replacement_choice.fol.def",
         "//zfc:test.fol",
     ],
     deps = [

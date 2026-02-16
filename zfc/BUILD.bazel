@@ -7,12 +7,12 @@ exports_files([
     "ordered_pair.fol",
     "replacement_choice.fol",
     "test.fol",
-    "axioms.fol.h",
-    "ordered_pair.fol.h",
+    "axioms.fol.def",
+    "ordered_pair.fol.def",
     "ordered_pair.fol.proof",
-    "functions.fol.h",
+    "functions.fol.def",
     "functions.fol.proof",
-    "replacement_choice.fol.h",
+    "replacement_choice.fol.def",
 ])
 
 # ============================================================
@@ -21,24 +21,24 @@ exports_files([
 
 fol_library(
     name = "axioms",
-    header = "axioms.fol.h",
+    header = "axioms.fol.def",
 )
 
 fol_library(
     name = "ordered_pair_lib",
-    header = "ordered_pair.fol.h",
+    header = "ordered_pair.fol.def",
     deps = [":axioms"],
 )
 
 fol_library(
     name = "functions_lib",
-    header = "functions.fol.h",
+    header = "functions.fol.def",
     deps = [":ordered_pair_lib"],
 )
 
 fol_library(
     name = "replacement_choice_lib",
-    header = "replacement_choice.fol.h",
+    header = "replacement_choice.fol.def",
     deps = [":functions_lib"],
 )
 
@@ -48,14 +48,14 @@ fol_library(
 
 fol_proof(
     name = "ordered_pair",
-    header = "ordered_pair.fol.h",
+    header = "ordered_pair.fol.def",
     proof = "ordered_pair.fol.proof",
     deps = [":axioms"],
 )
 
 fol_proof(
     name = "functions",
-    header = "functions.fol.h",
+    header = "functions.fol.def",
     proof = "functions.fol.proof",
     deps = [":ordered_pair"],
 )

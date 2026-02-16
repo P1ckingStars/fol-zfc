@@ -1,4 +1,4 @@
-include "functions.fol.h"
+include "functions.fol.def"
 
 # ============================================================
 # Remaining ZFC Axioms: Replacement and Choice

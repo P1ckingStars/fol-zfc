@@ -49,12 +49,12 @@ test/
 └── runtime_test.cpp       # Runtime and proof execution tests
 
 zfc/
-├── axioms.fol.h               # ZFC axioms (1-8: extensionality through separation)
-├── ordered_pair.fol.h         # Kuratowski ordered pair definitions + claims
+├── axioms.fol.def               # ZFC axioms (1-8: extensionality through separation)
+├── ordered_pair.fol.def         # Kuratowski ordered pair definitions + claims
 ├── ordered_pair.fol.proof     # Ordered pair proofs (15 theorems)
-├── functions.fol.h            # Functions as sets of ordered pairs + claims
+├── functions.fol.def            # Functions as sets of ordered pairs + claims
 ├── functions.fol.proof        # Function proofs (5 theorems)
-├── replacement_choice.fol.h   # ZFC axioms 9-10 (replacement, choice)
+├── replacement_choice.fol.def   # ZFC axioms 9-10 (replacement, choice)
 ├── axioms.fol                 # (legacy) Combined axiom file
 ├── ordered_pair.fol           # (legacy) Combined ordered pair file
 ├── functions.fol              # (legacy) Combined functions file
@@ -133,7 +133,7 @@ Quantified: forall x. P(x), exists x. P(x)
 
 Predicates: `elem(x, y)` (membership), `eq(x, y)` (equality)
 
-In `zfc/axioms.fol.h`:
+In `zfc/axioms.fol.def`:
 1. **Extensionality** - Sets equal iff same members
 2. **Empty Set** - Exists set with no members
 3. **Pairing** - For any a,b exists {a,b}
@@ -143,17 +143,17 @@ In `zfc/axioms.fol.h`:
 7. **Foundation** - No infinite descending membership chains
 8. **Separation** - For any set and property, exists the subset satisfying it
 
-In `zfc/replacement_choice.fol.h` (depends on functions):
+In `zfc/replacement_choice.fol.def` (depends on functions):
 9. **Replacement** - Image of a set under a function exists
 10. **Choice** - Every collection of non-empty sets has a choice function
 
-## File Format: .fol.h / .fol.proof Split
+## File Format: .fol.def / .fol.proof Split
 
-Axioms and claims live in `.fol.h` header files. Proofs live in `.fol.proof` files. This separation enables Bazel-based proof verification.
+Axioms and claims live in `.fol.def` header files. Proofs live in `.fol.proof` files. This separation enables Bazel-based proof verification.
 
-### .fol.h (Header files)
+### .fol.def (Header files)
 ```fol
-include "axioms.fol.h"
+include "axioms.fol.def"
 
 # Axioms (definitions)
 axiom singleton_def: forall s. forall x. (singleton(s, x) <-> ...)
@@ -178,7 +178,7 @@ proof eq_refl:
 
 - Contains only `proof` blocks (and comments)
 - No `axiom`, `claim`, or `include` directives
-- Each proof block proves one claim from the corresponding `.fol.h` file
+- Each proof block proves one claim from the corresponding `.fol.def` file
 - Proofs can `use` axioms and previously proven theorems
 
 ## Bazel Proof Rules
@@ -189,12 +189,12 @@ Defined in `build/fol.bzl`. Two rules:
 ```python
 fol_library(
     name = "axioms",
-    header = "axioms.fol.h",
+    header = "axioms.fol.def",
 )
 
 fol_library(
     name = "ordered_pair_lib",
-    header = "ordered_pair.fol.h",
+    header = "ordered_pair.fol.def",
     deps = [":axioms"],
 )
 ```
@@ -203,7 +203,7 @@ fol_library(
 ```python
 fol_proof(
     name = "ordered_pair",
-    header = "ordered_pair.fol.h",
+    header = "ordered_pair.fol.def",
     proof = "ordered_pair.fol.proof",
     deps = [":axioms"],           # fol_library or fol_proof deps
 )
@@ -226,7 +226,7 @@ axioms (fol_library)
 
 `src/tools/proof_checker.cpp` — standalone binary used by `fol_proof`:
 ```
-Usage: proof_checker <header.fol.h> <proof.fol.proof> [dep1.fol.h ...]
+Usage: proof_checker <header.fol.def> <proof.fol.proof> [dep1.fol.def ...]
 ```
 1. Loads dependency headers (passed as extra args from Bazel depset)
 2. Loads the main header
@@ -490,7 +490,7 @@ bool test_assume_with_fixed_vars() {
 
 ## Example: Ordered Pair Proofs
 
-The `zfc/ordered_pair.fol.h` and `zfc/ordered_pair.fol.proof` files contain proofs about Kuratowski ordered pairs:
+The `zfc/ordered_pair.fol.def` and `zfc/ordered_pair.fol.proof` files contain proofs about Kuratowski ordered pairs:
 
 ```fol
 # Definition: (a, b) = {{a}, {a, b}}
@@ -558,6 +558,6 @@ Key techniques demonstrated:
 
 8. **Deferred formula parsing**: Formulas in `assume` and `let` proof steps are parsed during proof execution, not at file parse time. This allows them to reference fixed variables by name.
 
-9. **Header/proof split**: `.fol.h` files contain axioms and claims, `.fol.proof` files contain proofs. This enables incremental Bazel-based verification and separates interface from implementation.
+9. **Header/proof split**: `.fol.def` files contain axioms and claims, `.fol.proof` files contain proofs. This enables incremental Bazel-based verification and separates interface from implementation.
 
 10. **#pragma once includes**: `load_file_recursive` silently skips already-loaded files (by canonical path). Diamond dependencies (A includes B and C, both include D) work correctly.

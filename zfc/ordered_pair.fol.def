@@ -1,4 +1,4 @@
-include "axioms.fol.h"
+include "axioms.fol.def"
 
 # Ordered Pair Encoding - Kuratowski Definition
 #
