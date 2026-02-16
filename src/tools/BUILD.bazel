@@ -1,0 +1,10 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
+cc_binary(
+    name = "proof_checker",
+    srcs = ["proof_checker.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/runtime",
+    ],
+)

@@ -1,0 +1,59 @@
+include "ordered_pair.fol.h"
+
+# ============================================================
+# Functions as Sets of Ordered Pairs
+# ============================================================
+#
+# A function f is a set of ordered pairs (a, b) where each
+# input a maps to at most one output b.
+
+# rel_elem(f, a, b) means the ordered pair (a, b) is in f
+axiom rel_elem_def: forall f. forall a. forall b.
+    (rel_elem(f, a, b) <-> exists p. (pair(p, a, b) & elem(p, f)))
+
+# is_function(f) means f maps each input to at most one output
+axiom function_def: forall f.
+    (is_function(f) <-> forall a. forall b. forall c.
+        ((rel_elem(f, a, b) & rel_elem(f, a, c)) -> eq(b, c)))
+
+# in_domain(f, a) means a has some output in f
+axiom domain_def: forall f. forall a.
+    (in_domain(f, a) <-> exists b. rel_elem(f, a, b))
+
+# in_range(f, b) means b is an output of some input
+axiom range_def: forall f. forall b.
+    (in_range(f, b) <-> exists a. rel_elem(f, a, b))
+
+# injective(f) means distinct inputs give distinct outputs
+axiom injective_def: forall f.
+    (injective(f) <-> forall a. forall b. forall c.
+        ((rel_elem(f, a, c) & rel_elem(f, b, c)) -> eq(a, b)))
+
+# compose(h, f, g) means h = g . f (g after f)
+axiom compose_def: forall h. forall f. forall g.
+    (compose(h, f, g) <-> forall a. forall c.
+        (rel_elem(h, a, c) <-> exists b. (rel_elem(f, a, b) & rel_elem(g, b, c))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Function + two outputs for same input -> equal
+claim func_unique: forall f. forall a. forall b. forall c.
+    ((is_function(f) & rel_elem(f, a, b) & rel_elem(f, a, c)) -> eq(b, c))
+
+# Equal inputs/outputs give equal rel_elem
+claim rel_elem_eq: forall f. forall a. forall b. forall c. forall d.
+    ((rel_elem(f, a, b) & eq(a, c) & eq(b, d)) -> rel_elem(f, c, d))
+
+# rel_elem implies in_domain
+claim domain_elem: forall f. forall a. forall b.
+    (rel_elem(f, a, b) -> in_domain(f, a))
+
+# rel_elem implies in_range
+claim range_elem: forall f. forall a. forall b.
+    (rel_elem(f, a, b) -> in_range(f, b))
+
+# Injective function: same output -> same input
+claim injective_func_unique_input: forall f. forall a. forall b. forall c.
+    ((injective(f) & rel_elem(f, a, c) & rel_elem(f, b, c)) -> eq(a, b))

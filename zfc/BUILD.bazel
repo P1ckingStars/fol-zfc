@@ -1,7 +1,61 @@
+load("//build:fol.bzl", "fol_library", "fol_proof")
+
+# Legacy exports for tests that still use load_file_recursive
 exports_files([
     "axioms.fol",
     "functions.fol",
     "ordered_pair.fol",
     "replacement_choice.fol",
     "test.fol",
+    "axioms.fol.h",
+    "ordered_pair.fol.h",
+    "ordered_pair.fol.proof",
+    "functions.fol.h",
+    "functions.fol.proof",
+    "replacement_choice.fol.h",
 ])
+
+# ============================================================
+# FOL Libraries (axioms + claims, no proofs)
+# ============================================================
+
+fol_library(
+    name = "axioms",
+    header = "axioms.fol.h",
+)
+
+fol_library(
+    name = "ordered_pair_lib",
+    header = "ordered_pair.fol.h",
+    deps = [":axioms"],
+)
+
+fol_library(
+    name = "functions_lib",
+    header = "functions.fol.h",
+    deps = [":ordered_pair_lib"],
+)
+
+fol_library(
+    name = "replacement_choice_lib",
+    header = "replacement_choice.fol.h",
+    deps = [":functions_lib"],
+)
+
+# ============================================================
+# FOL Proofs (verify all claims are proved)
+# ============================================================
+
+fol_proof(
+    name = "ordered_pair",
+    header = "ordered_pair.fol.h",
+    proof = "ordered_pair.fol.proof",
+    deps = [":axioms"],
+)
+
+fol_proof(
+    name = "functions",
+    header = "functions.fol.h",
+    proof = "functions.fol.proof",
+    deps = [":ordered_pair"],
+)

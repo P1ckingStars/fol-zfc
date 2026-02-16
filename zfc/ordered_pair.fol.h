@@ -1,0 +1,99 @@
+include "axioms.fol.h"
+
+# Ordered Pair Encoding - Kuratowski Definition
+#
+# Definition: (a, b) = {{a}, {a, b}}
+#
+# Theorem: Ordered pairs are unambiguous
+#   (a, b) = (c, d)  implies  a = c and b = d
+#
+# This proof uses the following set theory facts:
+#   - Extensionality: sets are equal iff they have the same elements
+#   - Pairing: {x, y} exists and contains exactly x and y
+#   - Singleton: {x} = {x, x}
+
+# Helper predicates:
+#   pair(p, a, b) means p = (a, b) = {{a}, {a, b}}
+#   singleton(s, x) means s = {x}
+#   doubleton(d, x, y) means d = {x, y}
+
+# Axiom: Definition of singleton
+axiom singleton_def: forall s. forall x. (singleton(s, x) <-> forall z. (elem(z, s) <-> eq(z, x)))
+
+# Axiom: Definition of doubleton (unordered pair)
+axiom doubleton_def: forall d. forall x. forall y. (doubleton(d, x, y) <-> forall z. (elem(z, d) <-> (eq(z, x) | eq(z, y))))
+
+# Axiom: Definition of Kuratowski ordered pair
+# (a, b) = {{a}, {a, b}}
+# pair(p, a, b) means p is the ordered pair of a and b
+axiom pair_def: forall p. forall a. forall b. (pair(p, a, b) <->
+    forall z. (elem(z, p) <->
+        (forall w. (elem(w, z) <-> eq(w, a))) |
+        (forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b))))))
+
+# ============================================================
+# Equality properties (derived from extensionality)
+# ============================================================
+
+claim eq_refl: forall x. eq(x, x)
+
+claim eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
+
+claim eq_trans: forall x. forall y. forall z. ((eq(x, y) & eq(y, z)) -> eq(x, z))
+
+claim eq_elem_l: forall x. forall y. forall s. ((eq(x, y) & elem(x, s)) -> elem(y, s))
+
+claim eq_elem_r: forall x. forall s. forall t. ((eq(s, t) & elem(x, s)) -> elem(x, t))
+
+# ============================================================
+# Main Theorem: Ordered pairs are unambiguous
+# ============================================================
+
+# If (a, b) = (c, d), then a = c and b = d
+claim pair_injective: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> (eq(a, c) & eq(b, d)))
+
+# ============================================================
+# Lemmas needed for the proof
+# ============================================================
+
+# Lemma 1: Singletons are equal iff their elements are equal
+# {x} = {y} implies x = y
+claim singleton_injective: forall x. forall y. forall s. forall t.
+    ((singleton(s, x) & singleton(t, y) & eq(s, t)) -> eq(x, y))
+
+# Lemma 2: If {a} = {c, d}, then c = d = a
+claim singleton_eq_doubleton: forall a. forall c. forall d. forall s. forall t.
+    ((singleton(s, a) & doubleton(t, c, d) & eq(s, t)) -> (eq(c, a) & eq(d, a)))
+
+# Lemma 3: Doubleton equality
+# {a, b} = {c, d} implies (a = c & b = d) | (a = d & b = c)
+claim doubleton_eq: forall a. forall b. forall c. forall d. forall s. forall t.
+    ((doubleton(s, a, b) & doubleton(t, c, d) & eq(s, t)) ->
+        ((eq(a, c) & eq(b, d)) | (eq(a, d) & eq(b, c))))
+
+# Lemma 4: An element of an ordered pair is either the singleton or the doubleton
+claim pair_elems: forall p. forall a. forall b. forall z.
+    ((pair(p, a, b) & elem(z, p)) ->
+        ((forall w. (elem(w, z) <-> eq(w, a))) |
+         (forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b))))))
+
+# Lemma 5: The singleton {a} is an element of (a, b)
+claim singleton_in_pair: forall p. forall a. forall b. forall s.
+    ((pair(p, a, b) & singleton(s, a)) -> elem(s, p))
+
+# Lemma 6: The doubleton {a, b} is an element of (a, b)
+claim doubleton_in_pair: forall p. forall a. forall b. forall d.
+    ((pair(p, a, b) & doubleton(d, a, b)) -> elem(d, p))
+
+# Lemma 7: First components of equal ordered pairs are equal
+claim pair_first_eq: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> eq(a, c))
+
+# Lemma 8: Second components match when first components differ
+claim pair_second_neq: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> (~eq(a, b) -> eq(b, d)))
+
+# Lemma 9: Second components match in degenerate case (a = b)
+claim pair_second_degenerate: forall a. forall b. forall c. forall d. forall p. forall q.
+    ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> (eq(a, b) -> eq(b, d)))

@@ -66,6 +66,10 @@ public:
         return id_ == other.id_ && registry_ == other.registry_;
     }
 
+    bool operator!=(const Handle& other) const {
+        return !(*this == other);
+    }
+
     // For use in hash maps - only accessible by std::hash specialization
     size_t hash_value() const { return id_; }
 };

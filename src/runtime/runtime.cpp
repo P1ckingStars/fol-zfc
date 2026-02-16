@@ -63,9 +63,9 @@ util::Result<ParseResult> Runtime::load_file_impl(
     std::filesystem::path abs_path = std::filesystem::absolute(path);
     std::string canonical = abs_path.string();
 
-    // Check for cycle
+    // Skip already-loaded files (#pragma once semantics)
     if (loaded.count(canonical)) {
-        return MAKE_ERROR << "Include cycle detected: " << canonical;
+        return ParseResult{};
     }
     loaded.insert(canonical);
 

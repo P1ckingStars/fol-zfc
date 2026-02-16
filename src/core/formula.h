@@ -313,6 +313,14 @@ public:
         if (it != named_claims_.end()) return it->second;
         return std::nullopt;
     }
+
+    const std::unordered_map<std::string, SentenceHandle>& claims() const {
+        return named_claims_;
+    }
+
+    const std::unordered_map<std::string, SentenceHandle>& theorems() const {
+        return named_theorems_;
+    }
 };
 
 // FormulaBuilder builds formulas and tracks variable scope.

@@ -1,0 +1,129 @@
+proof func_unique:
+    fix f
+    fix a
+    fix b
+    fix c
+    h = assume is_function(f) & rel_elem(f, a, b) & rel_elem(f, a, c)
+    h_left = and_elim_l h
+    h_rac = and_elim_r h
+    h_func = and_elim_l h_left
+    h_rab = and_elim_r h_left
+    # Unfold function_def
+    fdef = use function_def
+    fdef1 = forall_elim fdef, f
+    h_body = iff_elim_l fdef1, h_func
+    h_body1 = forall_elim h_body, a
+    h_body2 = forall_elim h_body1, b
+    h_body3 = forall_elim h_body2, c
+    h_conj = and_intro h_rab, h_rac
+    h_eq = implies_elim h_body3, h_conj
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+proof rel_elem_eq:
+    fix f
+    fix a
+    fix b
+    fix c
+    fix d
+    h = assume rel_elem(f, a, b) & eq(a, c) & eq(b, d)
+    h_left = and_elim_l h
+    h_eq_bd = and_elim_r h
+    h_rel = and_elim_l h_left
+    h_eq_ac = and_elim_r h_left
+    # Unfold rel_elem(f, a, b) to exists p. (pair(p, a, b) & elem(p, f))
+    rdef = use rel_elem_def
+    rdef1 = forall_elim rdef, f
+    rdef2 = forall_elim rdef1, a
+    rdef3 = forall_elim rdef2, b
+    h_ex = iff_elim_l rdef3, h_rel
+    h_wit = exists_elim h_ex, w
+    # h_wit: pair(w, a, b) & elem(w, f)
+    h_pair_ab = and_elim_l h_wit
+    h_elem_wf = and_elim_r h_wit
+    # eq_subst: eq(a, c), pair(w, a, b) => pair(w, c, b)
+    h_pair_cb = eq_subst h_eq_ac, h_pair_ab
+    # eq_subst: eq(b, d), pair(w, c, b) => pair(w, c, d)
+    h_pair_cd = eq_subst h_eq_bd, h_pair_cb
+    # Rebuild: pair(w, c, d) & elem(w, f)
+    h_conj = and_intro h_pair_cd, h_elem_wf
+    # exists_intro to get exists p. (pair(p, c, d) & elem(p, f))
+    h_ex2 = exists_intro h_conj
+    # Fold back to rel_elem(f, c, d)
+    rdef4 = forall_elim rdef, f
+    rdef5 = forall_elim rdef4, c
+    rdef6 = forall_elim rdef5, d
+    h_rel_cd = iff_elim_r rdef6, h_ex2
+    h_impl = implies_intro h_rel_cd
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+proof domain_elem:
+    fix f
+    fix a
+    fix b
+    h_rel = assume rel_elem(f, a, b)
+    # Unfold domain_def
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, f
+    ddef2 = forall_elim ddef1, a
+    # Need to show exists b. rel_elem(f, a, b) — witness is b
+    h_ex = exists_intro h_rel, b
+    h_dom = iff_elim_r ddef2, h_ex
+    h_impl = implies_intro h_dom
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+proof range_elem:
+    fix f
+    fix a
+    fix b
+    h_rel = assume rel_elem(f, a, b)
+    # Unfold range_def
+    rdef = use range_def
+    rdef1 = forall_elim rdef, f
+    rdef2 = forall_elim rdef1, b
+    # Need to show exists a. rel_elem(f, a, b) — witness is a
+    h_ex = exists_intro h_rel, a
+    h_rng = iff_elim_r rdef2, h_ex
+    h_impl = implies_intro h_rng
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+proof injective_func_unique_input:
+    fix f
+    fix a
+    fix b
+    fix c
+    h = assume injective(f) & rel_elem(f, a, c) & rel_elem(f, b, c)
+    h_left = and_elim_l h
+    h_rbc = and_elim_r h
+    h_inj = and_elim_l h_left
+    h_rac = and_elim_r h_left
+    # Unfold injective_def
+    idef = use injective_def
+    idef1 = forall_elim idef, f
+    h_body = iff_elim_l idef1, h_inj
+    h_body1 = forall_elim h_body, a
+    h_body2 = forall_elim h_body1, b
+    h_body3 = forall_elim h_body2, c
+    h_conj = and_intro h_rac, h_rbc
+    h_eq = implies_elim h_body3, h_conj
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

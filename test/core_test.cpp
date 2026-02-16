@@ -259,7 +259,7 @@ bool test_parse_zfc_axioms() {
     GlobalContext ctx;
     try {
         auto stmts = parse_statements(zfc_axioms, ctx);
-        if (stmts.size() != 10) {
+        if (stmts.size() != 8) {
             std::cout << "[got " << stmts.size() << " statements] ";
             return false;
         }
@@ -272,7 +272,7 @@ bool test_parse_zfc_axioms() {
         // Check specific axioms are registered
         if (!ctx.find_axiom("extensionality").has_value()) return false;
         if (!ctx.find_axiom("empty_set").has_value()) return false;
-        if (!ctx.find_axiom("choice").has_value()) return false;
+        if (!ctx.find_axiom("separation_P").has_value()) return false;
 
         // Print extensionality for verification
         auto ext = ctx.find_axiom("extensionality");
@@ -286,20 +286,30 @@ bool test_parse_zfc_axioms() {
 }
 
 bool test_parse_ordered_pair_proof() {
-    // Read ordered pair proof from file
-    std::ifstream file("zfc/ordered_pair.fol");
+    // Parse ordered pair header (axioms + claims only, no proofs)
+    std::ifstream file("zfc/ordered_pair.fol.h");
     if (!file.is_open()) {
-        std::cout << "[ERROR: Could not open ordered_pair.fol] ";
+        std::cout << "[ERROR: Could not open ordered_pair.fol.h] ";
         return false;
     }
 
     std::stringstream buffer;
     buffer << file.rdbuf();
-    std::string proof = buffer.str();
+    std::string header = buffer.str();
+
+    // Strip include directives (parse_statements doesn't handle them)
+    std::string stripped;
+    std::istringstream stream(header);
+    std::string line;
+    while (std::getline(stream, line)) {
+        if (line.substr(0, 7) != "include") {
+            stripped += line + "\n";
+        }
+    }
 
     GlobalContext ctx;
     try {
-        auto stmts = parse_statements(proof, ctx);
+        auto stmts = parse_statements(stripped, ctx);
 
         // Count axioms and claims
         int axioms = 0, claims = 0;

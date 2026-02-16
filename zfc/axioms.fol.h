@@ -1,0 +1,41 @@
+# ZFC Set Theory Axioms
+# Predicates: elem(x, y) means x is an element of y
+#             eq(x, y) means x equals y
+
+# 1. Extensionality (definition of equality)
+# Two sets are equal iff they have the same elements
+axiom extensionality: forall x. forall y. (eq(x, y) <-> forall z. (elem(z, x) <-> elem(z, y)))
+
+# 2. Empty Set
+# There exists a set with no elements
+axiom empty_set: exists e. forall x. ~elem(x, e)
+
+# 3. Pairing
+# For any two sets a and b, there exists a set containing exactly a and b
+axiom pairing: forall a. forall b. exists p. forall x. (elem(x, p) <-> (eq(x, a) | eq(x, b)))
+
+# 4. Union
+# For any set A, there exists the union of all elements of A
+axiom union: forall A. exists U. forall x. (elem(x, U) <-> exists y. (elem(y, A) & elem(x, y)))
+
+# 5. Power Set
+# For any set A, there exists the set of all subsets of A
+axiom power_set: forall A. exists P. forall x. (elem(x, P) <-> forall y. (elem(y, x) -> elem(y, A)))
+
+# 6. Infinity
+# There exists an infinite set (contains empty set and is closed under successor)
+# Successor of x is {x, {x}} but we express closure differently
+axiom infinity: exists I. (exists e. (elem(e, I) & forall x. ~elem(x, e))) & (forall x. (elem(x, I) -> exists y. (elem(y, I) & elem(x, y))))
+
+# 7. Foundation (Regularity)
+# Every non-empty set has an element disjoint from it
+axiom foundation: forall A. ((exists x. elem(x, A)) -> exists y. (elem(y, A) & forall z. ~(elem(z, y) & elem(z, A))))
+
+# 8. Separation Schema (instance)
+# For any set A and property P, there exists the subset of A satisfying P
+# Note: This is a schema - we can only express specific instances
+# Example instance for a unary predicate P:
+axiom separation_P: forall A. exists B. forall x. (elem(x, B) <-> (elem(x, A) & P(x)))
+
+# Note: Replacement and Choice axioms are in replacement_choice.fol.h,
+# which depends on the function definitions in functions.fol.h.
