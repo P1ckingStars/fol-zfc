@@ -76,6 +76,7 @@ static int col = 1;
 "excluded_middle" { return EXCLUDED_MIDDLE; }
 "eq_subst"      { return EQ_SUBST; }
 "include"       { return INCLUDE; }
+"@def"          { return DEF; }
 
 \"[^"]*\"       {
     // String literal - strip quotes

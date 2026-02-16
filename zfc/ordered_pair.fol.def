@@ -18,15 +18,15 @@ include "axioms.fol.def"
 #   doubleton(d, x, y) means d = {x, y}
 
 # Axiom: Definition of singleton
-axiom singleton_def: forall s. forall x. (singleton(s, x) <-> forall z. (elem(z, s) <-> eq(z, x)))
+@def(singleton) axiom singleton_def: forall s. forall x. (singleton(s, x) <-> forall z. (elem(z, s) <-> eq(z, x)))
 
 # Axiom: Definition of doubleton (unordered pair)
-axiom doubleton_def: forall d. forall x. forall y. (doubleton(d, x, y) <-> forall z. (elem(z, d) <-> (eq(z, x) | eq(z, y))))
+@def(doubleton) axiom doubleton_def: forall d. forall x. forall y. (doubleton(d, x, y) <-> forall z. (elem(z, d) <-> (eq(z, x) | eq(z, y))))
 
 # Axiom: Definition of Kuratowski ordered pair
 # (a, b) = {{a}, {a, b}}
 # pair(p, a, b) means p is the ordered pair of a and b
-axiom pair_def: forall p. forall a. forall b. (pair(p, a, b) <->
+@def(pair) axiom pair_def: forall p. forall a. forall b. (pair(p, a, b) <->
     forall z. (elem(z, p) <->
         (forall w. (elem(w, z) <-> eq(w, a))) |
         (forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b))))))

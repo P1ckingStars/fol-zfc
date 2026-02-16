@@ -23,6 +23,7 @@ struct ASTNode {
         Term,
         // Statements
         AxiomStmt,
+        DefStmt,       // @def(predicate) axiom name: formula
         ClaimStmt,
         // Proof blocks
         ProofBlock,      // proof name: steps
@@ -39,6 +40,7 @@ struct ASTNode {
     Type type;
     std::string name;           // For Predicate, Term, quantifier variable, result name
     std::string rule_name;      // For ProofStepRule: the rule being applied
+    std::string def_predicate;  // For DefStmt: the predicate being defined
     ASTNode* left = nullptr;    // For binary ops: left operand; For unary: operand
     ASTNode* right = nullptr;   // For binary ops: right operand
     ASTNode* body = nullptr;    // For quantifiers: body formula; For ProofStepAssume: assumed formula
@@ -70,6 +72,15 @@ struct ASTNode {
     // Note: Uses same constructor signature as Quantifier but for statement types
     static ASTNode* make_statement(Type t, const std::string& stmt_name, ASTNode* formula_body) {
         auto* node = new ASTNode(t);
+        node->name = stmt_name;
+        node->body = formula_body;
+        return node;
+    }
+
+    // Definition statement: @def(predicate) axiom name: formula
+    static ASTNode* make_def_statement(const std::string& pred, const std::string& stmt_name, ASTNode* formula_body) {
+        auto* node = new ASTNode(DefStmt);
+        node->def_predicate = pred;
         node->name = stmt_name;
         node->body = formula_body;
         return node;

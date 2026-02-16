@@ -28,6 +28,7 @@ struct ParsedStatement {
     Kind kind;
     std::string name;
     SentenceHandle formula;
+    std::string def_predicate;  // Non-empty if this is a @def axiom
 };
 
 // Represents a single proof step

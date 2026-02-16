@@ -21,6 +21,7 @@ static ASTNode* clone_ast_impl(const ASTNode* node) {
     ASTNode* cloned = new ASTNode(node->type);
     cloned->name = node->name;
     cloned->rule_name = node->rule_name;
+    cloned->def_predicate = node->def_predicate;
     cloned->left = clone_ast_impl(node->left);
     cloned->right = clone_ast_impl(node->right);
     cloned->body = clone_ast_impl(node->body);
@@ -235,6 +236,23 @@ SentenceHandle try_parse_sentence(std::string_view input, GlobalContext& ctx,
     }
 }
 
+// ==================== AST Predicate Search ====================
+
+// Check if a predicate name appears anywhere in an AST formula
+static bool ast_contains_predicate(const ASTNode* node, const std::string& pred_name) {
+    if (!node) return false;
+    if (node->type == ASTNode::Predicate && node->name == pred_name) return true;
+    if (ast_contains_predicate(node->left, pred_name)) return true;
+    if (ast_contains_predicate(node->right, pred_name)) return true;
+    if (ast_contains_predicate(node->body, pred_name)) return true;
+    if (node->args) {
+        for (const auto* arg : *node->args) {
+            if (ast_contains_predicate(arg, pred_name)) return true;
+        }
+    }
+    return false;
+}
+
 // ==================== Statement Parser Implementation ====================
 
 std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalContext& ctx) {
@@ -290,6 +308,10 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
             case ASTNode::AxiomStmt:
                 stmt.kind = ParsedStatement::Kind::Axiom;
                 break;
+            case ASTNode::DefStmt:
+                stmt.kind = ParsedStatement::Kind::Axiom;
+                stmt.def_predicate = stmt_node->def_predicate;
+                break;
             case ASTNode::ClaimStmt:
                 stmt.kind = ParsedStatement::Kind::Claim;
                 break;
@@ -298,6 +320,20 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
         }
 
         stmt.name = stmt_node->name;
+
+        // Validate @def annotations before converting formula
+        if (!stmt.def_predicate.empty()) {
+            if (ctx.is_defined(stmt.def_predicate) &&
+                !ctx.is_same_definition(stmt.def_predicate, stmt.name)) {
+                throw std::runtime_error("Predicate '" + stmt.def_predicate +
+                    "' is already defined (in @def axiom '" + stmt.name + "')");
+            }
+            if (!ast_contains_predicate(stmt_node->body, stmt.def_predicate)) {
+                throw std::runtime_error("@def(" + stmt.def_predicate +
+                    ") axiom '" + stmt.name + "' does not mention predicate '" +
+                    stmt.def_predicate + "'");
+            }
+        }
 
         // Convert the formula body
         FormulaBuilder builder(ctx);
@@ -313,7 +349,9 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
         stmt.formula = sh;
 
         // Register statements in GlobalContext
-        if (stmt.kind == ParsedStatement::Kind::Axiom) {
+        if (!stmt.def_predicate.empty()) {
+            ctx.add_definition(stmt.def_predicate, stmt.name, stmt.formula);
+        } else if (stmt.kind == ParsedStatement::Kind::Axiom) {
             ctx.add_axiom(stmt.name, stmt.formula);
         } else if (stmt.kind == ParsedStatement::Kind::Claim) {
             ctx.add_claim(stmt.name, stmt.formula);
@@ -461,12 +499,16 @@ ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
             inc.path = stmt_node->name;
             result.includes.push_back(std::move(inc));
         } else {
-            // Convert axiom/claim statement
+            // Convert axiom/claim/def statement
             ParsedStatement stmt;
 
             switch (stmt_node->type) {
                 case ASTNode::AxiomStmt:
                     stmt.kind = ParsedStatement::Kind::Axiom;
+                    break;
+                case ASTNode::DefStmt:
+                    stmt.kind = ParsedStatement::Kind::Axiom;
+                    stmt.def_predicate = stmt_node->def_predicate;
                     break;
                 case ASTNode::ClaimStmt:
                     stmt.kind = ParsedStatement::Kind::Claim;
@@ -476,6 +518,20 @@ ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
             }
 
             stmt.name = stmt_node->name;
+
+            // Validate @def annotations before converting formula
+            if (!stmt.def_predicate.empty()) {
+                if (ctx.is_defined(stmt.def_predicate) &&
+                    !ctx.is_same_definition(stmt.def_predicate, stmt.name)) {
+                    throw std::runtime_error("Predicate '" + stmt.def_predicate +
+                        "' is already defined (in @def axiom '" + stmt.name + "')");
+                }
+                if (!ast_contains_predicate(stmt_node->body, stmt.def_predicate)) {
+                    throw std::runtime_error("@def(" + stmt.def_predicate +
+                        ") axiom '" + stmt.name + "' does not mention predicate '" +
+                        stmt.def_predicate + "'");
+                }
+            }
 
             // Convert the formula body
             FormulaBuilder builder(ctx);
@@ -490,7 +546,9 @@ ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
             stmt.formula = sh;
 
             // Register statements in GlobalContext
-            if (stmt.kind == ParsedStatement::Kind::Axiom) {
+            if (!stmt.def_predicate.empty()) {
+                ctx.add_definition(stmt.def_predicate, stmt.name, stmt.formula);
+            } else if (stmt.kind == ParsedStatement::Kind::Axiom) {
                 ctx.add_axiom(stmt.name, stmt.formula);
             } else if (stmt.kind == ParsedStatement::Kind::Claim) {
                 ctx.add_claim(stmt.name, stmt.formula);

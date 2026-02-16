@@ -8,29 +8,29 @@ include "ordered_pair.fol"
 # input a maps to at most one output b.
 
 # rel_elem(f, a, b) means the ordered pair (a, b) is in f
-axiom rel_elem_def: forall f. forall a. forall b.
+@def(rel_elem) axiom rel_elem_def: forall f. forall a. forall b.
     (rel_elem(f, a, b) <-> exists p. (pair(p, a, b) & elem(p, f)))
 
 # is_function(f) means f maps each input to at most one output
-axiom function_def: forall f.
+@def(is_function) axiom function_def: forall f.
     (is_function(f) <-> forall a. forall b. forall c.
         ((rel_elem(f, a, b) & rel_elem(f, a, c)) -> eq(b, c)))
 
 # in_domain(f, a) means a has some output in f
-axiom domain_def: forall f. forall a.
+@def(in_domain) axiom domain_def: forall f. forall a.
     (in_domain(f, a) <-> exists b. rel_elem(f, a, b))
 
 # in_range(f, b) means b is an output of some input
-axiom range_def: forall f. forall b.
+@def(in_range) axiom range_def: forall f. forall b.
     (in_range(f, b) <-> exists a. rel_elem(f, a, b))
 
 # injective(f) means distinct inputs give distinct outputs
-axiom injective_def: forall f.
+@def(injective) axiom injective_def: forall f.
     (injective(f) <-> forall a. forall b. forall c.
         ((rel_elem(f, a, c) & rel_elem(f, b, c)) -> eq(a, b)))
 
 # compose(h, f, g) means h = g . f (g after f)
-axiom compose_def: forall h. forall f. forall g.
+@def(compose) axiom compose_def: forall h. forall f. forall g.
     (compose(h, f, g) <-> forall a. forall c.
         (rel_elem(h, a, c) <-> exists b. (rel_elem(f, a, b) & rel_elem(g, b, c))))
 

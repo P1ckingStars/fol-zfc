@@ -259,6 +259,9 @@ class GlobalContext {
     // Claims (to be proven)
     std::unordered_map<std::string, SentenceHandle> named_claims_;
 
+    // Predicates that have been defined via @def (predicate name -> axiom name)
+    std::unordered_map<std::string, std::string> defined_predicates_;
+
 public:
     // Access the shared formula registry
     FormulaRegistry& formulas() { return formulas_; }
@@ -275,6 +278,24 @@ public:
     void add_axiom(const std::string& name, SentenceHandle sentence) {
         named_axioms_[name] = sentence;
         known_.insert(sentence);
+    }
+
+    // Register a @def axiom: marks the predicate as defined and adds the axiom
+    // Idempotent: re-registering the same predicate with the same axiom is a no-op
+    // (needed for #pragma once semantics when files are loaded multiple times)
+    void add_definition(const std::string& predicate_name, const std::string& axiom_name, SentenceHandle sentence) {
+        defined_predicates_[predicate_name] = axiom_name;
+        add_axiom(axiom_name, sentence);
+    }
+
+    bool is_defined(const std::string& predicate_name) const {
+        return defined_predicates_.count(predicate_name) > 0;
+    }
+
+    // Check if this is a re-registration of the same definition (idempotent)
+    bool is_same_definition(const std::string& predicate_name, const std::string& axiom_name) const {
+        auto it = defined_predicates_.find(predicate_name);
+        return it != defined_predicates_.end() && it->second == axiom_name;
     }
 
     void add_theorem(const std::string& name, SentenceHandle sentence) {

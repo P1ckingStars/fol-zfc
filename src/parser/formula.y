@@ -36,7 +36,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %token LPAREN RPAREN COMMA DOT COLON EQUALS
 %token AND OR NOT IMPLIES IFF BOTTOM
 %token FORALL EXISTS
-%token AXIOM CLAIM PROOF INCLUDE
+%token AXIOM CLAIM PROOF INCLUDE DEF
 %token FIX ASSUME QED USE LET
 %token AND_INTRO AND_ELIM_L AND_ELIM_R
 %token OR_INTRO_L OR_INTRO_R OR_ELIM
@@ -86,6 +86,10 @@ statement
     : AXIOM IDENTIFIER COLON formula {
         $$ = ASTNode::make_statement(ASTNode::AxiomStmt, *$2, $4);
         delete $2;
+    }
+    | DEF LPAREN IDENTIFIER RPAREN AXIOM IDENTIFIER COLON formula {
+        $$ = ASTNode::make_def_statement(*$3, *$6, $8);
+        delete $3; delete $6;
     }
     | CLAIM IDENTIFIER COLON formula {
         $$ = ASTNode::make_statement(ASTNode::ClaimStmt, *$2, $4);

@@ -551,6 +551,163 @@ bool test_let_does_not_derive() {
     return true;
 }
 
+// ==================== @def Annotation Tests ====================
+
+bool test_def_annotation_basic() {
+    // @def(P) axiom should parse and register correctly
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        @def(P) axiom p_def: forall x. (P(x) <-> Q(x))
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto& parsed = result.value();
+    if (parsed.statements.size() != 1) {
+        std::cout << "[expected 1 statement, got " << parsed.statements.size() << "] ";
+        return false;
+    }
+
+    // Should be registered as axiom
+    if (!rt.context().find_axiom("p_def").has_value()) {
+        std::cout << "[p_def not registered as axiom] ";
+        return false;
+    }
+
+    // Should be marked as definition
+    if (!rt.context().is_defined("P")) {
+        std::cout << "[P not marked as defined] ";
+        return false;
+    }
+
+    // def_predicate field should be set
+    if (parsed.statements[0].def_predicate != "P") {
+        std::cout << "[def_predicate not set] ";
+        return false;
+    }
+
+    std::cout << "[@def(P) axiom parsed and registered] ";
+    return true;
+}
+
+bool test_def_annotation_redefinition() {
+    // Redefining the same predicate should error
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        @def(P) axiom p_def1: forall x. (P(x) <-> Q(x))
+        @def(P) axiom p_def2: forall x. (P(x) <-> R(x))
+    )");
+
+    if (result.ok()) {
+        std::cout << "[should have failed but succeeded] ";
+        return false;
+    }
+
+    std::string err = result.error().message();
+    if (err.find("already defined") == std::string::npos) {
+        std::cout << "[unexpected error: " << err << "] ";
+        return false;
+    }
+
+    std::cout << "[correctly rejected: " << err << "] ";
+    return true;
+}
+
+bool test_def_annotation_missing_predicate() {
+    // @def(P) on axiom not mentioning P should error
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        @def(P) axiom bad_def: forall x. (Q(x) <-> R(x))
+    )");
+
+    if (result.ok()) {
+        std::cout << "[should have failed but succeeded] ";
+        return false;
+    }
+
+    std::string err = result.error().message();
+    if (err.find("does not mention") == std::string::npos) {
+        std::cout << "[unexpected error: " << err << "] ";
+        return false;
+    }
+
+    std::cout << "[correctly rejected: " << err << "] ";
+    return true;
+}
+
+bool test_def_annotation_plain_axiom_unchanged() {
+    // Plain axioms should still work and not be marked as definitions
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        axiom ext: forall x. forall y. (eq(x, y) <-> forall z. (elem(z, x) <-> elem(z, y)))
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    if (!rt.context().find_axiom("ext").has_value()) {
+        std::cout << "[ext not registered] ";
+        return false;
+    }
+
+    if (rt.context().is_defined("eq")) {
+        std::cout << "[eq should not be marked as defined] ";
+        return false;
+    }
+
+    if (!result.value().statements[0].def_predicate.empty()) {
+        std::cout << "[def_predicate should be empty for plain axiom] ";
+        return false;
+    }
+
+    std::cout << "[plain axiom unchanged] ";
+    return true;
+}
+
+bool test_def_annotation_with_proof() {
+    // @def axiom should work in proofs just like regular axioms
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        @def(P) axiom p_def: forall x. (P(x) <-> Q(x))
+        axiom all_Q: forall x. Q(x)
+        claim all_P: forall x. P(x)
+
+        proof all_P:
+            fix x
+            h1 = use all_Q
+            h2 = forall_elim h1, x
+            pd = use p_def
+            pd1 = forall_elim pd, x
+            h3 = iff_elim_r pd1, h2
+            h4 = forall_intro h3
+            qed h4
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    if (!rt.context().find_theorem("all_P").has_value()) {
+        std::cout << "[all_P not proven] ";
+        return false;
+    }
+
+    std::cout << "[proof with @def axiom works] ";
+    return true;
+}
+
 // ==================== Ordered Pair Proofs ====================
 
 // Helper to load ordered pair axioms
@@ -844,6 +1001,14 @@ int main() {
     run_test("Proof with and_intro", test_proof_with_and);
     run_test("Proof with fix and forall_intro", test_proof_with_fix_and_forall_intro);
     run_test("Let does not derive (soundness)", test_let_does_not_derive);
+
+    // @def annotation tests
+    std::cout << "\n── @def Annotation Tests ──\n";
+    run_test("@def annotation basic", test_def_annotation_basic);
+    run_test("@def redefinition error", test_def_annotation_redefinition);
+    run_test("@def missing predicate error", test_def_annotation_missing_predicate);
+    run_test("Plain axiom unchanged", test_def_annotation_plain_axiom_unchanged);
+    run_test("@def annotation with proof", test_def_annotation_with_proof);
 
     // Ordered pair proofs
     std::cout << "\n── Ordered Pair Proofs ──\n";

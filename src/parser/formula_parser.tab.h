@@ -84,32 +84,33 @@ typedef void* yyscan_t;
     CLAIM = 275,                   /* CLAIM  */
     PROOF = 276,                   /* PROOF  */
     INCLUDE = 277,                 /* INCLUDE  */
-    FIX = 278,                     /* FIX  */
-    ASSUME = 279,                  /* ASSUME  */
-    QED = 280,                     /* QED  */
-    USE = 281,                     /* USE  */
-    LET = 282,                     /* LET  */
-    AND_INTRO = 283,               /* AND_INTRO  */
-    AND_ELIM_L = 284,              /* AND_ELIM_L  */
-    AND_ELIM_R = 285,              /* AND_ELIM_R  */
-    OR_INTRO_L = 286,              /* OR_INTRO_L  */
-    OR_INTRO_R = 287,              /* OR_INTRO_R  */
-    OR_ELIM = 288,                 /* OR_ELIM  */
-    IMPLIES_INTRO = 289,           /* IMPLIES_INTRO  */
-    IMPLIES_ELIM = 290,            /* IMPLIES_ELIM  */
-    NOT_INTRO = 291,               /* NOT_INTRO  */
-    NOT_ELIM = 292,                /* NOT_ELIM  */
-    BOTTOM_ELIM = 293,             /* BOTTOM_ELIM  */
-    IFF_INTRO = 294,               /* IFF_INTRO  */
-    IFF_ELIM_L = 295,              /* IFF_ELIM_L  */
-    IFF_ELIM_R = 296,              /* IFF_ELIM_R  */
-    FORALL_INTRO = 297,            /* FORALL_INTRO  */
-    FORALL_ELIM = 298,             /* FORALL_ELIM  */
-    EXISTS_INTRO = 299,            /* EXISTS_INTRO  */
-    EXISTS_ELIM = 300,             /* EXISTS_ELIM  */
-    DOUBLE_NEG_ELIM = 301,         /* DOUBLE_NEG_ELIM  */
-    EXCLUDED_MIDDLE = 302,         /* EXCLUDED_MIDDLE  */
-    EQ_SUBST = 303                 /* EQ_SUBST  */
+    DEF = 278,                     /* DEF  */
+    FIX = 279,                     /* FIX  */
+    ASSUME = 280,                  /* ASSUME  */
+    QED = 281,                     /* QED  */
+    USE = 282,                     /* USE  */
+    LET = 283,                     /* LET  */
+    AND_INTRO = 284,               /* AND_INTRO  */
+    AND_ELIM_L = 285,              /* AND_ELIM_L  */
+    AND_ELIM_R = 286,              /* AND_ELIM_R  */
+    OR_INTRO_L = 287,              /* OR_INTRO_L  */
+    OR_INTRO_R = 288,              /* OR_INTRO_R  */
+    OR_ELIM = 289,                 /* OR_ELIM  */
+    IMPLIES_INTRO = 290,           /* IMPLIES_INTRO  */
+    IMPLIES_ELIM = 291,            /* IMPLIES_ELIM  */
+    NOT_INTRO = 292,               /* NOT_INTRO  */
+    NOT_ELIM = 293,                /* NOT_ELIM  */
+    BOTTOM_ELIM = 294,             /* BOTTOM_ELIM  */
+    IFF_INTRO = 295,               /* IFF_INTRO  */
+    IFF_ELIM_L = 296,              /* IFF_ELIM_L  */
+    IFF_ELIM_R = 297,              /* IFF_ELIM_R  */
+    FORALL_INTRO = 298,            /* FORALL_INTRO  */
+    FORALL_ELIM = 299,             /* FORALL_ELIM  */
+    EXISTS_INTRO = 300,            /* EXISTS_INTRO  */
+    EXISTS_ELIM = 301,             /* EXISTS_ELIM  */
+    DOUBLE_NEG_ELIM = 302,         /* DOUBLE_NEG_ELIM  */
+    EXCLUDED_MIDDLE = 303,         /* EXCLUDED_MIDDLE  */
+    EQ_SUBST = 304                 /* EQ_SUBST  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -124,7 +125,7 @@ union YYSTYPE
     ASTNode* node;
     std::vector<ASTNode*>* node_list;
 
-#line 128 "formula_parser.tab.h"
+#line 129 "formula_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -168,6 +169,6 @@ void yypstate_delete (yypstate *ps);
 
 void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg);
 
-#line 172 "formula_parser.tab.h"
+#line 173 "formula_parser.tab.h"
 
 #endif /* !YY_YY_FORMULA_PARSER_TAB_H_INCLUDED  */

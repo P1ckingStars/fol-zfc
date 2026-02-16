@@ -69,7 +69,7 @@ zfc/
 - `Term` - A variable (generalized or fixed)
 - `Formula` - Variant: `PredicateInstance`, `Compound`, `Quantified`
 - `Op` - Operators: And, Or, Implies, Iff, Not, Bottom, Forall, Exists
-- `GlobalContext` - Central storage for all formulas, predicates, sentences
+- `GlobalContext` - Central storage for all formulas, predicates, sentences, and definition tracking
 
 **proof.h:**
 - `FormulaHandle` - Reference to a formula in a proof
@@ -114,11 +114,12 @@ bison -d --defines=formula_parser.tab.h -o formula_parser.tab.cc formula.y
 ### Syntax
 
 ```
-Atoms:      A, B, P(x), R(x,y), _|_ (bottom), false
-Negation:   ~A, !A, not A
-Binary:     A & B, A | B, A -> B, A <-> B
-            and, or, implies, iff (keyword alternatives)
-Quantified: forall x. P(x), exists x. P(x)
+Atoms:       A, B, P(x), R(x,y), _|_ (bottom), false
+Negation:    ~A, !A, not A
+Binary:      A & B, A | B, A -> B, A <-> B
+             and, or, implies, iff (keyword alternatives)
+Quantified:  forall x. P(x), exists x. P(x)
+Statements:  axiom name: φ, claim name: φ, @def(P) axiom name: φ
 ```
 
 ### Precedence (lowest to highest)
@@ -155,14 +156,17 @@ Axioms and claims live in `.fol.def` header files. Proofs live in `.fol.proof` f
 ```fol
 include "axioms.fol.def"
 
-# Axioms (definitions)
-axiom singleton_def: forall s. forall x. (singleton(s, x) <-> ...)
+# Definition axioms — @def(predicate) prevents redefining the same predicate
+@def(singleton) axiom singleton_def: forall s. forall x. (singleton(s, x) <-> ...)
+
+# Plain axioms (no @def annotation)
+axiom extensionality: forall x. forall y. (...)
 
 # Claims (to be proved in the .fol.proof file)
 claim eq_refl: forall x. eq(x, x)
 ```
 
-- Contains `include` directives, `axiom` statements, and `claim` statements
+- Contains `include` directives, `axiom` statements (with optional `@def`), and `claim` statements
 - No `proof` blocks
 - Includes use `#pragma once` semantics: loading the same file twice silently skips it
 - Include graph must be acyclic
@@ -254,6 +258,7 @@ Proofs can be written in a declarative syntax and executed by the runtime.
 ```fol
 # Axioms and claims (must be sentences - no free variables)
 axiom all_P: forall x. P(x)
+@def(P) axiom p_def: forall x. (P(x) <-> Q(x))   # Definition axiom
 axiom all_P_impl_Q: forall x. (P(x) -> Q(x))
 claim all_Q: forall x. Q(x)
 
@@ -285,6 +290,11 @@ If you want to assert something about a variable, quantify it:
 ### Available Rules
 
 ```
+# Statement types
+axiom name: <formula>                # Axiom (assumed true)
+@def(P) axiom name: <formula>       # Definition axiom for predicate P (prevents redefining P)
+claim name: <formula>                # Claim (must be proved)
+
 # Scope management
 fix x                   # Introduce eigenvariable x
 h = assume <formula>    # Assume formula (can reference fixed vars)
@@ -494,7 +504,7 @@ The `zfc/ordered_pair.fol.def` and `zfc/ordered_pair.fol.proof` files contain pr
 
 ```fol
 # Definition: (a, b) = {{a}, {a, b}}
-axiom pair_def: forall p. forall a. forall b. (pair(p, a, b) <->
+@def(pair) axiom pair_def: forall p. forall a. forall b. (pair(p, a, b) <->
     forall z. (elem(z, p) <->
         (forall w. (elem(w, z) <-> eq(w, a))) |
         (forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b))))))
@@ -561,3 +571,5 @@ Key techniques demonstrated:
 9. **Header/proof split**: `.fol.def` files contain axioms and claims, `.fol.proof` files contain proofs. This enables incremental Bazel-based verification and separates interface from implementation.
 
 10. **#pragma once includes**: `load_file_recursive` silently skips already-loaded files (by canonical path). Diamond dependencies (A includes B and C, both include D) work correctly.
+
+11. **`@def` annotations**: `@def(P) axiom name: φ` marks an axiom as the definition of predicate `P`. The predicate must appear in the formula, and redefining the same predicate with a different axiom is a parse error. Re-registration of the same predicate+axiom pair is idempotent (for `#pragma once` compatibility). At the core level, `@def` axioms are still axioms. `GlobalContext` tracks `defined_predicates_` as a map from predicate name to axiom name.
