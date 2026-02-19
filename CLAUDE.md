@@ -11,8 +11,8 @@ bazel test //test:core_test       # Core logic tests
 bazel test //test:runtime_test    # Runtime and proof execution tests
 bazel test //test:all_tests       # Run all tests
 
-bazel build //zfc:ordered_pair    # Verify ordered pair proofs
-bazel build //zfc:functions       # Verify function proofs
+bazel build //zfc/basics:ordered_pair    # Verify ordered pair proofs
+bazel build //zfc/basics:functions       # Verify function proofs
 ```
 
 ## Architecture
@@ -49,16 +49,17 @@ test/
 └── runtime_test.cpp       # Runtime and proof execution tests
 
 zfc/
-├── axioms.fol.def               # ZFC axioms (1-8: extensionality through separation)
-├── ordered_pair.fol.def         # Kuratowski ordered pair definitions + claims
-├── ordered_pair.fol.proof     # Ordered pair proofs (15 theorems)
-├── functions.fol.def            # Functions as sets of ordered pairs + claims
-├── functions.fol.proof        # Function proofs (5 theorems)
-├── replacement_choice.fol.def   # ZFC axioms 9-10 (replacement, choice)
-├── axioms.fol                 # (legacy) Combined axiom file
-├── ordered_pair.fol           # (legacy) Combined ordered pair file
-├── functions.fol              # (legacy) Combined functions file
-└── replacement_choice.fol     # (legacy) Combined replacement/choice file
+└── basics/
+    ├── axioms.fol.def               # ZFC axioms (1-8: extensionality through separation)
+    ├── ordered_pair.fol.def         # Kuratowski ordered pair definitions + claims
+    ├── ordered_pair.fol.proof     # Ordered pair proofs (15 theorems)
+    ├── functions.fol.def            # Functions as sets of ordered pairs + claims
+    ├── functions.fol.proof        # Function proofs (5 theorems)
+    ├── replacement_choice.fol.def   # ZFC axioms 9-10 (replacement, choice)
+    ├── axioms.fol                 # (legacy) Combined axiom file
+    ├── ordered_pair.fol           # (legacy) Combined ordered pair file
+    ├── functions.fol              # (legacy) Combined functions file
+    └── replacement_choice.fol     # (legacy) Combined replacement/choice file
 ```
 
 ### Key Types (core/)
@@ -134,7 +135,7 @@ Statements:  axiom name: φ, claim name: φ, @def(P) axiom name: φ
 
 Predicates: `elem(x, y)` (membership), `eq(x, y)` (equality)
 
-In `zfc/axioms.fol.def`:
+In `zfc/basics/axioms.fol.def`:
 1. **Extensionality** - Sets equal iff same members
 2. **Empty Set** - Exists set with no members
 3. **Pairing** - For any a,b exists {a,b}
@@ -144,7 +145,7 @@ In `zfc/axioms.fol.def`:
 7. **Foundation** - No infinite descending membership chains
 8. **Separation** - For any set and property, exists the subset satisfying it
 
-In `zfc/replacement_choice.fol.def` (depends on functions):
+In `zfc/basics/replacement_choice.fol.def` (depends on functions):
 9. **Replacement** - Image of a set under a function exists
 10. **Choice** - Every collection of non-empty sets has a choice function
 
@@ -500,7 +501,7 @@ bool test_assume_with_fixed_vars() {
 
 ## Example: Ordered Pair Proofs
 
-The `zfc/ordered_pair.fol.def` and `zfc/ordered_pair.fol.proof` files contain proofs about Kuratowski ordered pairs:
+The `zfc/basics/ordered_pair.fol.def` and `zfc/basics/ordered_pair.fol.proof` files contain proofs about Kuratowski ordered pairs:
 
 ```fol
 # Definition: (a, b) = {{a}, {a, b}}

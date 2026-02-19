@@ -6,7 +6,7 @@ Write a formal proof for the claim **$ARGUMENTS** in the FOL-ZFC proof system. P
 
 ### Step 1: Find the claim
 
-Search `zfc/*.fol` files for `claim $ARGUMENTS:`. Read the target .fol file and any files it includes (via `include` directives). If no such claim exists, report an error and stop.
+Search `zfc/**/*.fol` files for `claim $ARGUMENTS:`. Read the target .fol file and any files it includes (via `include` directives). If no such claim exists, report an error and stop.
 
 ### Step 2: Understand the context
 
