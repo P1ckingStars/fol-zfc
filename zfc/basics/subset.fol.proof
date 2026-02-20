@@ -1,0 +1,84 @@
+# Proof of subset_refl: forall x. (elem(x,a) -> elem(x,a)) is trivial,
+# so subset(a, a) follows from subset_def.
+proof subset_refl:
+    fix a
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, a
+    sdef2 = forall_elim sdef1, a
+    fix x
+    h = assume elem(x, a)
+    h_impl = implies_intro h
+    h_all = forall_intro h_impl
+    h_sub = iff_elim_r sdef2, h_all
+    h_result = forall_intro h_sub
+    qed h_result
+
+# Proof of subset_trans: expand both subset assumptions, chain the
+# implications elem(x,a) -> elem(x,b) -> elem(x,c), then re-wrap.
+proof subset_trans:
+    fix a
+    fix b
+    fix c
+    h = assume subset(a, b) & subset(b, c)
+    h_ab = and_elim_l h
+    h_bc = and_elim_r h
+    # Expand subset(a, b)
+    sdef = use subset_def
+    sdef_ab1 = forall_elim sdef, a
+    sdef_ab2 = forall_elim sdef_ab1, b
+    h_ab_mem = iff_elim_l sdef_ab2, h_ab
+    # Expand subset(b, c)
+    sdef_bc1 = forall_elim sdef, b
+    sdef_bc2 = forall_elim sdef_bc1, c
+    h_bc_mem = iff_elim_l sdef_bc2, h_bc
+    # Chain: elem(x, a) -> elem(x, b) -> elem(x, c)
+    fix x
+    h_ab_x = forall_elim h_ab_mem, x
+    h_bc_x = forall_elim h_bc_mem, x
+    h_xa = assume elem(x, a)
+    h_xb = implies_elim h_ab_x, h_xa
+    h_xc = implies_elim h_bc_x, h_xb
+    h_ac_x = implies_intro h_xc
+    h_ac_all = forall_intro h_ac_x
+    # Re-wrap as subset(a, c)
+    sdef_ac1 = forall_elim sdef, a
+    sdef_ac2 = forall_elim sdef_ac1, c
+    h_ac = iff_elim_r sdef_ac2, h_ac_all
+    h_impl = implies_intro h_ac
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of subset_antisym: expand both subsets to get both directions
+# of elem membership, build biconditional, apply extensionality.
+proof subset_antisym:
+    fix a
+    fix b
+    h = assume subset(a, b) & subset(b, a)
+    h_ab = and_elim_l h
+    h_ba = and_elim_r h
+    # Expand subset(a, b)
+    sdef = use subset_def
+    sdef_ab1 = forall_elim sdef, a
+    sdef_ab2 = forall_elim sdef_ab1, b
+    h_ab_mem = iff_elim_l sdef_ab2, h_ab
+    # Expand subset(b, a)
+    sdef_ba1 = forall_elim sdef, b
+    sdef_ba2 = forall_elim sdef_ba1, a
+    h_ba_mem = iff_elim_l sdef_ba2, h_ba
+    # Build forall z. (elem(z, a) <-> elem(z, b))
+    fix z
+    h_ab_z = forall_elim h_ab_mem, z
+    h_ba_z = forall_elim h_ba_mem, z
+    h_iff = iff_intro h_ab_z, h_ba_z
+    h_all = forall_intro h_iff
+    # Apply extensionality
+    ext = use extensionality
+    ext1 = forall_elim ext, a
+    ext2 = forall_elim ext1, b
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1

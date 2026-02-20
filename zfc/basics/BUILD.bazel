@@ -1,5 +1,7 @@
 load("//build:fol.bzl", "fol_library", "fol_proof")
 
+package(default_visibility = ["//visibility:public"])
+
 # Legacy exports for tests that still use load_file_recursive
 exports_files([
     "axioms.fol",
@@ -37,6 +39,12 @@ fol_library(
 )
 
 fol_library(
+    name = "subset_lib",
+    header = "subset.fol.def",
+    deps = [":axioms"],
+)
+
+fol_library(
     name = "replacement_choice_lib",
     header = "replacement_choice.fol.def",
     deps = [":functions_lib"],
@@ -58,4 +66,11 @@ fol_proof(
     header = "functions.fol.def",
     proof = "functions.fol.proof",
     deps = [":ordered_pair"],
+)
+
+fol_proof(
+    name = "subset",
+    header = "subset.fol.def",
+    proof = "subset.fol.proof",
+    deps = [":axioms"],
 )

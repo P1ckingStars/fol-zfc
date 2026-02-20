@@ -1,0 +1,26 @@
+include "axioms.fol.def"
+
+# ============================================================
+# Subset Relation
+# ============================================================
+#
+# a ⊆ b means every element of a is an element of b.
+
+# subset(a, b) means every element of a is an element of b
+@def(subset) axiom subset_def: forall a. forall b.
+    (subset(a, b) <-> forall x. (elem(x, a) -> elem(x, b)))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Every set is a subset of itself
+claim subset_refl: forall a. subset(a, a)
+
+# Subset relation is transitive
+claim subset_trans: forall a. forall b. forall c.
+    ((subset(a, b) & subset(b, c)) -> subset(a, c))
+
+# Subset relation is antisymmetric (sets with same elements are equal)
+claim subset_antisym: forall a. forall b.
+    ((subset(a, b) & subset(b, a)) -> eq(a, b))

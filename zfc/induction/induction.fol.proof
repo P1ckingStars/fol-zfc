@@ -1,0 +1,54 @@
+# Proof of closed_is_subset: extract the first conjunct of closed_def.
+proof closed_is_subset:
+    fix f
+    fix c
+    fix s
+    h = assume closed(f, c, s)
+    cdef = use closed_def
+    cdef1 = forall_elim cdef, f
+    cdef2 = forall_elim cdef1, c
+    cdef3 = forall_elim cdef2, s
+    h_body = iff_elim_l cdef3, h
+    h_sub = and_elim_l h_body
+    h_impl = implies_intro h_sub
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_subset_closed: expand lfp to get the membership
+# biconditional, then for each x in l derive x in c.
+proof lfp_subset_closed:
+    fix l
+    fix f
+    fix s
+    fix c
+    h = assume lfp(l, f, s) & closed(f, c, s)
+    h_lfp = and_elim_l h
+    h_closed = and_elim_r h
+    # Expand lfp(l, f, s)
+    ldef = use lfp_def
+    ldef1 = forall_elim ldef, l
+    ldef2 = forall_elim ldef1, f
+    ldef3 = forall_elim ldef2, s
+    h_mem = iff_elim_l ldef3, h_lfp
+    # Expand subset_def for subset(l, c)
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, l
+    sdef2 = forall_elim sdef1, c
+    # Show forall x. (elem(x, l) -> elem(x, c))
+    fix x
+    h_x_iff = forall_elim h_mem, x
+    h_xl = assume elem(x, l)
+    h_x_all = iff_elim_l h_x_iff, h_xl
+    h_x_c = forall_elim h_x_all, c
+    h_xc = implies_elim h_x_c, h_closed
+    h_x_impl = implies_intro h_xc
+    h_all = forall_intro h_x_impl
+    h_sub = iff_elim_r sdef2, h_all
+    h_result = implies_intro h_sub
+    h4 = forall_intro h_result
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
