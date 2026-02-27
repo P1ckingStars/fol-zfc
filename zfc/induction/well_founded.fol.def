@@ -1,0 +1,40 @@
+include "induction.fol.def"
+
+# ============================================================
+# Well-Founded Relations (Note 3.37)
+# ============================================================
+#
+# Let ≺ ⊆ X² be a binary relation on a set X.
+# The monotone operator induced by ≺ is:
+#   T_≺ : P(X) → P(X)
+#   A ↦ {x ∈ X | ∀y ≺ x. y ∈ A}
+#
+# A subset A ⊆ X is ≺-closed if T_≺(A) ⊆ A, i.e., for every
+# x ∈ X, whenever all ≺-predecessors of x are in A, then x ∈ A.
+# The relation ≺ is well-founded on X if the only ≺-closed
+# subset of X is X itself (the induction principle).
+#
+# In our formalization, rel_elem(r, y, z) represents y ≺ z.
+
+# prec_closed(a, r, x): A is ≺-closed in X
+@def(prec_closed) axiom prec_closed_def: forall a. forall r. forall x.
+    (prec_closed(a, r, x) <->
+        forall z. ((elem(z, x) &
+            forall y. ((elem(y, x) & rel_elem(r, y, z)) -> elem(y, a))) ->
+            elem(z, a)))
+
+# well_founded(r, x): ≺ is well-founded on X
+@def(well_founded) axiom well_founded_def: forall r. forall x.
+    (well_founded(r, x) <->
+        forall a. ((subset(a, x) & prec_closed(a, r, x)) -> subset(x, a)))
+
+# ============================================================
+# Basic Properties
+# ============================================================
+
+# X is always ≺-closed in X (trivially: if z ∈ X then z ∈ X)
+claim prec_closed_full: forall r. forall x. prec_closed(x, r, x)
+
+# Well-founded induction: a ≺-closed subset of X equals X
+claim wf_induction: forall r. forall x. forall a.
+    ((well_founded(r, x) & subset(a, x) & prec_closed(a, r, x)) -> eq(a, x))

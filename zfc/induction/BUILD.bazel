@@ -18,3 +18,16 @@ fol_proof(
         "//zfc/basics:subset",
     ],
 )
+
+fol_library(
+    name = "well_founded_lib",
+    header = "well_founded.fol.def",
+    deps = [":induction_lib"],
+)
+
+fol_proof(
+    name = "well_founded",
+    header = "well_founded.fol.def",
+    proof = "well_founded.fol.proof",
+    deps = [":induction"],
+)

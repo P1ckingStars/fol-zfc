@@ -1,0 +1,49 @@
+# Proof of prec_closed_full: X is ≺-closed in X.
+# The conclusion elem(z, x) is part of the hypothesis.
+proof prec_closed_full:
+    fix r
+    fix x
+    pcdef = use prec_closed_def
+    pcdef1 = forall_elim pcdef, x
+    pcdef2 = forall_elim pcdef1, r
+    pcdef3 = forall_elim pcdef2, x
+    fix z
+    h = assume elem(z, x) & forall y. ((elem(y, x) & rel_elem(r, y, z)) -> elem(y, x))
+    h_zx = and_elim_l h
+    h_impl = implies_intro h_zx
+    h_all = forall_intro h_impl
+    h_pc = iff_elim_r pcdef3, h_all
+    h2 = forall_intro h_pc
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of wf_induction: from well_founded, get subset(x, a),
+# combine with subset(a, x) via subset_antisym to get eq(a, x).
+proof wf_induction:
+    fix r
+    fix x
+    fix a
+    h = assume well_founded(r, x) & subset(a, x) & prec_closed(a, r, x)
+    h_lhs = and_elim_l h
+    h_pc = and_elim_r h
+    h_wf = and_elim_l h_lhs
+    h_sub = and_elim_r h_lhs
+    # Expand well_founded
+    wfdef = use well_founded_def
+    wfdef1 = forall_elim wfdef, r
+    wfdef2 = forall_elim wfdef1, x
+    h_wf_body = iff_elim_l wfdef2, h_wf
+    h_wf_a = forall_elim h_wf_body, a
+    h_prem = and_intro h_sub, h_pc
+    h_xa = implies_elim h_wf_a, h_prem
+    # subset_antisym: subset(a, x) & subset(x, a) -> eq(a, x)
+    sa = use subset_antisym
+    sa1 = forall_elim sa, a
+    sa2 = forall_elim sa1, x
+    h_both = and_intro h_sub, h_xa
+    h_eq = implies_elim sa2, h_both
+    h_main = implies_intro h_eq
+    h3 = forall_intro h_main
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
