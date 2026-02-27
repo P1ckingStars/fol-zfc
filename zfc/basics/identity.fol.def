@@ -26,3 +26,17 @@ claim id_func_injective: forall i. forall x.
 
 claim id_func_bijective: forall i. forall x.
     (id_func(i, x) -> bijective(i, x, x))
+
+# ============================================================
+# Identity as Identity Element of Composition
+# ============================================================
+
+# Right identity: f∘id_X = f (as rel_elem)
+claim compose_id_right: forall h. forall f. forall id. forall x. forall y.
+    ((func_from_to(f, x, y) & id_func(id, x) & compose(h, id, f)) ->
+     forall a. forall c. (rel_elem(h, a, c) <-> rel_elem(f, a, c)))
+
+# Left identity: id_Y∘f = f (as rel_elem)
+claim compose_id_left: forall h. forall f. forall id. forall x. forall y.
+    ((func_from_to(f, x, y) & id_func(id, y) & compose(h, f, id)) ->
+     forall a. forall c. (rel_elem(h, a, c) <-> rel_elem(f, a, c)))

@@ -102,6 +102,204 @@ proof range_elem:
     h1 = forall_intro h2
     qed h1
 
+# Composition is associative: j∘(g∘f) = (j∘g)∘f
+# compose(gf,f,g) & compose(gj,g,j) & compose(h,gf,j) -> compose(h,f,gj)
+# Idea: rel_elem(h,a,d) <-> ∃c.(rel_elem(gf,a,c)&rel_elem(j,c,d))
+#                         <-> ∃c.∃b.(rel_elem(f,a,b)&rel_elem(g,b,c)&rel_elem(j,c,d))
+#                         <-> ∃b.(rel_elem(f,a,b)&∃c.(rel_elem(g,b,c)&rel_elem(j,c,d)))
+#                         <-> ∃b.(rel_elem(f,a,b)&rel_elem(gj,b,d))
+proof compose_assoc:
+    fix h
+    fix f
+    fix g
+    fix j
+    fix gf
+    fix gj
+    h_pre = assume compose(gf, f, g) & compose(gj, g, j) & compose(h, gf, j)
+    h_left = and_elim_l h_pre
+    h_ch = and_elim_r h_pre
+    h_cgf = and_elim_l h_left
+    h_cgj = and_elim_r h_left
+    cdef = use compose_def
+    # Expand compose(h, gf, j)
+    ch1 = forall_elim cdef, h
+    ch2 = forall_elim ch1, gf
+    ch3 = forall_elim ch2, j
+    h_hbody = iff_elim_l ch3, h_ch
+    # Expand compose(gf, f, g)
+    cgf1 = forall_elim cdef, gf
+    cgf2 = forall_elim cgf1, f
+    cgf3 = forall_elim cgf2, g
+    h_gfbody = iff_elim_l cgf3, h_cgf
+    # Expand compose(gj, g, j)
+    cgj1 = forall_elim cdef, gj
+    cgj2 = forall_elim cgj1, g
+    cgj3 = forall_elim cgj2, j
+    h_gjbody = iff_elim_l cgj3, h_cgj
+    fix a
+    fix d
+    h_had_iff = forall_elim h_hbody, a
+    h_had_iff2 = forall_elim h_had_iff, d
+    # Forward: rel_elem(h,a,d) -> exists b. (rel_elem(f,a,b) & rel_elem(gj,b,d))
+    h_had = assume rel_elem(h, a, d)
+    h_ex_c = iff_elim_l h_had_iff2, h_had
+    h_wc = exists_elim h_ex_c, wc
+    h_gf_awc = and_elim_l h_wc
+    h_j_wcd = and_elim_r h_wc
+    h_gf_inst = forall_elim h_gfbody, a
+    h_gf_inst2 = forall_elim h_gf_inst, wc
+    h_ex_b = iff_elim_l h_gf_inst2, h_gf_awc
+    h_wb = exists_elim h_ex_b, wb
+    h_f_awb = and_elim_l h_wb
+    h_g_wbwc = and_elim_r h_wb
+    # Build rel_elem(gj, wb, d)
+    h_gj_inst = forall_elim h_gjbody, wb
+    h_gj_inst2 = forall_elim h_gj_inst, d
+    h_gj_conj = and_intro h_g_wbwc, h_j_wcd
+    h_gj_ex = exists_intro h_gj_conj, wc
+    h_gj_val = iff_elim_r h_gj_inst2, h_gj_ex
+    h_fwd_conj = and_intro h_f_awb, h_gj_val
+    h_fwd_ex = exists_intro h_fwd_conj, wb
+    h_close_wb = exists_intro h_fwd_ex
+    h_close_wc = exists_intro h_close_wb
+    h_fwd = implies_intro h_close_wc
+    # Backward: exists b. (rel_elem(f,a,b) & rel_elem(gj,b,d)) -> rel_elem(h,a,d)
+    h_bwd_ass = assume exists b. (rel_elem(f, a, b) & rel_elem(gj, b, d))
+    h_vb = exists_elim h_bwd_ass, vb
+    h_f_avb = and_elim_l h_vb
+    h_gj_vbd = and_elim_r h_vb
+    h_gj_inst3 = forall_elim h_gjbody, vb
+    h_gj_inst4 = forall_elim h_gj_inst3, d
+    h_ex_c2 = iff_elim_l h_gj_inst4, h_gj_vbd
+    h_vc = exists_elim h_ex_c2, vc
+    h_g_vbvc = and_elim_l h_vc
+    h_j_vcd = and_elim_r h_vc
+    # Build rel_elem(gf, a, vc)
+    h_gf_inst3 = forall_elim h_gfbody, a
+    h_gf_inst4 = forall_elim h_gf_inst3, vc
+    h_gf_conj = and_intro h_f_avb, h_g_vbvc
+    h_gf_ex = exists_intro h_gf_conj, vb
+    h_gf_val = iff_elim_r h_gf_inst4, h_gf_ex
+    # Build rel_elem(h, a, d)
+    h_h_conj = and_intro h_gf_val, h_j_vcd
+    h_h_ex = exists_intro h_h_conj, vc
+    h_had_val = iff_elim_r h_had_iff2, h_h_ex
+    h_close_vc = exists_intro h_had_val
+    h_close_vb = exists_intro h_close_vc
+    h_bwd = implies_intro h_close_vb
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all_d = forall_intro h_iff
+    h_all_a = forall_intro h_all_d
+    cfgj1 = forall_elim cdef, h
+    cfgj2 = forall_elim cfgj1, f
+    cfgj3 = forall_elim cfgj2, gj
+    h_result = iff_elim_r cfgj3, h_all_a
+    h_impl = implies_intro h_result
+    r6 = forall_intro h_impl
+    r5 = forall_intro r6
+    r4 = forall_intro r5
+    r3 = forall_intro r4
+    r2 = forall_intro r3
+    r1 = forall_intro r2
+    qed r1
+
+# Reverse direction: (j∘g)∘f = j∘(g∘f)
+# compose(gf,f,g) & compose(gj,g,j) & compose(h,f,gj) -> compose(h,gf,j)
+proof compose_assoc_rev:
+    fix h
+    fix f
+    fix g
+    fix j
+    fix gf
+    fix gj
+    h_pre = assume compose(gf, f, g) & compose(gj, g, j) & compose(h, f, gj)
+    h_left = and_elim_l h_pre
+    h_ch = and_elim_r h_pre
+    h_cgf = and_elim_l h_left
+    h_cgj = and_elim_r h_left
+    cdef = use compose_def
+    # Expand compose(h, f, gj)
+    ch1 = forall_elim cdef, h
+    ch2 = forall_elim ch1, f
+    ch3 = forall_elim ch2, gj
+    h_hbody = iff_elim_l ch3, h_ch
+    # Expand compose(gf, f, g)
+    cgf1 = forall_elim cdef, gf
+    cgf2 = forall_elim cgf1, f
+    cgf3 = forall_elim cgf2, g
+    h_gfbody = iff_elim_l cgf3, h_cgf
+    # Expand compose(gj, g, j)
+    cgj1 = forall_elim cdef, gj
+    cgj2 = forall_elim cgj1, g
+    cgj3 = forall_elim cgj2, j
+    h_gjbody = iff_elim_l cgj3, h_cgj
+    fix a
+    fix d
+    h_had_iff = forall_elim h_hbody, a
+    h_had_iff2 = forall_elim h_had_iff, d
+    # Forward: rel_elem(h,a,d) -> exists c. (rel_elem(gf,a,c) & rel_elem(j,c,d))
+    h_had = assume rel_elem(h, a, d)
+    h_ex_b = iff_elim_l h_had_iff2, h_had
+    h_wb = exists_elim h_ex_b, wb
+    h_f_awb = and_elim_l h_wb
+    h_gj_wbd = and_elim_r h_wb
+    h_gj_inst = forall_elim h_gjbody, wb
+    h_gj_inst2 = forall_elim h_gj_inst, d
+    h_ex_c = iff_elim_l h_gj_inst2, h_gj_wbd
+    h_wc = exists_elim h_ex_c, wc
+    h_g_wbwc = and_elim_l h_wc
+    h_j_wcd = and_elim_r h_wc
+    # Build rel_elem(gf, a, wc)
+    h_gf_inst = forall_elim h_gfbody, a
+    h_gf_inst2 = forall_elim h_gf_inst, wc
+    h_fg_conj = and_intro h_f_awb, h_g_wbwc
+    h_fg_ex = exists_intro h_fg_conj, wb
+    h_gf_val = iff_elim_r h_gf_inst2, h_fg_ex
+    h_fwd_conj = and_intro h_gf_val, h_j_wcd
+    h_fwd_ex = exists_intro h_fwd_conj, wc
+    h_close_wc = exists_intro h_fwd_ex
+    h_close_wb = exists_intro h_close_wc
+    h_fwd = implies_intro h_close_wb
+    # Backward: exists c. (rel_elem(gf,a,c) & rel_elem(j,c,d)) -> rel_elem(h,a,d)
+    h_bwd_ass = assume exists c. (rel_elem(gf, a, c) & rel_elem(j, c, d))
+    h_vc = exists_elim h_bwd_ass, vc
+    h_gf_avc = and_elim_l h_vc
+    h_j_vcd = and_elim_r h_vc
+    h_gf_inst3 = forall_elim h_gfbody, a
+    h_gf_inst4 = forall_elim h_gf_inst3, vc
+    h_ex_b2 = iff_elim_l h_gf_inst4, h_gf_avc
+    h_vb = exists_elim h_ex_b2, vb
+    h_f_avb = and_elim_l h_vb
+    h_g_vbvc = and_elim_r h_vb
+    # Build rel_elem(gj, vb, d)
+    h_gj_inst3 = forall_elim h_gjbody, vb
+    h_gj_inst4 = forall_elim h_gj_inst3, d
+    h_gj_conj = and_intro h_g_vbvc, h_j_vcd
+    h_gj_ex = exists_intro h_gj_conj, vc
+    h_gj_val = iff_elim_r h_gj_inst4, h_gj_ex
+    # Build rel_elem(h, a, d)
+    h_h_conj = and_intro h_f_avb, h_gj_val
+    h_h_ex = exists_intro h_h_conj, vb
+    h_had_val = iff_elim_r h_had_iff2, h_h_ex
+    h_close_vb2 = exists_intro h_had_val
+    h_close_vc2 = exists_intro h_close_vb2
+    h_bwd = implies_intro h_close_vc2
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all_d = forall_intro h_iff
+    h_all_a = forall_intro h_all_d
+    cgfj1 = forall_elim cdef, h
+    cgfj2 = forall_elim cgfj1, gf
+    cgfj3 = forall_elim cgfj2, j
+    h_result = iff_elim_r cgfj3, h_all_a
+    h_impl = implies_intro h_result
+    r6 = forall_intro h_impl
+    r5 = forall_intro r6
+    r4 = forall_intro r5
+    r3 = forall_intro r4
+    r2 = forall_intro r3
+    r1 = forall_intro r2
+    qed r1
+
 proof injective_func_unique_input:
     fix f
     fix a

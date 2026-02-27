@@ -244,3 +244,196 @@ proof id_func_bijective:
     h2 = forall_intro h_impl
     h1 = forall_intro h2
     qed h1
+
+# compose_id_right: f∘id_X = f (as rel_elem)
+# compose(h, id, f) means h = f∘id. With id_func(id, x) and func_from_to(f, x, y),
+# rel_elem(h,a,c) <-> ∃b.(rel_elem(id,a,b) & rel_elem(f,b,c))
+# Since rel_elem(id,a,b) <-> (elem(a,x) & eq(a,b)), this reduces to rel_elem(f,a,c).
+proof compose_id_right:
+    fix h
+    fix f
+    fix id
+    fix x
+    fix y
+    h_pre = assume func_from_to(f, x, y) & id_func(id, x) & compose(h, id, f)
+    h_left = and_elim_l h_pre
+    h_ch = and_elim_r h_pre
+    h_ft_f = and_elim_l h_left
+    h_id = and_elim_r h_left
+    # Expand compose(h, id, f)
+    cdef = use compose_def
+    ch1 = forall_elim cdef, h
+    ch2 = forall_elim ch1, id
+    ch3 = forall_elim ch2, f
+    h_hbody = iff_elim_l ch3, h_ch
+    # Expand id_func_def
+    iddef = use id_func_def
+    iddef1 = forall_elim iddef, id
+    iddef2 = forall_elim iddef1, x
+    h_idbody = iff_elim_l iddef2, h_id
+    refl = use eq_refl
+    sym = use eq_sym
+    fix a
+    fix c
+    h_hac_iff = forall_elim h_hbody, a
+    h_hac_iff2 = forall_elim h_hac_iff, c
+    # Forward: rel_elem(h, a, c) -> rel_elem(f, a, c)
+    h_hac = assume rel_elem(h, a, c)
+    h_ex = iff_elim_l h_hac_iff2, h_hac
+    h_wb = exists_elim h_ex, wb
+    h_id_awb = and_elim_l h_wb
+    h_f_wbc = and_elim_r h_wb
+    h_id_inst = forall_elim h_idbody, a
+    h_id_inst2 = forall_elim h_id_inst, wb
+    h_id_cond = iff_elim_l h_id_inst2, h_id_awb
+    h_eq_awb = and_elim_r h_id_cond
+    # eq_sym: eq(wb, a), then eq_subst to get rel_elem(f, a, c)
+    sym1 = forall_elim sym, a
+    sym2 = forall_elim sym1, wb
+    h_eq_wba = implies_elim sym2, h_eq_awb
+    h_fac = eq_subst h_eq_wba, h_f_wbc
+    h_close_wb = exists_intro h_fac
+    h_fwd = implies_intro h_close_wb
+    # Backward: rel_elem(f, a, c) -> rel_elem(h, a, c)
+    h_fac2 = assume rel_elem(f, a, c)
+    # Get elem(a, x) from func_from_to + domain_elem
+    de = use domain_elem
+    de1 = forall_elim de, f
+    de2 = forall_elim de1, a
+    de3 = forall_elim de2, c
+    h_dom_f = implies_elim de3, h_fac2
+    ftdef = use func_from_to_def
+    ftdef1 = forall_elim ftdef, f
+    ftdef2 = forall_elim ftdef1, x
+    ftdef3 = forall_elim ftdef2, y
+    h_ft_body = iff_elim_l ftdef3, h_ft_f
+    h_ft_left = and_elim_l h_ft_body
+    h_ft_dom = and_elim_r h_ft_left
+    h_dom_iff = forall_elim h_ft_dom, a
+    h_ax = iff_elim_l h_dom_iff, h_dom_f
+    # Auxiliary variable: fix w, assume eq(w, a), build witness, close, instantiate w=a
+    fix w
+    h_wa = assume eq(w, a)
+    sym3 = forall_elim sym, w
+    sym4 = forall_elim sym3, a
+    h_aw = implies_elim sym4, h_wa
+    # Build rel_elem(id, a, w)
+    h_id_inst3 = forall_elim h_idbody, a
+    h_id_inst4 = forall_elim h_id_inst3, w
+    h_id_cond2 = and_intro h_ax, h_aw
+    h_rel_id = iff_elim_r h_id_inst4, h_id_cond2
+    # Build rel_elem(f, w, c)
+    h_fwc = eq_subst h_aw, h_fac2
+    # Conjunction + existential
+    h_conj = and_intro h_rel_id, h_fwc
+    h_ex2 = exists_intro h_conj, w
+    h_hac2 = iff_elim_r h_hac_iff2, h_ex2
+    h_impl_w = implies_intro h_hac2
+    h_all_w = forall_intro h_impl_w
+    h_inst_a = forall_elim h_all_w, a
+    refl_a = forall_elim refl, a
+    h_hac_final = implies_elim h_inst_a, refl_a
+    h_bwd = implies_intro h_hac_final
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all_c = forall_intro h_iff
+    h_all_a = forall_intro h_all_c
+    h_impl = implies_intro h_all_a
+    r5 = forall_intro h_impl
+    r4 = forall_intro r5
+    r3 = forall_intro r4
+    r2 = forall_intro r3
+    r1 = forall_intro r2
+    qed r1
+
+# compose_id_left: id_Y∘f = f (as rel_elem)
+# compose(h, f, id) means h = id∘f. With id_func(id, y) and func_from_to(f, x, y),
+# rel_elem(h,a,c) <-> ∃b.(rel_elem(f,a,b) & rel_elem(id,b,c))
+# Since rel_elem(id,b,c) <-> (elem(b,y) & eq(b,c)), this reduces to rel_elem(f,a,c).
+proof compose_id_left:
+    fix h
+    fix f
+    fix id
+    fix x
+    fix y
+    h_pre = assume func_from_to(f, x, y) & id_func(id, y) & compose(h, f, id)
+    h_left = and_elim_l h_pre
+    h_ch = and_elim_r h_pre
+    h_ft_f = and_elim_l h_left
+    h_id = and_elim_r h_left
+    # Expand compose(h, f, id)
+    cdef = use compose_def
+    ch1 = forall_elim cdef, h
+    ch2 = forall_elim ch1, f
+    ch3 = forall_elim ch2, id
+    h_hbody = iff_elim_l ch3, h_ch
+    # Expand id_func_def
+    iddef = use id_func_def
+    iddef1 = forall_elim iddef, id
+    iddef2 = forall_elim iddef1, y
+    h_idbody = iff_elim_l iddef2, h_id
+    refl = use eq_refl
+    sym = use eq_sym
+    fix a
+    fix c
+    h_hac_iff = forall_elim h_hbody, a
+    h_hac_iff2 = forall_elim h_hac_iff, c
+    # Forward: rel_elem(h, a, c) -> rel_elem(f, a, c)
+    h_hac = assume rel_elem(h, a, c)
+    h_ex = iff_elim_l h_hac_iff2, h_hac
+    h_wb = exists_elim h_ex, wb
+    h_f_awb = and_elim_l h_wb
+    h_id_wbc = and_elim_r h_wb
+    h_id_inst = forall_elim h_idbody, wb
+    h_id_inst2 = forall_elim h_id_inst, c
+    h_id_cond = iff_elim_l h_id_inst2, h_id_wbc
+    h_eq_wbc = and_elim_r h_id_cond
+    # eq_subst: eq(wb, c), rel_elem(f, a, wb) -> rel_elem(f, a, c)
+    h_fac = eq_subst h_eq_wbc, h_f_awb
+    h_close_wb = exists_intro h_fac
+    h_fwd = implies_intro h_close_wb
+    # Backward: rel_elem(f, a, c) -> rel_elem(h, a, c)
+    h_fac2 = assume rel_elem(f, a, c)
+    # Get elem(c, y) via func_from_to_range
+    ftr = use func_from_to_range
+    ftr1 = forall_elim ftr, f
+    ftr2 = forall_elim ftr1, x
+    ftr3 = forall_elim ftr2, y
+    ftr4 = forall_elim ftr3, a
+    ftr5 = forall_elim ftr4, c
+    h_ftr_conj = and_intro h_ft_f, h_fac2
+    h_cy = implies_elim ftr5, h_ftr_conj
+    # Auxiliary variable: fix w, assume eq(w, c), build witness, close, instantiate w=c
+    fix w
+    h_wc = assume eq(w, c)
+    sym1 = forall_elim sym, w
+    sym2 = forall_elim sym1, c
+    h_cw = implies_elim sym2, h_wc
+    # Build rel_elem(f, a, w)
+    h_faw = eq_subst h_cw, h_fac2
+    # Build elem(w, y)
+    h_wy = eq_subst h_cw, h_cy
+    # Build rel_elem(id, w, c)
+    h_id_inst3 = forall_elim h_idbody, w
+    h_id_inst4 = forall_elim h_id_inst3, c
+    h_id_cond2 = and_intro h_wy, h_wc
+    h_rel_id = iff_elim_r h_id_inst4, h_id_cond2
+    # Conjunction + existential
+    h_conj = and_intro h_faw, h_rel_id
+    h_ex2 = exists_intro h_conj, w
+    h_hac2 = iff_elim_r h_hac_iff2, h_ex2
+    h_impl_w = implies_intro h_hac2
+    h_all_w = forall_intro h_impl_w
+    h_inst_c = forall_elim h_all_w, c
+    refl_c = forall_elim refl, c
+    h_hac_final = implies_elim h_inst_c, refl_c
+    h_bwd = implies_intro h_hac_final
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all_c = forall_intro h_iff
+    h_all_a = forall_intro h_all_c
+    h_impl = implies_intro h_all_a
+    r5 = forall_intro h_impl
+    r4 = forall_intro r5
+    r3 = forall_intro r4
+    r2 = forall_intro r3
+    r1 = forall_intro r2
+    qed r1
