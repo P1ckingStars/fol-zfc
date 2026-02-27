@@ -1,0 +1,99 @@
+include "subset.fol.def"
+
+# ============================================================
+# Set Operations: Empty, Intersection, Binary Union, Difference
+# ============================================================
+
+# empty(e) means e has no elements
+@def(empty) axiom empty_def: forall e. (empty(e) <-> forall x. ~elem(x, e))
+
+# intersection(c, a, b) means c = a intersect b
+@def(intersection) axiom intersection_def: forall c. forall a. forall b.
+    (intersection(c, a, b) <-> forall x. (elem(x, c) <-> (elem(x, a) & elem(x, b))))
+
+# binary_union(c, a, b) means c = a union b
+@def(binary_union) axiom binary_union_def: forall c. forall a. forall b.
+    (binary_union(c, a, b) <-> forall x. (elem(x, c) <-> (elem(x, a) | elem(x, b))))
+
+# set_diff(c, a, b) means c = a \ b
+@def(set_diff) axiom set_diff_def: forall c. forall a. forall b.
+    (set_diff(c, a, b) <-> forall x. (elem(x, c) <-> (elem(x, a) & ~elem(x, b))))
+
+# ============================================================
+# Empty Set Claims
+# ============================================================
+
+# The empty set is a subset of every set
+claim empty_subset: forall e. forall a. (empty(e) -> subset(e, a))
+
+# Any two empty sets are equal
+claim empty_unique: forall e1. forall e2. ((empty(e1) & empty(e2)) -> eq(e1, e2))
+
+# ============================================================
+# Intersection Claims
+# ============================================================
+
+claim intersect_elim: forall c. forall a. forall b. forall x.
+    ((intersection(c, a, b) & elem(x, c)) -> (elem(x, a) & elem(x, b)))
+
+claim intersect_intro: forall c. forall a. forall b. forall x.
+    ((intersection(c, a, b) & elem(x, a) & elem(x, b)) -> elem(x, c))
+
+claim intersect_subset_l: forall c. forall a. forall b.
+    (intersection(c, a, b) -> subset(c, a))
+
+claim intersect_subset_r: forall c. forall a. forall b.
+    (intersection(c, a, b) -> subset(c, b))
+
+claim intersect_unique: forall c1. forall c2. forall a. forall b.
+    ((intersection(c1, a, b) & intersection(c2, a, b)) -> eq(c1, c2))
+
+# ============================================================
+# Binary Union Claims
+# ============================================================
+
+claim bunion_intro_l: forall c. forall a. forall b. forall x.
+    ((binary_union(c, a, b) & elem(x, a)) -> elem(x, c))
+
+claim bunion_intro_r: forall c. forall a. forall b. forall x.
+    ((binary_union(c, a, b) & elem(x, b)) -> elem(x, c))
+
+claim bunion_elim: forall c. forall a. forall b. forall x.
+    ((binary_union(c, a, b) & elem(x, c)) -> (elem(x, a) | elem(x, b)))
+
+claim bunion_unique: forall c1. forall c2. forall a. forall b.
+    ((binary_union(c1, a, b) & binary_union(c2, a, b)) -> eq(c1, c2))
+
+# ============================================================
+# Set Difference Claims
+# ============================================================
+
+claim diff_elim: forall c. forall a. forall b. forall x.
+    ((set_diff(c, a, b) & elem(x, c)) -> (elem(x, a) & ~elem(x, b)))
+
+claim diff_intro: forall c. forall a. forall b. forall x.
+    ((set_diff(c, a, b) & elem(x, a) & ~elem(x, b)) -> elem(x, c))
+
+claim diff_subset: forall c. forall a. forall b.
+    (set_diff(c, a, b) -> subset(c, a))
+
+# ============================================================
+# General Intersection
+# ============================================================
+
+# gen_intersect(c, a) means c = ⋂a, the intersection of all members of a
+@def(gen_intersect) axiom gen_intersect_def: forall c. forall a.
+    (gen_intersect(c, a) <-> forall x. (elem(x, c) <->
+        forall y. (elem(y, a) -> elem(x, y))))
+
+claim gen_intersect_elim: forall c. forall a. forall x. forall y.
+    ((gen_intersect(c, a) & elem(x, c) & elem(y, a)) -> elem(x, y))
+
+claim gen_intersect_intro: forall c. forall a. forall x.
+    ((gen_intersect(c, a) & forall y. (elem(y, a) -> elem(x, y))) -> elem(x, c))
+
+claim gen_intersect_subset: forall c. forall a. forall y.
+    ((gen_intersect(c, a) & elem(y, a)) -> subset(c, y))
+
+claim gen_intersect_unique: forall c1. forall c2. forall a.
+    ((gen_intersect(c1, a) & gen_intersect(c2, a)) -> eq(c1, c2))

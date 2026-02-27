@@ -1,0 +1,24 @@
+include "typed_functions.fol.def"
+
+# ============================================================
+# Function Space Y^X
+# ============================================================
+#
+# func_space(s, x, y) means s is the set of all functions from x to y:
+#   s = { f | func_from_to(f, x, y) }
+
+@def(func_space) axiom func_space_def: forall s. forall x. forall y.
+    (func_space(s, x, y) <-> forall f. (elem(f, s) <-> func_from_to(f, x, y)))
+
+# ============================================================
+# Claims
+# ============================================================
+
+claim func_space_elem: forall s. forall x. forall y. forall f.
+    ((func_space(s, x, y) & elem(f, s)) -> func_from_to(f, x, y))
+
+claim func_space_intro: forall s. forall x. forall y. forall f.
+    ((func_space(s, x, y) & func_from_to(f, x, y)) -> elem(f, s))
+
+claim func_space_unique: forall s1. forall s2. forall x. forall y.
+    ((func_space(s1, x, y) & func_space(s2, x, y)) -> eq(s1, s2))

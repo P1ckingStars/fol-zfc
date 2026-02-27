@@ -1,0 +1,81 @@
+include "functions.fol.def"
+
+# ============================================================
+# Typed Functions: f : X -> Y
+# ============================================================
+#
+# A typed function f : X -> Y is a function whose domain is exactly X
+# and whose range is contained in Y.
+
+@def(func_from_to) axiom func_from_to_def: forall f. forall x. forall y.
+    (func_from_to(f, x, y) <->
+        (is_function(f) &
+         (forall a. (in_domain(f, a) <-> elem(a, x))) &
+         (forall a. forall b. (rel_elem(f, a, b) -> elem(b, y)))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# A typed function is a function
+claim func_from_to_is_function: forall f. forall x. forall y.
+    (func_from_to(f, x, y) -> is_function(f))
+
+# Elements of the domain set are in_domain
+claim func_from_to_domain: forall f. forall x. forall y. forall a.
+    ((func_from_to(f, x, y) & elem(a, x)) -> in_domain(f, a))
+
+# Outputs land in the codomain
+claim func_from_to_range: forall f. forall x. forall y. forall a. forall b.
+    ((func_from_to(f, x, y) & rel_elem(f, a, b)) -> elem(b, y))
+
+# Typed functions are total: every element of the domain has an output
+claim func_from_to_total: forall f. forall x. forall y. forall a.
+    ((func_from_to(f, x, y) & elem(a, x)) -> exists b. rel_elem(f, a, b))
+
+# ============================================================
+# Surjective Functions
+# ============================================================
+
+@def(surjective) axiom surjective_def: forall f. forall x. forall y.
+    (surjective(f, x, y) <-> (func_from_to(f, x, y) &
+        forall b. (elem(b, y) -> exists a. (elem(a, x) & rel_elem(f, a, b)))))
+
+claim surjective_is_func: forall f. forall x. forall y.
+    (surjective(f, x, y) -> func_from_to(f, x, y))
+
+claim surjective_onto: forall f. forall x. forall y. forall b.
+    ((surjective(f, x, y) & elem(b, y)) ->
+        exists a. (elem(a, x) & rel_elem(f, a, b)))
+
+# ============================================================
+# Bijective Functions
+# ============================================================
+
+@def(bijective) axiom bijective_def: forall f. forall x. forall y.
+    (bijective(f, x, y) <-> (surjective(f, x, y) & injective(f)))
+
+claim bijective_is_surjective: forall f. forall x. forall y.
+    (bijective(f, x, y) -> surjective(f, x, y))
+
+claim bijective_is_injective: forall f. forall x. forall y.
+    (bijective(f, x, y) -> injective(f))
+
+claim bijective_is_func: forall f. forall x. forall y.
+    (bijective(f, x, y) -> func_from_to(f, x, y))
+
+claim bijective_intro: forall f. forall x. forall y.
+    ((surjective(f, x, y) & injective(f)) -> bijective(f, x, y))
+
+# ============================================================
+# Typed Composition
+# ============================================================
+
+# compose(h, f, g) with f: X->Y, g: Y->Z gives h: X->Z
+claim compose_func_from_to: forall h. forall f. forall g. forall x. forall y. forall z.
+    ((compose(h, f, g) & func_from_to(f, x, y) & func_from_to(g, y, z)) ->
+     func_from_to(h, x, z))
+
+# Composition of injective functions is injective
+claim compose_injective: forall h. forall f. forall g.
+    ((compose(h, f, g) & injective(f) & injective(g)) -> injective(h))

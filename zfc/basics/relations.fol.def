@@ -1,0 +1,91 @@
+include "functions.fol.def"
+
+# ============================================================
+# Relations: is_relation, Domain Set, Range Set, Inverse, Image
+# ============================================================
+
+# is_relation(r) means every element of r is an ordered pair
+@def(is_relation) axiom is_relation_def: forall r.
+    (is_relation(r) <-> forall z. (elem(z, r) ->
+        exists x. exists y. pair(z, x, y)))
+
+# domain_set(d, r) means d is the set of all first components of pairs in r
+@def(domain_set) axiom domain_set_def: forall d. forall r.
+    (domain_set(d, r) <-> forall x. (elem(x, d) <-> exists y. rel_elem(r, x, y)))
+
+# range_set(g, r) means g is the set of all second components of pairs in r
+@def(range_set) axiom range_set_def: forall g. forall r.
+    (range_set(g, r) <-> forall y. (elem(y, g) <-> exists x. rel_elem(r, x, y)))
+
+# inverse(s, r) means s is the relation with all pairs reversed
+@def(inverse) axiom inverse_def: forall s. forall r.
+    (inverse(s, r) <-> forall x. forall y. (rel_elem(s, x, y) <-> rel_elem(r, y, x)))
+
+# image(t, r, a) means t = { y | exists x in a. (x, y) in r }
+@def(image) axiom image_def: forall t. forall r. forall a.
+    (image(t, r, a) <-> forall y. (elem(y, t) <-> exists x. (elem(x, a) & rel_elem(r, x, y))))
+
+# ============================================================
+# Domain Set Claims
+# ============================================================
+
+# If x is in the domain set, then x is in_domain
+claim domain_set_elem: forall d. forall r. forall x.
+    ((domain_set(d, r) & elem(x, d)) -> in_domain(r, x))
+
+# If x is in_domain, then x is in the domain set
+claim in_domain_elem: forall d. forall r. forall x.
+    ((domain_set(d, r) & in_domain(r, x)) -> elem(x, d))
+
+# Domain set is unique
+claim domain_set_unique: forall d1. forall d2. forall r.
+    ((domain_set(d1, r) & domain_set(d2, r)) -> eq(d1, d2))
+
+# ============================================================
+# Range Set Claims
+# ============================================================
+
+# Range set is unique
+claim range_set_unique: forall g1. forall g2. forall r.
+    ((range_set(g1, r) & range_set(g2, r)) -> eq(g1, g2))
+
+# ============================================================
+# Inverse Claims
+# ============================================================
+
+# Forward: rel_elem in the inverse means rel_elem with swapped args in the original
+claim inverse_fwd: forall s. forall r. forall x. forall y.
+    ((inverse(s, r) & rel_elem(s, x, y)) -> rel_elem(r, y, x))
+
+# Reverse: rel_elem in the original means rel_elem with swapped args in the inverse
+claim inverse_rev: forall s. forall r. forall x. forall y.
+    ((inverse(s, r) & rel_elem(r, x, y)) -> rel_elem(s, y, x))
+
+# Double inverse is the identity
+claim inverse_involution: forall s. forall r. forall t. forall x. forall y.
+    ((inverse(s, r) & inverse(t, s)) -> (rel_elem(t, x, y) <-> rel_elem(r, x, y)))
+
+# ============================================================
+# Image Claims
+# ============================================================
+
+# Elimination: element of the image has a preimage in a
+claim image_elem: forall t. forall r. forall a. forall y.
+    ((image(t, r, a) & elem(y, t)) -> exists x. (elem(x, a) & rel_elem(r, x, y)))
+
+# Introduction: if x is in a and (x,y) is in r, then y is in the image
+claim image_intro: forall t. forall r. forall a. forall x. forall y.
+    ((image(t, r, a) & elem(x, a) & rel_elem(r, x, y)) -> elem(y, t))
+
+# Image is unique
+claim image_unique: forall t1. forall t2. forall r. forall a.
+    ((image(t1, r, a) & image(t2, r, a)) -> eq(t1, t2))
+
+# ============================================================
+# Relation Extensionality
+# ============================================================
+
+# Relation extensionality: same rel_elem everywhere → equal as sets
+claim rel_ext: forall r. forall s.
+    ((is_relation(r) & is_relation(s) &
+      forall a. forall b. (rel_elem(r, a, b) <-> rel_elem(s, a, b))) -> eq(r, s))

@@ -5,14 +5,14 @@ include "../basics/subset.fol.def"
 # Monotone Set Operators
 # ============================================================
 #
-# A monotone operator is a function F: P(S) -> P(S) that
-# preserves the subset ordering: A ⊆ B implies F(A) ⊆ F(B).
+# A monotone operator is a function that preserves the subset
+# ordering: A ⊆ B implies F(A) ⊆ F(B).
 
-# monotone(f, s) means f is a monotone operator on P(s)
-@def(monotone) axiom monotone_def: forall f. forall s.
-    (monotone(f, s) <->
+# monotone(f) means f is a monotone function on sets
+@def(monotone) axiom monotone_def: forall f.
+    (monotone(f) <->
         (is_function(f) &
-         forall a. forall b. ((subset(a, s) & subset(b, s) & subset(a, b)) ->
+         forall a. forall b. (subset(a, b) ->
              forall fa. forall fb. ((rel_elem(f, a, fa) & rel_elem(f, b, fb)) ->
                  subset(fa, fb)))))
 
@@ -20,31 +20,29 @@ include "../basics/subset.fol.def"
 # F-Closed Sets and Least Fixed Point
 # ============================================================
 #
-# A set C ⊆ S is F-closed if F(C) ⊆ C. The least fixed point
-# (inductive set) is the intersection of all F-closed subsets
-# of S: an element belongs to the lfp iff it belongs to every
-# F-closed set.
+# A set C is F-closed if F(C) ⊆ C. The least fixed point
+# (inductive set) over base b is the smallest F-closed set
+# containing b: an element belongs to the lfp iff it belongs
+# to every F-closed set that contains b.
 
-# closed(f, c, s) means c is an F-closed subset of s
-@def(closed) axiom closed_def: forall f. forall c. forall s.
-    (closed(f, c, s) <->
-        (subset(c, s) &
-         forall fc. (rel_elem(f, c, fc) -> subset(fc, c))))
+# closed(f, c) means c is an F-closed set: F(c) ⊆ c
+@def(closed) axiom closed_def: forall f. forall c.
+    (closed(f, c) <-> forall fc. (rel_elem(f, c, fc) -> subset(fc, c)))
 
-# lfp(l, f, s) means l is the least fixed point of f on s
-@def(lfp) axiom lfp_def: forall l. forall f. forall s.
-    (lfp(l, f, s) <->
+# lfp(l, f, b) means l is the smallest F-closed set containing b
+@def(lfp) axiom lfp_def: forall l. forall f. forall b.
+    (lfp(l, f, b) <->
         forall x. (elem(x, l) <->
-            forall c. (closed(f, c, s) -> elem(x, c))))
+            forall c. ((closed(f, c) & subset(b, c)) -> elem(x, c))))
 
 # ============================================================
 # Claims
 # ============================================================
 
-# An F-closed set is a subset of s
-claim closed_is_subset: forall f. forall c. forall s.
-    (closed(f, c, s) -> subset(c, s))
+# The lfp contains the base set
+claim lfp_contains_base: forall l. forall f. forall b.
+    (lfp(l, f, b) -> subset(b, l))
 
-# The lfp is a subset of every F-closed set
-claim lfp_subset_closed: forall l. forall f. forall s. forall c.
-    ((lfp(l, f, s) & closed(f, c, s)) -> subset(l, c))
+# The lfp is a subset of every F-closed set containing the base
+claim lfp_subset_closed: forall l. forall f. forall b. forall c.
+    ((lfp(l, f, b) & closed(f, c) & subset(b, c)) -> subset(l, c))

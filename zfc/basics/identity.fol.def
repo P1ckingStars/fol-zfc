@@ -1,0 +1,28 @@
+include "typed_functions.fol.def"
+
+# ============================================================
+# Identity Function
+# ============================================================
+#
+# The identity function on X maps each element to itself:
+#   id_X = { (a, a) | a in X }
+
+@def(id_func) axiom id_func_def: forall i. forall x.
+    (id_func(i, x) <-> forall a. forall b.
+        (rel_elem(i, a, b) <-> (elem(a, x) & eq(a, b))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+claim id_func_is_function: forall i. forall x.
+    (id_func(i, x) -> is_function(i))
+
+claim id_func_from_to: forall i. forall x.
+    (id_func(i, x) -> func_from_to(i, x, x))
+
+claim id_func_injective: forall i. forall x.
+    (id_func(i, x) -> injective(i))
+
+claim id_func_bijective: forall i. forall x.
+    (id_func(i, x) -> bijective(i, x, x))

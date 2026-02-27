@@ -45,6 +45,42 @@ fol_library(
 )
 
 fol_library(
+    name = "set_operations_lib",
+    header = "set_operations.fol.def",
+    deps = [":axioms", ":subset_lib"],
+)
+
+fol_library(
+    name = "cartesian_lib",
+    header = "cartesian.fol.def",
+    deps = [":functions_lib"],
+)
+
+fol_library(
+    name = "relations_lib",
+    header = "relations.fol.def",
+    deps = [":functions_lib"],
+)
+
+fol_library(
+    name = "typed_functions_lib",
+    header = "typed_functions.fol.def",
+    deps = [":functions_lib"],
+)
+
+fol_library(
+    name = "identity_lib",
+    header = "identity.fol.def",
+    deps = [":typed_functions_lib"],
+)
+
+fol_library(
+    name = "func_space_lib",
+    header = "func_space.fol.def",
+    deps = [":typed_functions_lib"],
+)
+
+fol_library(
     name = "replacement_choice_lib",
     header = "replacement_choice.fol.def",
     deps = [":functions_lib"],
@@ -73,4 +109,46 @@ fol_proof(
     header = "subset.fol.def",
     proof = "subset.fol.proof",
     deps = [":axioms"],
+)
+
+fol_proof(
+    name = "set_operations",
+    header = "set_operations.fol.def",
+    proof = "set_operations.fol.proof",
+    deps = [":axioms", ":subset"],
+)
+
+fol_proof(
+    name = "cartesian",
+    header = "cartesian.fol.def",
+    proof = "cartesian.fol.proof",
+    deps = [":functions"],
+)
+
+fol_proof(
+    name = "relations",
+    header = "relations.fol.def",
+    proof = "relations.fol.proof",
+    deps = [":functions"],
+)
+
+fol_proof(
+    name = "typed_functions",
+    header = "typed_functions.fol.def",
+    proof = "typed_functions.fol.proof",
+    deps = [":functions"],
+)
+
+fol_proof(
+    name = "identity",
+    header = "identity.fol.def",
+    proof = "identity.fol.proof",
+    deps = [":typed_functions"],
+)
+
+fol_proof(
+    name = "func_space",
+    header = "func_space.fol.def",
+    proof = "func_space.fol.proof",
+    deps = [":typed_functions"],
 )

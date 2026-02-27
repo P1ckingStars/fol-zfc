@@ -1,9 +1,10 @@
 """Bazel rules for FOL-ZFC proof verification."""
 
 FolInfo = provider(
-    doc = "Information about FOL header files.",
+    doc = "Information about FOL header and proof files.",
     fields = {
         "headers": "depset of .fol.def files (transitive)",
+        "proofs": "depset of .fol.proof files (transitive)",
     },
 )
 
@@ -12,8 +13,11 @@ def _fol_library_impl(ctx):
         direct = [ctx.file.header],
         transitive = [dep[FolInfo].headers for dep in ctx.attr.deps],
     )
+    proofs = depset(
+        transitive = [dep[FolInfo].proofs for dep in ctx.attr.deps],
+    )
     return [
-        FolInfo(headers = headers),
+        FolInfo(headers = headers, proofs = proofs),
         DefaultInfo(files = depset([ctx.file.header])),
     ]
 
@@ -38,24 +42,27 @@ def _fol_proof_impl(ctx):
     proof_file = ctx.file.proof
     output = ctx.actions.declare_file(ctx.label.name + ".proven")
 
-    # Collect all transitive headers from deps
+    # Collect all transitive headers and proofs from deps
     dep_headers = depset(transitive = [dep[FolInfo].headers for dep in ctx.attr.deps])
+    dep_proofs = depset(transitive = [dep[FolInfo].proofs for dep in ctx.attr.deps])
 
-    # All inputs: header, proof, and transitive dep headers
+    # All inputs: header, proof, transitive dep headers, and transitive dep proofs
     all_headers = depset(
         direct = [header_file],
         transitive = [dep_headers],
     )
     inputs = depset(
         direct = [proof_file],
-        transitive = [all_headers],
+        transitive = [all_headers, dep_proofs],
     )
 
-    # Build command: proof_checker <header> <proof> [dep_headers...]
+    # Build command: proof_checker <header> <proof> [dep_headers...] -- [dep_proofs...]
     args = ctx.actions.args()
     args.add(header_file)
     args.add(proof_file)
     args.add_all(dep_headers)
+    args.add("--")
+    args.add_all(dep_proofs)
 
     ctx.actions.run(
         outputs = [output],
@@ -67,14 +74,18 @@ def _fol_proof_impl(ctx):
         progress_message = "Proving %{label}",
     )
 
-    # This target also acts as a FolInfo provider (its header is available to dependents)
+    # This target also acts as a FolInfo provider (its header and proof are available to dependents)
     headers = depset(
         direct = [header_file],
         transitive = [dep[FolInfo].headers for dep in ctx.attr.deps],
     )
+    proofs = depset(
+        direct = [proof_file],
+        transitive = [dep[FolInfo].proofs for dep in ctx.attr.deps],
+    )
 
     return [
-        FolInfo(headers = headers),
+        FolInfo(headers = headers, proofs = proofs),
         DefaultInfo(files = depset([output])),
     ]
 

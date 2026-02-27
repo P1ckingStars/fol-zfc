@@ -1,0 +1,87 @@
+# func_space_elem: elem(f, s) -> func_from_to(f, x, y)
+proof func_space_elem:
+    fix s
+    fix x
+    fix y
+    fix f
+    h = assume func_space(s, x, y) & elem(f, s)
+    h_fs = and_elim_l h
+    h_elem = and_elim_r h
+    fsdef = use func_space_def
+    fsdef1 = forall_elim fsdef, s
+    fsdef2 = forall_elim fsdef1, x
+    fsdef3 = forall_elim fsdef2, y
+    h_mem = iff_elim_l fsdef3, h_fs
+    h_f = forall_elim h_mem, f
+    h_result = iff_elim_l h_f, h_elem
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# func_space_intro: func_from_to(f, x, y) -> elem(f, s)
+proof func_space_intro:
+    fix s
+    fix x
+    fix y
+    fix f
+    h = assume func_space(s, x, y) & func_from_to(f, x, y)
+    h_fs = and_elim_l h
+    h_ft = and_elim_r h
+    fsdef = use func_space_def
+    fsdef1 = forall_elim fsdef, s
+    fsdef2 = forall_elim fsdef1, x
+    fsdef3 = forall_elim fsdef2, y
+    h_mem = iff_elim_l fsdef3, h_fs
+    h_f = forall_elim h_mem, f
+    h_result = iff_elim_r h_f, h_ft
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# func_space_unique: two function spaces for the same (x, y) are equal
+proof func_space_unique:
+    fix s1
+    fix s2
+    fix x
+    fix y
+    h = assume func_space(s1, x, y) & func_space(s2, x, y)
+    h_fs1 = and_elim_l h
+    h_fs2 = and_elim_r h
+    fsdef = use func_space_def
+    fsdef1a = forall_elim fsdef, s1
+    fsdef1b = forall_elim fsdef1a, x
+    fsdef1c = forall_elim fsdef1b, y
+    h_mem1 = iff_elim_l fsdef1c, h_fs1
+    fsdef2a = forall_elim fsdef, s2
+    fsdef2b = forall_elim fsdef2a, x
+    fsdef2c = forall_elim fsdef2b, y
+    h_mem2 = iff_elim_l fsdef2c, h_fs2
+    fix f
+    h_f1 = forall_elim h_mem1, f
+    h_f2 = forall_elim h_mem2, f
+    h_fs1_elem = assume elem(f, s1)
+    h_ft = iff_elim_l h_f1, h_fs1_elem
+    h_fs2_fwd = iff_elim_r h_f2, h_ft
+    h_fwd = implies_intro h_fs2_fwd
+    h_fs2_elem = assume elem(f, s2)
+    h_ft2 = iff_elim_l h_f2, h_fs2_elem
+    h_fs1_bwd = iff_elim_r h_f1, h_ft2
+    h_bwd = implies_intro h_fs1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, s1
+    ext2 = forall_elim ext1, s2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

@@ -1,0 +1,445 @@
+# domain_set membership implies in_domain
+proof domain_set_elem:
+    fix d
+    fix r
+    fix x
+    h = assume domain_set(d, r) & elem(x, d)
+    h_ds = and_elim_l h
+    h_xd = and_elim_r h
+    dsdef = use domain_set_def
+    dsdef1 = forall_elim dsdef, d
+    dsdef2 = forall_elim dsdef1, r
+    h_mem = iff_elim_l dsdef2, h_ds
+    h_x = forall_elim h_mem, x
+    h_ex = iff_elim_l h_x, h_xd
+    # h_ex: exists y. rel_elem(r, x, y) — same as in_domain body
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, r
+    ddef2 = forall_elim ddef1, x
+    h_dom = iff_elim_r ddef2, h_ex
+    h_impl = implies_intro h_dom
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# in_domain implies domain_set membership
+proof in_domain_elem:
+    fix d
+    fix r
+    fix x
+    h = assume domain_set(d, r) & in_domain(r, x)
+    h_ds = and_elim_l h
+    h_dom = and_elim_r h
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, r
+    ddef2 = forall_elim ddef1, x
+    h_ex = iff_elim_l ddef2, h_dom
+    dsdef = use domain_set_def
+    dsdef1 = forall_elim dsdef, d
+    dsdef2 = forall_elim dsdef1, r
+    h_mem = iff_elim_l dsdef2, h_ds
+    h_x = forall_elim h_mem, x
+    h_xd = iff_elim_r h_x, h_ex
+    h_impl = implies_intro h_xd
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Two domain sets of the same relation are equal
+proof domain_set_unique:
+    fix d1
+    fix d2
+    fix r
+    h = assume domain_set(d1, r) & domain_set(d2, r)
+    h_ds1 = and_elim_l h
+    h_ds2 = and_elim_r h
+    dsdef = use domain_set_def
+    dsdef1a = forall_elim dsdef, d1
+    dsdef1b = forall_elim dsdef1a, r
+    h_mem1 = iff_elim_l dsdef1b, h_ds1
+    dsdef2a = forall_elim dsdef, d2
+    dsdef2b = forall_elim dsdef2a, r
+    h_mem2 = iff_elim_l dsdef2b, h_ds2
+    fix x
+    h_x1 = forall_elim h_mem1, x
+    h_x2 = forall_elim h_mem2, x
+    h_xd1 = assume elem(x, d1)
+    h_ex = iff_elim_l h_x1, h_xd1
+    h_xd2_fwd = iff_elim_r h_x2, h_ex
+    h_fwd = implies_intro h_xd2_fwd
+    h_xd2 = assume elem(x, d2)
+    h_ex2 = iff_elim_l h_x2, h_xd2
+    h_xd1_bwd = iff_elim_r h_x1, h_ex2
+    h_bwd = implies_intro h_xd1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, d1
+    ext2 = forall_elim ext1, d2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Two range sets of the same relation are equal
+proof range_set_unique:
+    fix g1
+    fix g2
+    fix r
+    h = assume range_set(g1, r) & range_set(g2, r)
+    h_rs1 = and_elim_l h
+    h_rs2 = and_elim_r h
+    rsdef = use range_set_def
+    rsdef1a = forall_elim rsdef, g1
+    rsdef1b = forall_elim rsdef1a, r
+    h_mem1 = iff_elim_l rsdef1b, h_rs1
+    rsdef2a = forall_elim rsdef, g2
+    rsdef2b = forall_elim rsdef2a, r
+    h_mem2 = iff_elim_l rsdef2b, h_rs2
+    fix y
+    h_y1 = forall_elim h_mem1, y
+    h_y2 = forall_elim h_mem2, y
+    h_yg1 = assume elem(y, g1)
+    h_ex = iff_elim_l h_y1, h_yg1
+    h_yg2_fwd = iff_elim_r h_y2, h_ex
+    h_fwd = implies_intro h_yg2_fwd
+    h_yg2 = assume elem(y, g2)
+    h_ex2 = iff_elim_l h_y2, h_yg2
+    h_yg1_bwd = iff_elim_r h_y1, h_ex2
+    h_bwd = implies_intro h_yg1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, g1
+    ext2 = forall_elim ext1, g2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Forward direction of inverse: rel_elem(s,x,y) -> rel_elem(r,y,x)
+proof inverse_fwd:
+    fix s
+    fix r
+    fix x
+    fix y
+    h = assume inverse(s, r) & rel_elem(s, x, y)
+    h_inv = and_elim_l h
+    h_rel = and_elim_r h
+    invdef = use inverse_def
+    invdef1 = forall_elim invdef, s
+    invdef2 = forall_elim invdef1, r
+    h_body = iff_elim_l invdef2, h_inv
+    h_xy = forall_elim h_body, x
+    h_xy2 = forall_elim h_xy, y
+    h_result = iff_elim_l h_xy2, h_rel
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Reverse direction of inverse: rel_elem(r,x,y) -> rel_elem(s,y,x)
+proof inverse_rev:
+    fix s
+    fix r
+    fix x
+    fix y
+    h = assume inverse(s, r) & rel_elem(r, x, y)
+    h_inv = and_elim_l h
+    h_rel = and_elim_r h
+    invdef = use inverse_def
+    invdef1 = forall_elim invdef, s
+    invdef2 = forall_elim invdef1, r
+    h_body = iff_elim_l invdef2, h_inv
+    # inverse says: forall x. forall y. (rel_elem(s, x, y) <-> rel_elem(r, y, x))
+    # Instantiate with y, x to get: rel_elem(s, y, x) <-> rel_elem(r, x, y)
+    h_yx = forall_elim h_body, y
+    h_yx2 = forall_elim h_yx, x
+    h_result = iff_elim_r h_yx2, h_rel
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Double inverse is the identity: inverse(s,r) & inverse(t,s) -> rel_elem(t,x,y) <-> rel_elem(r,x,y)
+proof inverse_involution:
+    fix s
+    fix r
+    fix t
+    fix x
+    fix y
+    h = assume inverse(s, r) & inverse(t, s)
+    h_inv_sr = and_elim_l h
+    h_inv_ts = and_elim_r h
+    invdef = use inverse_def
+    invdef_sr1 = forall_elim invdef, s
+    invdef_sr2 = forall_elim invdef_sr1, r
+    h_sr = iff_elim_l invdef_sr2, h_inv_sr
+    invdef_ts1 = forall_elim invdef, t
+    invdef_ts2 = forall_elim invdef_ts1, s
+    h_ts = iff_elim_l invdef_ts2, h_inv_ts
+    # h_sr: forall x. forall y. (rel_elem(s, x, y) <-> rel_elem(r, y, x))
+    # h_ts: forall x. forall y. (rel_elem(t, x, y) <-> rel_elem(s, y, x))
+    h_ts_xy = forall_elim h_ts, x
+    h_ts_xy2 = forall_elim h_ts_xy, y
+    # rel_elem(t, x, y) <-> rel_elem(s, y, x)
+    h_sr_yx = forall_elim h_sr, y
+    h_sr_yx2 = forall_elim h_sr_yx, x
+    # rel_elem(s, y, x) <-> rel_elem(r, x, y)
+    # Forward: rel_elem(t, x, y) -> rel_elem(r, x, y)
+    h_txy = assume rel_elem(t, x, y)
+    h_syx = iff_elim_l h_ts_xy2, h_txy
+    h_rxy = iff_elim_l h_sr_yx2, h_syx
+    h_fwd = implies_intro h_rxy
+    # Backward: rel_elem(r, x, y) -> rel_elem(t, x, y)
+    h_rxy2 = assume rel_elem(r, x, y)
+    h_syx2 = iff_elim_r h_sr_yx2, h_rxy2
+    h_txy2 = iff_elim_r h_ts_xy2, h_syx2
+    h_bwd = implies_intro h_txy2
+    h_iff = iff_intro h_fwd, h_bwd
+    h_impl = implies_intro h_iff
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Image elimination: elem(y, t) -> exists x. (elem(x, a) & rel_elem(r, x, y))
+proof image_elem:
+    fix t
+    fix r
+    fix a
+    fix y
+    h = assume image(t, r, a) & elem(y, t)
+    h_img = and_elim_l h
+    h_yt = and_elim_r h
+    imgdef = use image_def
+    imgdef1 = forall_elim imgdef, t
+    imgdef2 = forall_elim imgdef1, r
+    imgdef3 = forall_elim imgdef2, a
+    h_mem = iff_elim_l imgdef3, h_img
+    h_y = forall_elim h_mem, y
+    h_result = iff_elim_l h_y, h_yt
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Image introduction: elem(x, a) & rel_elem(r, x, y) -> elem(y, t)
+proof image_intro:
+    fix t
+    fix r
+    fix a
+    fix x
+    fix y
+    h = assume image(t, r, a) & elem(x, a) & rel_elem(r, x, y)
+    h_left = and_elim_l h
+    h_rel = and_elim_r h
+    h_img = and_elim_l h_left
+    h_xa = and_elim_r h_left
+    imgdef = use image_def
+    imgdef1 = forall_elim imgdef, t
+    imgdef2 = forall_elim imgdef1, r
+    imgdef3 = forall_elim imgdef2, a
+    h_mem = iff_elim_l imgdef3, h_img
+    h_y = forall_elim h_mem, y
+    h_conj = and_intro h_xa, h_rel
+    h_ex = exists_intro h_conj, x
+    h_result = iff_elim_r h_y, h_ex
+    h_impl = implies_intro h_result
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Image uniqueness via extensionality
+proof image_unique:
+    fix t1
+    fix t2
+    fix r
+    fix a
+    h = assume image(t1, r, a) & image(t2, r, a)
+    h_img1 = and_elim_l h
+    h_img2 = and_elim_r h
+    imgdef = use image_def
+    imgdef1a = forall_elim imgdef, t1
+    imgdef1b = forall_elim imgdef1a, r
+    imgdef1c = forall_elim imgdef1b, a
+    h_mem1 = iff_elim_l imgdef1c, h_img1
+    imgdef2a = forall_elim imgdef, t2
+    imgdef2b = forall_elim imgdef2a, r
+    imgdef2c = forall_elim imgdef2b, a
+    h_mem2 = iff_elim_l imgdef2c, h_img2
+    fix y
+    h_y1 = forall_elim h_mem1, y
+    h_y2 = forall_elim h_mem2, y
+    h_yt1 = assume elem(y, t1)
+    h_ex = iff_elim_l h_y1, h_yt1
+    h_yt2_fwd = iff_elim_r h_y2, h_ex
+    h_fwd = implies_intro h_yt2_fwd
+    h_yt2 = assume elem(y, t2)
+    h_ex2 = iff_elim_l h_y2, h_yt2
+    h_yt1_bwd = iff_elim_r h_y1, h_ex2
+    h_bwd = implies_intro h_yt1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, t1
+    ext2 = forall_elim ext1, t2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Relation extensionality: is_relation(r) & is_relation(s) &
+#   forall a. forall b. (rel_elem(r,a,b) <-> rel_elem(s,a,b)) -> eq(r,s)
+# Strategy: Take z in r. By is_relation, pair(z,x,y). Build rel_elem(r,x,y).
+# By hypothesis, rel_elem(s,x,y). Unfold to get pair(q,x,y) & elem(q,s).
+# By pair_unique, eq(z,q). Transfer elem(q,s) to elem(z,s). Symmetric for reverse.
+proof rel_ext:
+    fix r
+    fix s
+    h = assume is_relation(r) & is_relation(s) & forall a. forall b. (rel_elem(r, a, b) <-> rel_elem(s, a, b))
+    h_left = and_elim_l h
+    h_hyp = and_elim_r h
+    h_is_rel_r = and_elim_l h_left
+    h_is_rel_s = and_elim_r h_left
+    # Expand is_relation for r and s
+    irdef = use is_relation_def
+    irdef_r = forall_elim irdef, r
+    h_rel_r_body = iff_elim_l irdef_r, h_is_rel_r
+    irdef_s = forall_elim irdef, s
+    h_rel_s_body = iff_elim_l irdef_s, h_is_rel_s
+    # Utilities
+    rdef = use rel_elem_def
+    pu = use pair_unique
+    sym = use eq_sym
+    eel = use eq_elem_l
+    # Show forall z. (elem(z,r) <-> elem(z,s))
+    fix z
+    # Forward: elem(z,r) -> elem(z,s)
+    h_zr = assume elem(z, r)
+    # is_relation(r): elem(z,r) -> exists x. exists y. pair(z,x,y)
+    h_zr_impl = forall_elim h_rel_r_body, z
+    h_ex_xy = implies_elim h_zr_impl, h_zr
+    h_ex_y = exists_elim h_ex_xy, wx
+    h_pair_body = exists_elim h_ex_y, wy
+    # h_pair_body: pair(z, wx, wy)
+    # Build rel_elem(r, wx, wy) from pair(z,wx,wy) & elem(z,r)
+    h_conj_r = and_intro h_pair_body, h_zr
+    h_ex_p_r = exists_intro h_conj_r, z
+    rdef_r1 = forall_elim rdef, r
+    rdef_r2 = forall_elim rdef_r1, wx
+    rdef_r3 = forall_elim rdef_r2, wy
+    h_rel_elem_r = iff_elim_r rdef_r3, h_ex_p_r
+    # Apply hypothesis: rel_elem(r,wx,wy) -> rel_elem(s,wx,wy)
+    h_hyp_wx = forall_elim h_hyp, wx
+    h_hyp_wy = forall_elim h_hyp_wx, wy
+    h_rel_elem_s = iff_elim_l h_hyp_wy, h_rel_elem_r
+    # Unfold rel_elem(s,wx,wy): exists q. (pair(q,wx,wy) & elem(q,s))
+    rdef_s1 = forall_elim rdef, s
+    rdef_s2 = forall_elim rdef_s1, wx
+    rdef_s3 = forall_elim rdef_s2, wy
+    h_ex_q = iff_elim_l rdef_s3, h_rel_elem_s
+    h_wit_q = exists_elim h_ex_q, wq
+    h_pair_q = and_elim_l h_wit_q
+    h_q_in_s = and_elim_r h_wit_q
+    # pair_unique: pair(z,wx,wy) & pair(wq,wx,wy) -> eq(z,wq)
+    pu1 = forall_elim pu, z
+    pu2 = forall_elim pu1, wq
+    pu3 = forall_elim pu2, wx
+    pu4 = forall_elim pu3, wy
+    h_pairs = and_intro h_pair_body, h_pair_q
+    h_eq_zq = implies_elim pu4, h_pairs
+    # eq_sym: eq(wq, z)
+    sym1 = forall_elim sym, z
+    sym2 = forall_elim sym1, wq
+    h_eq_qz = implies_elim sym2, h_eq_zq
+    # eq_elem_l: eq(wq, z) & elem(wq, s) -> elem(z, s)
+    eel1 = forall_elim eel, wq
+    eel2 = forall_elim eel1, z
+    eel3 = forall_elim eel2, s
+    h_eel_conj = and_intro h_eq_qz, h_q_in_s
+    h_z_in_s = implies_elim eel3, h_eel_conj
+    # Close exists scope (wq)
+    h_close_q = exists_intro h_z_in_s
+    # Close exists scope (wy)
+    h_close_y = exists_intro h_close_q
+    # Close exists scope (wx)
+    h_close_x = exists_intro h_close_y
+    h_fwd = implies_intro h_close_x
+    # Backward: elem(z,s) -> elem(z,r)
+    h_zs = assume elem(z, s)
+    h_zs_impl = forall_elim h_rel_s_body, z
+    h_ex_xy2 = implies_elim h_zs_impl, h_zs
+    h_ex_y2 = exists_elim h_ex_xy2, vx
+    h_pair_body2 = exists_elim h_ex_y2, vy
+    # Build rel_elem(s, vx, vy)
+    h_conj_s = and_intro h_pair_body2, h_zs
+    h_ex_p_s = exists_intro h_conj_s, z
+    rdef_s4 = forall_elim rdef, s
+    rdef_s5 = forall_elim rdef_s4, vx
+    rdef_s6 = forall_elim rdef_s5, vy
+    h_rel_elem_s2 = iff_elim_r rdef_s6, h_ex_p_s
+    # Apply hypothesis reverse: rel_elem(s,vx,vy) -> rel_elem(r,vx,vy)
+    h_hyp_vx = forall_elim h_hyp, vx
+    h_hyp_vy = forall_elim h_hyp_vx, vy
+    h_rel_elem_r2 = iff_elim_r h_hyp_vy, h_rel_elem_s2
+    # Unfold rel_elem(r,vx,vy)
+    rdef_r4 = forall_elim rdef, r
+    rdef_r5 = forall_elim rdef_r4, vx
+    rdef_r6 = forall_elim rdef_r5, vy
+    h_ex_q2 = iff_elim_l rdef_r6, h_rel_elem_r2
+    h_wit_q2 = exists_elim h_ex_q2, vq
+    h_pair_vq = and_elim_l h_wit_q2
+    h_vq_in_r = and_elim_r h_wit_q2
+    # pair_unique: pair(z,vx,vy) & pair(vq,vx,vy) -> eq(z,vq)
+    pu5 = forall_elim pu, z
+    pu6 = forall_elim pu5, vq
+    pu7 = forall_elim pu6, vx
+    pu8 = forall_elim pu7, vy
+    h_pairs2 = and_intro h_pair_body2, h_pair_vq
+    h_eq_zvq = implies_elim pu8, h_pairs2
+    # eq_sym + eq_elem_l
+    sym3 = forall_elim sym, z
+    sym4 = forall_elim sym3, vq
+    h_eq_vqz = implies_elim sym4, h_eq_zvq
+    eel4 = forall_elim eel, vq
+    eel5 = forall_elim eel4, z
+    eel6 = forall_elim eel5, r
+    h_eel_conj2 = and_intro h_eq_vqz, h_vq_in_r
+    h_z_in_r = implies_elim eel6, h_eel_conj2
+    # Close exists scopes
+    h_close_vq = exists_intro h_z_in_r
+    h_close_vy = exists_intro h_close_vq
+    h_close_vx = exists_intro h_close_vy
+    h_bwd = implies_intro h_close_vx
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    # Apply extensionality
+    ext = use extensionality
+    ext1 = forall_elim ext, r
+    ext2 = forall_elim ext1, s
+    h_eq_rs = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq_rs
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1

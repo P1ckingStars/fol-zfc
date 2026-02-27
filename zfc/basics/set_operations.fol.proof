@@ -1,0 +1,505 @@
+# empty(e) -> subset(e, a): vacuous truth via bottom_elim
+proof empty_subset:
+    fix e
+    fix a
+    h_empty = assume empty(e)
+    edef = use empty_def
+    edef1 = forall_elim edef, e
+    h_no_elem = iff_elim_l edef1, h_empty
+    fix x
+    h_not_x = forall_elim h_no_elem, x
+    h_xe = assume elem(x, e)
+    h_bot = not_elim h_not_x, h_xe
+    h_xa_let = let elem(x, a)
+    h_xa = bottom_elim h_bot, h_xa_let
+    h_impl_x = implies_intro h_xa
+    h_all = forall_intro h_impl_x
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, e
+    sdef2 = forall_elim sdef1, a
+    h_sub = iff_elim_r sdef2, h_all
+    h_impl = implies_intro h_sub
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# (empty(e1) & empty(e2)) -> eq(e1, e2): both are subsets of each other
+proof empty_unique:
+    fix e1
+    fix e2
+    h = assume empty(e1) & empty(e2)
+    h_e1 = and_elim_l h
+    h_e2 = and_elim_r h
+    es = use empty_subset
+    es1 = forall_elim es, e1
+    es2 = forall_elim es1, e2
+    h_sub12 = implies_elim es2, h_e1
+    es3 = forall_elim es, e2
+    es4 = forall_elim es3, e1
+    h_sub21 = implies_elim es4, h_e2
+    sa = use subset_antisym
+    sa1 = forall_elim sa, e1
+    sa2 = forall_elim sa1, e2
+    h_both = and_intro h_sub12, h_sub21
+    h_eq = implies_elim sa2, h_both
+    h_impl = implies_intro h_eq
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# intersection elimination: forward direction of biconditional
+proof intersect_elim:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume intersection(c, a, b) & elem(x, c)
+    h_int = and_elim_l h
+    h_xc = and_elim_r h
+    idef = use intersection_def
+    idef1 = forall_elim idef, c
+    idef2 = forall_elim idef1, a
+    idef3 = forall_elim idef2, b
+    h_mem = iff_elim_l idef3, h_int
+    h_x = forall_elim h_mem, x
+    h_result = iff_elim_l h_x, h_xc
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# intersection introduction: reverse direction of biconditional
+proof intersect_intro:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume intersection(c, a, b) & elem(x, a) & elem(x, b)
+    h_left = and_elim_l h
+    h_xb = and_elim_r h
+    h_int = and_elim_l h_left
+    h_xa = and_elim_r h_left
+    idef = use intersection_def
+    idef1 = forall_elim idef, c
+    idef2 = forall_elim idef1, a
+    idef3 = forall_elim idef2, b
+    h_mem = iff_elim_l idef3, h_int
+    h_x = forall_elim h_mem, x
+    h_conj = and_intro h_xa, h_xb
+    h_result = iff_elim_r h_x, h_conj
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# intersection is a subset of the left operand
+proof intersect_subset_l:
+    fix c
+    fix a
+    fix b
+    h_int = assume intersection(c, a, b)
+    idef = use intersection_def
+    idef1 = forall_elim idef, c
+    idef2 = forall_elim idef1, a
+    idef3 = forall_elim idef2, b
+    h_mem = iff_elim_l idef3, h_int
+    fix x
+    h_x = forall_elim h_mem, x
+    h_xc = assume elem(x, c)
+    h_both = iff_elim_l h_x, h_xc
+    h_xa = and_elim_l h_both
+    h_impl_x = implies_intro h_xa
+    h_all = forall_intro h_impl_x
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, c
+    sdef2 = forall_elim sdef1, a
+    h_sub = iff_elim_r sdef2, h_all
+    h_impl = implies_intro h_sub
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# intersection is a subset of the right operand
+proof intersect_subset_r:
+    fix c
+    fix a
+    fix b
+    h_int = assume intersection(c, a, b)
+    idef = use intersection_def
+    idef1 = forall_elim idef, c
+    idef2 = forall_elim idef1, a
+    idef3 = forall_elim idef2, b
+    h_mem = iff_elim_l idef3, h_int
+    fix x
+    h_x = forall_elim h_mem, x
+    h_xc = assume elem(x, c)
+    h_both = iff_elim_l h_x, h_xc
+    h_xb = and_elim_r h_both
+    h_impl_x = implies_intro h_xb
+    h_all = forall_intro h_impl_x
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, c
+    sdef2 = forall_elim sdef1, b
+    h_sub = iff_elim_r sdef2, h_all
+    h_impl = implies_intro h_sub
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# two intersections of the same sets are equal (extensionality)
+proof intersect_unique:
+    fix c1
+    fix c2
+    fix a
+    fix b
+    h = assume intersection(c1, a, b) & intersection(c2, a, b)
+    h_int1 = and_elim_l h
+    h_int2 = and_elim_r h
+    idef = use intersection_def
+    idef1a = forall_elim idef, c1
+    idef1b = forall_elim idef1a, a
+    idef1c = forall_elim idef1b, b
+    h_mem1 = iff_elim_l idef1c, h_int1
+    idef2a = forall_elim idef, c2
+    idef2b = forall_elim idef2a, a
+    idef2c = forall_elim idef2b, b
+    h_mem2 = iff_elim_l idef2c, h_int2
+    fix x
+    h_x1 = forall_elim h_mem1, x
+    h_x2 = forall_elim h_mem2, x
+    h_xc1 = assume elem(x, c1)
+    h_both = iff_elim_l h_x1, h_xc1
+    h_xc2_fwd = iff_elim_r h_x2, h_both
+    h_fwd = implies_intro h_xc2_fwd
+    h_xc2 = assume elem(x, c2)
+    h_both2 = iff_elim_l h_x2, h_xc2
+    h_xc1_bwd = iff_elim_r h_x1, h_both2
+    h_bwd = implies_intro h_xc1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, c1
+    ext2 = forall_elim ext1, c2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# binary union introduction from left
+proof bunion_intro_l:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume binary_union(c, a, b) & elem(x, a)
+    h_bu = and_elim_l h
+    h_xa = and_elim_r h
+    budef = use binary_union_def
+    budef1 = forall_elim budef, c
+    budef2 = forall_elim budef1, a
+    budef3 = forall_elim budef2, b
+    h_mem = iff_elim_l budef3, h_bu
+    h_x = forall_elim h_mem, x
+    h_xb_let = let elem(x, b)
+    h_disj = or_intro_l h_xa, h_xb_let
+    h_xc = iff_elim_r h_x, h_disj
+    h_impl = implies_intro h_xc
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# binary union introduction from right
+proof bunion_intro_r:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume binary_union(c, a, b) & elem(x, b)
+    h_bu = and_elim_l h
+    h_xb = and_elim_r h
+    budef = use binary_union_def
+    budef1 = forall_elim budef, c
+    budef2 = forall_elim budef1, a
+    budef3 = forall_elim budef2, b
+    h_mem = iff_elim_l budef3, h_bu
+    h_x = forall_elim h_mem, x
+    h_xa_let = let elem(x, a)
+    h_disj = or_intro_r h_xa_let, h_xb
+    h_xc = iff_elim_r h_x, h_disj
+    h_impl = implies_intro h_xc
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# binary union elimination: forward direction
+proof bunion_elim:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume binary_union(c, a, b) & elem(x, c)
+    h_bu = and_elim_l h
+    h_xc = and_elim_r h
+    budef = use binary_union_def
+    budef1 = forall_elim budef, c
+    budef2 = forall_elim budef1, a
+    budef3 = forall_elim budef2, b
+    h_mem = iff_elim_l budef3, h_bu
+    h_x = forall_elim h_mem, x
+    h_result = iff_elim_l h_x, h_xc
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# two binary unions of the same sets are equal
+proof bunion_unique:
+    fix c1
+    fix c2
+    fix a
+    fix b
+    h = assume binary_union(c1, a, b) & binary_union(c2, a, b)
+    h_bu1 = and_elim_l h
+    h_bu2 = and_elim_r h
+    budef = use binary_union_def
+    budef1a = forall_elim budef, c1
+    budef1b = forall_elim budef1a, a
+    budef1c = forall_elim budef1b, b
+    h_mem1 = iff_elim_l budef1c, h_bu1
+    budef2a = forall_elim budef, c2
+    budef2b = forall_elim budef2a, a
+    budef2c = forall_elim budef2b, b
+    h_mem2 = iff_elim_l budef2c, h_bu2
+    fix x
+    h_x1 = forall_elim h_mem1, x
+    h_x2 = forall_elim h_mem2, x
+    h_xc1 = assume elem(x, c1)
+    h_disj = iff_elim_l h_x1, h_xc1
+    h_xc2_fwd = iff_elim_r h_x2, h_disj
+    h_fwd = implies_intro h_xc2_fwd
+    h_xc2 = assume elem(x, c2)
+    h_disj2 = iff_elim_l h_x2, h_xc2
+    h_xc1_bwd = iff_elim_r h_x1, h_disj2
+    h_bwd = implies_intro h_xc1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, c1
+    ext2 = forall_elim ext1, c2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# set difference elimination: forward direction
+proof diff_elim:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume set_diff(c, a, b) & elem(x, c)
+    h_diff = and_elim_l h
+    h_xc = and_elim_r h
+    sddef = use set_diff_def
+    sddef1 = forall_elim sddef, c
+    sddef2 = forall_elim sddef1, a
+    sddef3 = forall_elim sddef2, b
+    h_mem = iff_elim_l sddef3, h_diff
+    h_x = forall_elim h_mem, x
+    h_result = iff_elim_l h_x, h_xc
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# set difference introduction: reverse direction
+proof diff_intro:
+    fix c
+    fix a
+    fix b
+    fix x
+    h = assume set_diff(c, a, b) & elem(x, a) & ~elem(x, b)
+    h_left = and_elim_l h
+    h_nxb = and_elim_r h
+    h_diff = and_elim_l h_left
+    h_xa = and_elim_r h_left
+    sddef = use set_diff_def
+    sddef1 = forall_elim sddef, c
+    sddef2 = forall_elim sddef1, a
+    sddef3 = forall_elim sddef2, b
+    h_mem = iff_elim_l sddef3, h_diff
+    h_x = forall_elim h_mem, x
+    h_conj = and_intro h_xa, h_nxb
+    h_result = iff_elim_r h_x, h_conj
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# set difference is a subset of the left operand
+proof diff_subset:
+    fix c
+    fix a
+    fix b
+    h_diff = assume set_diff(c, a, b)
+    sddef = use set_diff_def
+    sddef1 = forall_elim sddef, c
+    sddef2 = forall_elim sddef1, a
+    sddef3 = forall_elim sddef2, b
+    h_mem = iff_elim_l sddef3, h_diff
+    fix x
+    h_x = forall_elim h_mem, x
+    h_xc = assume elem(x, c)
+    h_both = iff_elim_l h_x, h_xc
+    h_xa = and_elim_l h_both
+    h_impl_x = implies_intro h_xa
+    h_all = forall_intro h_impl_x
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, c
+    sdef2 = forall_elim sdef1, a
+    h_sub = iff_elim_r sdef2, h_all
+    h_impl = implies_intro h_sub
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# General Intersection proofs
+# ============================================================
+
+# gen_intersect_elim: elem(x,c) & elem(y,a) -> elem(x,y)
+proof gen_intersect_elim:
+    fix c
+    fix a
+    fix x
+    fix y
+    h = assume gen_intersect(c, a) & elem(x, c) & elem(y, a)
+    h_left = and_elim_l h
+    h_ya = and_elim_r h
+    h_gi = and_elim_l h_left
+    h_xc = and_elim_r h_left
+    gidef = use gen_intersect_def
+    gidef1 = forall_elim gidef, c
+    gidef2 = forall_elim gidef1, a
+    h_mem = iff_elim_l gidef2, h_gi
+    h_x = forall_elim h_mem, x
+    h_all_y = iff_elim_l h_x, h_xc
+    h_y = forall_elim h_all_y, y
+    h_result = implies_elim h_y, h_ya
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# gen_intersect_intro: forall y. (elem(y,a) -> elem(x,y)) -> elem(x,c)
+proof gen_intersect_intro:
+    fix c
+    fix a
+    fix x
+    h = assume gen_intersect(c, a) & forall y. (elem(y, a) -> elem(x, y))
+    h_gi = and_elim_l h
+    h_all = and_elim_r h
+    gidef = use gen_intersect_def
+    gidef1 = forall_elim gidef, c
+    gidef2 = forall_elim gidef1, a
+    h_mem = iff_elim_l gidef2, h_gi
+    h_x = forall_elim h_mem, x
+    h_result = iff_elim_r h_x, h_all
+    h_impl = implies_intro h_result
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# gen_intersect_subset: gen_intersect(c,a) & elem(y,a) -> subset(c,y)
+proof gen_intersect_subset:
+    fix c
+    fix a
+    fix y
+    h = assume gen_intersect(c, a) & elem(y, a)
+    h_gi = and_elim_l h
+    h_ya = and_elim_r h
+    gidef = use gen_intersect_def
+    gidef1 = forall_elim gidef, c
+    gidef2 = forall_elim gidef1, a
+    h_mem = iff_elim_l gidef2, h_gi
+    fix x
+    h_x = forall_elim h_mem, x
+    h_xc = assume elem(x, c)
+    h_all_y = iff_elim_l h_x, h_xc
+    h_y = forall_elim h_all_y, y
+    h_xy = implies_elim h_y, h_ya
+    h_impl_x = implies_intro h_xy
+    h_all_x = forall_intro h_impl_x
+    ssdef = use subset_def
+    ssdef1 = forall_elim ssdef, c
+    ssdef2 = forall_elim ssdef1, y
+    h_sub = iff_elim_r ssdef2, h_all_x
+    h_impl = implies_intro h_sub
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# gen_intersect_unique: two general intersections are equal via extensionality
+proof gen_intersect_unique:
+    fix c1
+    fix c2
+    fix a
+    h = assume gen_intersect(c1, a) & gen_intersect(c2, a)
+    h_gi1 = and_elim_l h
+    h_gi2 = and_elim_r h
+    gidef = use gen_intersect_def
+    gidef1a = forall_elim gidef, c1
+    gidef1b = forall_elim gidef1a, a
+    h_mem1 = iff_elim_l gidef1b, h_gi1
+    gidef2a = forall_elim gidef, c2
+    gidef2b = forall_elim gidef2a, a
+    h_mem2 = iff_elim_l gidef2b, h_gi2
+    fix x
+    h_x1 = forall_elim h_mem1, x
+    h_x2 = forall_elim h_mem2, x
+    h_xc1 = assume elem(x, c1)
+    h_all1 = iff_elim_l h_x1, h_xc1
+    h_xc2_fwd = iff_elim_r h_x2, h_all1
+    h_fwd = implies_intro h_xc2_fwd
+    h_xc2 = assume elem(x, c2)
+    h_all2 = iff_elim_l h_x2, h_xc2
+    h_xc1_bwd = iff_elim_r h_x1, h_all2
+    h_bwd = implies_intro h_xc1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, c1
+    ext2 = forall_elim ext1, c2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

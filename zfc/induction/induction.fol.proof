@@ -1,17 +1,43 @@
-# Proof of closed_is_subset: extract the first conjunct of closed_def.
-proof closed_is_subset:
+# Proof of lfp_contains_base: for any x in b, x must be in every
+# F-closed set containing b (trivially), so x is in the lfp.
+proof lfp_contains_base:
+    fix l
     fix f
+    fix b
+    h = assume lfp(l, f, b)
+    # Expand lfp
+    ldef = use lfp_def
+    ldef1 = forall_elim ldef, l
+    ldef2 = forall_elim ldef1, f
+    ldef3 = forall_elim ldef2, b
+    h_mem = iff_elim_l ldef3, h
+    # Expand subset_def
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, b
+    sdef2 = forall_elim sdef1, l
+    # Show forall x. (elem(x, b) -> elem(x, l))
+    fix x
+    h_x_iff = forall_elim h_mem, x
+    # Build: forall c. ((closed(f, c) & subset(b, c)) -> elem(x, c))
+    # assuming elem(x, b)
+    h_xb = assume elem(x, b)
     fix c
-    fix s
-    h = assume closed(f, c, s)
-    cdef = use closed_def
-    cdef1 = forall_elim cdef, f
-    cdef2 = forall_elim cdef1, c
-    cdef3 = forall_elim cdef2, s
-    h_body = iff_elim_l cdef3, h
-    h_sub = and_elim_l h_body
-    h_impl = implies_intro h_sub
-    h3 = forall_intro h_impl
+    h_cc = assume closed(f, c) & subset(b, c)
+    h_bc = and_elim_r h_cc
+    # Expand subset(b, c) to get elem(x, b) -> elem(x, c)
+    sdef3 = forall_elim sdef, b
+    sdef4 = forall_elim sdef3, c
+    h_bc_mem = iff_elim_l sdef4, h_bc
+    h_bc_x = forall_elim h_bc_mem, x
+    h_xc = implies_elim h_bc_x, h_xb
+    h_cc_impl = implies_intro h_xc
+    h_all_c = forall_intro h_cc_impl
+    h_xl = iff_elim_r h_x_iff, h_all_c
+    h_impl = implies_intro h_xl
+    h_all_x = forall_intro h_impl
+    h_sub = iff_elim_r sdef2, h_all_x
+    h_result = implies_intro h_sub
+    h3 = forall_intro h_result
     h2 = forall_intro h3
     h1 = forall_intro h2
     qed h1
@@ -21,16 +47,18 @@ proof closed_is_subset:
 proof lfp_subset_closed:
     fix l
     fix f
-    fix s
+    fix b
     fix c
-    h = assume lfp(l, f, s) & closed(f, c, s)
-    h_lfp = and_elim_l h
-    h_closed = and_elim_r h
-    # Expand lfp(l, f, s)
+    h = assume lfp(l, f, b) & closed(f, c) & subset(b, c)
+    h_lc = and_elim_l h
+    h_bc = and_elim_r h
+    h_lfp = and_elim_l h_lc
+    h_closed = and_elim_r h_lc
+    # Expand lfp(l, f, b)
     ldef = use lfp_def
     ldef1 = forall_elim ldef, l
     ldef2 = forall_elim ldef1, f
-    ldef3 = forall_elim ldef2, s
+    ldef3 = forall_elim ldef2, b
     h_mem = iff_elim_l ldef3, h_lfp
     # Expand subset_def for subset(l, c)
     sdef = use subset_def
@@ -41,8 +69,10 @@ proof lfp_subset_closed:
     h_x_iff = forall_elim h_mem, x
     h_xl = assume elem(x, l)
     h_x_all = iff_elim_l h_x_iff, h_xl
+    # Instantiate with c: need closed(f, c) & subset(b, c)
     h_x_c = forall_elim h_x_all, c
-    h_xc = implies_elim h_x_c, h_closed
+    h_premise = and_intro h_closed, h_bc
+    h_xc = implies_elim h_x_c, h_premise
     h_x_impl = implies_intro h_xc
     h_all = forall_intro h_x_impl
     h_sub = iff_elim_r sdef2, h_all
