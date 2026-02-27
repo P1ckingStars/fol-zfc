@@ -2,7 +2,7 @@ include "../basics/functions.fol.def"
 include "../basics/subset.fol.def"
 
 # ============================================================
-# Monotone Set Operators
+# Monotone Set Operators (Note 3.1)
 # ============================================================
 #
 # A monotone operator is a function that preserves the subset
@@ -17,11 +17,11 @@ include "../basics/subset.fol.def"
                  subset(fa, fb)))))
 
 # ============================================================
-# F-Closed Sets and Least Fixed Point
+# F-Closed Sets and Least Fixed Point (Note 3.6)
 # ============================================================
 #
 # A set C is F-closed if F(C) ⊆ C. The least fixed point
-# (inductive set) over base b is the smallest F-closed set
+# (T-closure) over base b is the smallest F-closed set
 # containing b: an element belongs to the lfp iff it belongs
 # to every F-closed set that contains b.
 
@@ -29,20 +29,59 @@ include "../basics/subset.fol.def"
 @def(closed) axiom closed_def: forall f. forall c.
     (closed(f, c) <-> forall fc. (rel_elem(f, c, fc) -> subset(fc, c)))
 
-# lfp(l, f, b) means l is the smallest F-closed set containing b
+# lfp(l, f, b) means l is the T-closure of b: the smallest
+# F-closed set containing b
 @def(lfp) axiom lfp_def: forall l. forall f. forall b.
     (lfp(l, f, b) <->
         forall x. (elem(x, l) <->
             forall c. ((closed(f, c) & subset(b, c)) -> elem(x, c))))
 
 # ============================================================
-# Claims
+# Extraction Lemmas
 # ============================================================
 
-# The lfp contains the base set
+# Monotone operators are functions
+claim monotone_is_function: forall f.
+    (monotone(f) -> is_function(f))
+
+# Monotone operators preserve subset ordering
+claim monotone_subset: forall f. forall a. forall b. forall fa. forall fb.
+    ((monotone(f) & subset(a, b) & rel_elem(f, a, fa) & rel_elem(f, b, fb)) ->
+     subset(fa, fb))
+
+# ============================================================
+# Basic Properties
+# ============================================================
+
+# The T-closure contains the base set
 claim lfp_contains_base: forall l. forall f. forall b.
     (lfp(l, f, b) -> subset(b, l))
 
-# The lfp is a subset of every F-closed set containing the base
+# The T-closure is a subset of every F-closed set containing the base
 claim lfp_subset_closed: forall l. forall f. forall b. forall c.
     ((lfp(l, f, b) & closed(f, c) & subset(b, c)) -> subset(l, c))
+
+# The T-closure is unique (by extensionality)
+claim lfp_unique: forall l1. forall l2. forall f. forall b.
+    ((lfp(l1, f, b) & lfp(l2, f, b)) -> eq(l1, l2))
+
+# ============================================================
+# Knaster-Tarski Fixed Point Theorem (Note 3.6)
+# ============================================================
+#
+# The T-closure is F-closed, and for empty base it is a true
+# fixed point: F(T-bar(empty)) = T-bar(empty).
+
+# The T-closure is F-closed (requires monotonicity and that F
+# is defined on all F-closed supersets of the base)
+claim lfp_closed: forall l. forall f. forall b.
+    ((monotone(f) & lfp(l, f, b) &
+      forall c. ((closed(f, c) & subset(b, c)) -> in_domain(f, c))) ->
+     closed(f, l))
+
+# For empty base: l ⊆ F(l), making the T-closure a true fixed
+# point. Combined with lfp_closed, this gives F(l) = l.
+claim lfp_fixed_point: forall l. forall f. forall e. forall fl.
+    ((monotone(f) & lfp(l, f, e) & (forall x. ~elem(x, e)) &
+      rel_elem(f, l, fl) & closed(f, l)) ->
+     subset(l, fl))
