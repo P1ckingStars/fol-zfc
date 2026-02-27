@@ -38,3 +38,9 @@ claim prec_closed_full: forall r. forall x. prec_closed(x, r, x)
 # Well-founded induction: a ≺-closed subset of X equals X
 claim wf_induction: forall r. forall x. forall a.
     ((well_founded(r, x) & subset(a, x) & prec_closed(a, r, x)) -> eq(a, x))
+
+# The intersection of ≺-closed sets is ≺-closed
+claim prec_closed_intersect: forall i. forall a. forall r. forall x.
+    ((gen_intersect(i, a) &
+      forall c. (elem(c, a) -> prec_closed(c, r, x))) ->
+     prec_closed(i, r, x))

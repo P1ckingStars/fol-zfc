@@ -47,3 +47,76 @@ proof wf_induction:
     h2 = forall_intro h3
     h1 = forall_intro h2
     qed h1
+
+# Proof of prec_closed_intersect: the intersection of ≺-closed sets
+# is ≺-closed. For z with all predecessors in ⋂A, each member c ∈ A
+# has all predecessors of z in c (via gen_intersect), and c is
+# ≺-closed, so z ∈ c. Since z ∈ c for all c, z ∈ ⋂A.
+proof prec_closed_intersect:
+    fix i
+    fix a
+    fix r
+    fix x
+    h = assume gen_intersect(i, a) & forall c. (elem(c, a) -> prec_closed(c, r, x))
+    h_gi = and_elim_l h
+    h_all_pc = and_elim_r h
+    # Need: prec_closed(i, r, x)
+    pcdef = use prec_closed_def
+    pcd1 = forall_elim pcdef, i
+    pcd2 = forall_elim pcd1, r
+    pcd3 = forall_elim pcd2, x
+    fix z
+    h_z = assume elem(z, x) & forall y. ((elem(y, x) & rel_elem(r, y, z)) -> elem(y, i))
+    h_zx = and_elim_l h_z
+    h_preds = and_elim_r h_z
+    # Need: elem(z, i). Use gen_intersect_intro.
+    gi = use gen_intersect_intro
+    gi1 = forall_elim gi, i
+    gi2 = forall_elim gi1, a
+    gi3 = forall_elim gi2, z
+    # Build: forall d. (elem(d, a) -> elem(z, d))
+    fix d
+    h_da = assume elem(d, a)
+    # Get prec_closed(d, r, x)
+    h_pc_d_impl = forall_elim h_all_pc, d
+    h_pc_d = implies_elim h_pc_d_impl, h_da
+    # Expand prec_closed(d, r, x)
+    pcd_d1 = forall_elim pcdef, d
+    pcd_d2 = forall_elim pcd_d1, r
+    pcd_d3 = forall_elim pcd_d2, x
+    h_pc_body = iff_elim_l pcd_d3, h_pc_d
+    h_pc_z = forall_elim h_pc_body, z
+    # Build: forall w. ((elem(w, x) & rel_elem(r, w, z)) -> elem(w, d))
+    fix w
+    h_w_prem = assume elem(w, x) & rel_elem(r, w, z)
+    # Get elem(w, i) from predecessor hypothesis
+    h_wi_impl = forall_elim h_preds, w
+    h_wi = implies_elim h_wi_impl, h_w_prem
+    # Get elem(w, d) from gen_intersect_elim
+    gie = use gen_intersect_elim
+    gie1 = forall_elim gie, i
+    gie2 = forall_elim gie1, a
+    gie3 = forall_elim gie2, w
+    gie4 = forall_elim gie3, d
+    h_gie_p1 = and_intro h_gi, h_wi
+    h_gie_prem = and_intro h_gie_p1, h_da
+    h_wd = implies_elim gie4, h_gie_prem
+    h_w_impl = implies_intro h_wd
+    h_all_w = forall_intro h_w_impl
+    # Apply prec_closed for d at z
+    h_z_prem = and_intro h_zx, h_all_w
+    h_zd = implies_elim h_pc_z, h_z_prem
+    h_da_impl = implies_intro h_zd
+    h_all_d = forall_intro h_da_impl
+    # Apply gen_intersect_intro
+    h_gi_prem = and_intro h_gi, h_all_d
+    h_zi = implies_elim gi3, h_gi_prem
+    h_z_impl = implies_intro h_zi
+    h_all_z = forall_intro h_z_impl
+    h_pc_i = iff_elim_r pcd3, h_all_z
+    h_main = implies_intro h_pc_i
+    hf4 = forall_intro h_main
+    hf3 = forall_intro hf4
+    hf2 = forall_intro hf3
+    hf1 = forall_intro hf2
+    qed hf1

@@ -1,5 +1,6 @@
 include "../basics/functions.fol.def"
 include "../basics/subset.fol.def"
+include "../basics/set_operations.fol.def"
 
 # ============================================================
 # Monotone Set Operators (Note 3.1)
@@ -93,3 +94,16 @@ claim lfp_induction: forall l. forall f. forall b. forall c.
 # The T-closure is monotone in the base: b1 ⊆ b2 implies T-bar(b1) ⊆ T-bar(b2)
 claim lfp_base_monotone: forall l1. forall l2. forall f. forall b1. forall b2.
     ((lfp(l1, f, b1) & lfp(l2, f, b2) & subset(b1, b2)) -> subset(l1, l2))
+
+# ============================================================
+# Intersection of Closed Sets (Note 3.7)
+# ============================================================
+#
+# The T-closed sets are closed under arbitrary intersections:
+# if A is a collection of T-closed sets, then ⋂A is T-closed.
+# Requires monotonicity and that F is defined on each member.
+
+claim closed_intersect: forall f. forall i. forall a.
+    ((monotone(f) & gen_intersect(i, a) &
+      forall c. (elem(c, a) -> (closed(f, c) & in_domain(f, c)))) ->
+     closed(f, i))

@@ -458,3 +458,103 @@ proof lfp_base_monotone:
     h2 = forall_intro h3
     h1 = forall_intro h2
     qed h1
+
+# Proof of closed_intersect (Note 3.7): the intersection of F-closed
+# sets is F-closed. For each member c, use monotonicity to get
+# F(⋂A) ⊆ F(c) ⊆ c, so F(⋂A) ⊆ ⋂A.
+proof closed_intersect:
+    fix f
+    fix i
+    fix a
+    h = assume monotone(f) & gen_intersect(i, a) & forall c. (elem(c, a) -> (closed(f, c) & in_domain(f, c)))
+    h_all_cd = and_elim_r h
+    h_r1 = and_elim_l h
+    h_mono = and_elim_l h_r1
+    h_gi = and_elim_r h_r1
+    # Need: closed(f, i), i.e., forall fi. (rel_elem(f, i, fi) -> subset(fi, i))
+    cdef = use closed_def
+    cdef_f = forall_elim cdef, f
+    cdef_i = forall_elim cdef_f, i
+    fix fi
+    h_rel_fi = assume rel_elem(f, i, fi)
+    # Need: subset(fi, i), i.e., forall x. (elem(x, fi) -> elem(x, i))
+    sdef = use subset_def
+    sdef_fi = forall_elim sdef, fi
+    sdef_fi_i = forall_elim sdef_fi, i
+    fix x
+    h_x_fi = assume elem(x, fi)
+    # Use gen_intersect_intro: need gen_intersect(i,a) & forall y. (elem(y,a) -> elem(x,y))
+    gi_intro = use gen_intersect_intro
+    gi1 = forall_elim gi_intro, i
+    gi2 = forall_elim gi1, a
+    gi3 = forall_elim gi2, x
+    # Build: forall y. (elem(y, a) -> elem(x, y))
+    fix y
+    h_ya = assume elem(y, a)
+    # Get closed(f, y) & in_domain(f, y) from premise
+    h_cd_y = forall_elim h_all_cd, y
+    h_cd = implies_elim h_cd_y, h_ya
+    h_closed_y = and_elim_l h_cd
+    h_dom_y = and_elim_r h_cd
+    # Get subset(i, y) from gen_intersect_subset
+    gis = use gen_intersect_subset
+    gis1 = forall_elim gis, i
+    gis2 = forall_elim gis1, a
+    gis3 = forall_elim gis2, y
+    h_gis_prem = and_intro h_gi, h_ya
+    h_sub_i_y = implies_elim gis3, h_gis_prem
+    # Get witness fy from in_domain(f, y)
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, f
+    ddef2 = forall_elim ddef1, y
+    h_exists_fy = iff_elim_l ddef2, h_dom_y
+    h_rel_fy = exists_elim h_exists_fy, fy
+    # monotone_subset: mono & subset(i,y) & rels -> subset(fi, fy)
+    ms = use monotone_subset
+    ms1 = forall_elim ms, f
+    ms2 = forall_elim ms1, i
+    ms3 = forall_elim ms2, y
+    ms4 = forall_elim ms3, fi
+    ms5 = forall_elim ms4, fy
+    h_ms_p1 = and_intro h_mono, h_sub_i_y
+    h_ms_p2 = and_intro h_ms_p1, h_rel_fi
+    h_ms_prem = and_intro h_ms_p2, h_rel_fy
+    h_sub_fi_fy = implies_elim ms5, h_ms_prem
+    # closed(f, y): rel_elem(f, y, fy) -> subset(fy, y)
+    cdef_y = forall_elim cdef_f, y
+    h_cl_body = iff_elim_l cdef_y, h_closed_y
+    h_cl_fy = forall_elim h_cl_body, fy
+    h_sub_fy_y = implies_elim h_cl_fy, h_rel_fy
+    # subset_trans: subset(fi, fy) & subset(fy, y) -> subset(fi, y)
+    st = use subset_trans
+    st1 = forall_elim st, fi
+    st2 = forall_elim st1, fy
+    st3 = forall_elim st2, y
+    h_tr = and_intro h_sub_fi_fy, h_sub_fy_y
+    h_sub_fi_y = implies_elim st3, h_tr
+    # elem(x, y) from subset(fi, y) + elem(x, fi)
+    sdef_fi2 = forall_elim sdef, fi
+    sdef_fi_y = forall_elim sdef_fi2, y
+    h_mem_fi_y = iff_elim_l sdef_fi_y, h_sub_fi_y
+    h_xy_impl = forall_elim h_mem_fi_y, x
+    h_xy = implies_elim h_xy_impl, h_x_fi
+    # Close exists scope (fy not in elem(x, y))
+    h_xy_out = exists_intro h_xy
+    # Close assume/fix y
+    h_ya_impl = implies_intro h_xy_out
+    h_all_y = forall_intro h_ya_impl
+    # Apply gen_intersect_intro to get elem(x, i)
+    h_gi_prem = and_intro h_gi, h_all_y
+    h_xi = implies_elim gi3, h_gi_prem
+    # Close inner scopes
+    h_x_impl = implies_intro h_xi
+    h_all_x = forall_intro h_x_impl
+    h_sub_fi_i = iff_elim_r sdef_fi_i, h_all_x
+    h_fi_impl = implies_intro h_sub_fi_i
+    h_all_fi = forall_intro h_fi_impl
+    h_closed_i = iff_elim_r cdef_i, h_all_fi
+    h_main = implies_intro h_closed_i
+    hf3 = forall_intro h_main
+    hf2 = forall_intro hf3
+    hf1 = forall_intro hf2
+    qed hf1
