@@ -246,9 +246,9 @@ bool test_claim_not_registered() {
 
 bool test_parse_zfc_axioms() {
     // Read ZFC axioms from file
-    std::ifstream file("zfc/basics/axioms.fol");
+    std::ifstream file("zfc/basics/axioms.fol.def");
     if (!file.is_open()) {
-        std::cout << "[ERROR: Could not open axioms.fol] ";
+        std::cout << "[ERROR: Could not open axioms.fol.def] ";
         return false;
     }
 

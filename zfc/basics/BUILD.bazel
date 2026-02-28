@@ -2,13 +2,7 @@ load("//build:fol.bzl", "fol_library", "fol_proof")
 
 package(default_visibility = ["//visibility:public"])
 
-# Legacy exports for tests that still use load_file_recursive
 exports_files([
-    "axioms.fol",
-    "functions.fol",
-    "ordered_pair.fol",
-    "replacement_choice.fol",
-    "test.fol",
     "axioms.fol.def",
     "ordered_pair.fol.def",
     "ordered_pair.fol.proof",
