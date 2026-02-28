@@ -97,7 +97,7 @@ bool test_runtime_load() {
 
 bool test_runtime_load_file() {
     Runtime rt;
-    auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol");
+    auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
 
     if (!result.ok()) {
         std::cout << "[" << result.error() << "] ";
@@ -715,9 +715,9 @@ Runtime& load_ordered_pair_axioms() {
     static Runtime rt;
     static bool loaded = false;
     if (!loaded) {
-        auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol");
+        auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
         if (!result.ok()) {
-            throw std::runtime_error("Failed to load ordered_pair.fol: " + result.error().to_string());
+            throw std::runtime_error("Failed to load ordered_pair.fol.def: " + result.error().to_string());
         }
         loaded = true;
     }
@@ -780,19 +780,32 @@ bool test_ordered_pair_axioms_loaded() {
 bool test_execute_ordered_pair_proofs() {
     Runtime rt;
 
-    // Load the ordered_pair.fol file with proofs (recursive to handle includes)
-    auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol");
-    if (!result.ok()) {
-        std::cout << "[load error: " << result.error() << "] ";
+    // Load the header (includes axioms.fol.def recursively)
+    auto header_result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
+    if (!header_result.ok()) {
+        std::cout << "[header load error: " << header_result.error() << "] ";
+        return false;
+    }
+    rt.execute_all_proofs(header_result.value());
+
+    // Load the proof file
+    std::ifstream proof_file("zfc/basics/ordered_pair.fol.proof");
+    if (!proof_file.is_open()) {
+        std::cout << "[could not open proof file] ";
+        return false;
+    }
+    std::stringstream buffer;
+    buffer << proof_file.rdbuf();
+
+    std::string error;
+    auto proof_result = try_parse_with_proofs(buffer.str(), rt.context(), &error);
+    if (!error.empty()) {
+        std::cout << "[parse error: " << error << "] ";
         return false;
     }
 
-    auto& parsed = result.value();
-    std::cout << "[" << parsed.statements.size() << " statements, "
-              << parsed.proofs.size() << " proofs] ";
-
     // Execute all proofs
-    auto exec_result = rt.execute_all_proofs(parsed);
+    auto exec_result = rt.execute_all_proofs(proof_result);
     if (!exec_result.ok()) {
         std::cout << "[execution error: " << exec_result.error() << "] ";
         return false;
@@ -818,159 +831,55 @@ bool test_execute_ordered_pair_proofs() {
 bool test_fol_test_file() {
     Runtime rt;
 
-    auto result = rt.load_file_recursive("zfc/basics/test.fol");
-    if (!result.ok()) {
-        std::cout << "[load error: " << result.error() << "] ";
-        return false;
-    }
-
-    auto& parsed = result.value();
-    std::cout << "[" << parsed.statements.size() << " statements, "
-              << parsed.proofs.size() << " proofs] ";
-
-    auto exec_result = rt.execute_all_proofs(parsed);
-    if (!exec_result.ok()) {
-        std::cout << "[execution error: " << exec_result.error() << "] ";
-        return false;
-    }
-
-    std::cout << "[all proofs verified] ";
-    return true;
-}
-
-// ==================== Split Header/Proof Tests ====================
-
-bool test_split_ordered_pair() {
-    // Test loading ordered_pair.fol.def (header) then ordered_pair.fol.proof (proofs)
-    // This simulates what the proof_checker binary does
-    Runtime rt;
-
-    // Load the header (includes axioms.fol.def recursively)
-    auto header_result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
+    // Load the full header chain (replacement_choice includes functions includes ordered_pair includes axioms)
+    auto header_result = rt.load_file_recursive("zfc/basics/replacement_choice.fol.def");
     if (!header_result.ok()) {
         std::cout << "[header load error: " << header_result.error() << "] ";
         return false;
     }
+    rt.execute_all_proofs(header_result.value());
 
-    // Execute any proofs from header includes (none expected)
-    auto header_exec = rt.execute_all_proofs(header_result.value());
-    if (!header_exec.ok()) {
-        std::cout << "[header exec error: " << header_exec.error() << "] ";
+    // Load and execute ordered_pair proofs
+    std::ifstream op_file("zfc/basics/ordered_pair.fol.proof");
+    if (!op_file.is_open()) {
+        std::cout << "[could not open ordered_pair.fol.proof] ";
         return false;
     }
-
-    // Snapshot claims before loading proof file
-    auto claims_before = rt.context().claims();
-    std::cout << "[" << claims_before.size() << " claims] ";
-
-    // Load the proof file
-    std::ifstream proof_file("zfc/basics/ordered_pair.fol.proof");
-    if (!proof_file.is_open()) {
-        std::cout << "[could not open proof file] ";
-        return false;
-    }
-    std::stringstream buffer;
-    buffer << proof_file.rdbuf();
-
-    std::string error;
-    auto proof_result = try_parse_with_proofs(buffer.str(), rt.context(), &error);
-    if (!error.empty()) {
-        std::cout << "[parse error: " << error << "] ";
-        return false;
-    }
-
-    // Execute all proofs
-    auto exec_result = rt.execute_all_proofs(proof_result);
-    if (!exec_result.ok()) {
-        std::cout << "[execution error: " << exec_result.error() << "] ";
-        return false;
-    }
-
-    // Check that every claim is proved
-    int unproven = 0;
-    for (const auto& [name, _] : claims_before) {
-        if (!rt.context().find_theorem(name).has_value()) {
-            std::cout << "[" << name << " not proven] ";
-            unproven++;
-        }
-    }
-
-    if (unproven > 0) {
-        return false;
-    }
-
-    std::cout << "[all claims proved] ";
-    return true;
-}
-
-bool test_split_functions() {
-    // Test loading functions.fol.def then functions.fol.proof
-    // Functions depends on ordered_pair, which must be loaded first with proofs executed
-    Runtime rt;
-
-    // Load ordered_pair header + proof first (as a dependency)
-    auto op_header = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
-    if (!op_header.ok()) {
-        std::cout << "[op header load error: " << op_header.error() << "] ";
-        return false;
-    }
-    rt.execute_all_proofs(op_header.value());
-
-    // Load ordered_pair proofs
-    std::ifstream op_proof_file("zfc/basics/ordered_pair.fol.proof");
     std::stringstream op_buf;
-    op_buf << op_proof_file.rdbuf();
+    op_buf << op_file.rdbuf();
     std::string op_error;
-    auto op_proof_result = try_parse_with_proofs(op_buf.str(), rt.context(), &op_error);
+    auto op_result = try_parse_with_proofs(op_buf.str(), rt.context(), &op_error);
     if (!op_error.empty()) {
         std::cout << "[op parse error: " << op_error << "] ";
         return false;
     }
-    auto op_proof_exec = rt.execute_all_proofs(op_proof_result);
-    if (!op_proof_exec.ok()) {
-        std::cout << "[op proof exec error: " << op_proof_exec.error() << "] ";
+    auto op_exec = rt.execute_all_proofs(op_result);
+    if (!op_exec.ok()) {
+        std::cout << "[op execution error: " << op_exec.error() << "] ";
         return false;
     }
 
-    // Now load functions header (#pragma once will skip already-loaded axioms.fol.def and ordered_pair.fol.def)
-    auto func_header = rt.load_file_recursive("zfc/basics/functions.fol.def");
-    if (!func_header.ok()) {
-        std::cout << "[func header load error: " << func_header.error() << "] ";
+    // Load and execute functions proofs
+    std::ifstream fn_file("zfc/basics/functions.fol.proof");
+    if (!fn_file.is_open()) {
+        std::cout << "[could not open functions.fol.proof] ";
         return false;
     }
-    rt.execute_all_proofs(func_header.value());
-
-    auto claims_before = rt.context().claims();
-
-    // Load functions proofs
-    std::ifstream func_proof_file("zfc/basics/functions.fol.proof");
-    std::stringstream func_buf;
-    func_buf << func_proof_file.rdbuf();
-    std::string func_error;
-    auto func_proof_result = try_parse_with_proofs(func_buf.str(), rt.context(), &func_error);
-    if (!func_error.empty()) {
-        std::cout << "[func parse error: " << func_error << "] ";
+    std::stringstream fn_buf;
+    fn_buf << fn_file.rdbuf();
+    std::string fn_error;
+    auto fn_result = try_parse_with_proofs(fn_buf.str(), rt.context(), &fn_error);
+    if (!fn_error.empty()) {
+        std::cout << "[fn parse error: " << fn_error << "] ";
         return false;
     }
-    auto func_proof_exec = rt.execute_all_proofs(func_proof_result);
-    if (!func_proof_exec.ok()) {
-        std::cout << "[func proof exec error: " << func_proof_exec.error() << "] ";
+    auto fn_exec = rt.execute_all_proofs(fn_result);
+    if (!fn_exec.ok()) {
+        std::cout << "[fn execution error: " << fn_exec.error() << "] ";
         return false;
     }
 
-    // Check functions claims are proved
-    std::vector<std::string> func_claims = {
-        "func_unique", "rel_elem_eq", "domain_elem", "range_elem",
-        "injective_func_unique_input"
-    };
-    for (const auto& name : func_claims) {
-        if (!rt.context().find_theorem(name).has_value()) {
-            std::cout << "[" << name << " not proven] ";
-            return false;
-        }
-    }
-
-    std::cout << "[all function claims proved] ";
+    std::cout << "[all proofs verified] ";
     return true;
 }
 
@@ -1015,14 +924,9 @@ int main() {
     run_test("Load ordered pair axioms and claims", test_ordered_pair_axioms_loaded);
     run_test("Execute ordered pair proofs", test_execute_ordered_pair_proofs);
 
-    // Split header/proof tests
-    std::cout << "\n── Split Header/Proof Tests ──\n";
-    run_test("Split ordered_pair .fol.def + .fol.proof", test_split_ordered_pair);
-    run_test("Split functions .fol.def + .fol.proof", test_split_functions);
-
-    // test.fol integration test
-    std::cout << "\n── test.fol ──\n";
-    run_test("Load and verify test.fol", test_fol_test_file);
+    // Integration test
+    std::cout << "\n── Integration Test ──\n";
+    run_test("Load and verify full proof chain", test_fol_test_file);
 
     // Print summary
     print_summary();

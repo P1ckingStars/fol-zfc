@@ -4,9 +4,7 @@ cc_test(
     name = "core_test",
     srcs = ["core_test.cpp"],
     data = [
-        "//zfc/basics:axioms.fol",
         "//zfc/basics:axioms.fol.def",
-        "//zfc/basics:ordered_pair.fol",
         "//zfc/basics:ordered_pair.fol.def",
     ],
     deps = [
@@ -19,17 +17,12 @@ cc_test(
     name = "runtime_test",
     srcs = ["runtime_test.cpp"],
     data = [
-        "//zfc/basics:axioms.fol",
         "//zfc/basics:axioms.fol.def",
-        "//zfc/basics:functions.fol",
         "//zfc/basics:functions.fol.def",
         "//zfc/basics:functions.fol.proof",
-        "//zfc/basics:ordered_pair.fol",
         "//zfc/basics:ordered_pair.fol.def",
         "//zfc/basics:ordered_pair.fol.proof",
-        "//zfc/basics:replacement_choice.fol",
         "//zfc/basics:replacement_choice.fol.def",
-        "//zfc/basics:test.fol",
     ],
     deps = [
         "//src/runtime",
