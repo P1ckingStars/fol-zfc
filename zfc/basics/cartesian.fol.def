@@ -1,0 +1,33 @@
+include "functions.fol.def"
+
+# ============================================================
+# Cartesian Product
+# ============================================================
+#
+# cart_prod(c, a, b) means c = a x b, the set of all ordered pairs
+# (x, y) with x in a and y in b.
+
+@def(cart_prod) axiom cart_prod_def: forall c. forall a. forall b.
+    (cart_prod(c, a, b) <-> forall z. (elem(z, c) <->
+        exists x. exists y. (elem(x, a) & elem(y, b) & pair(z, x, y))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Elimination: an element of a cartesian product is a pair
+claim cart_prod_elim: forall c. forall a. forall b. forall z.
+    ((cart_prod(c, a, b) & elem(z, c)) ->
+        exists x. exists y. (elem(x, a) & elem(y, b) & pair(z, x, y)))
+
+# Introduction: a pair of elements is in the cartesian product
+claim cart_prod_intro: forall c. forall a. forall b. forall x. forall y. forall p.
+    ((cart_prod(c, a, b) & elem(x, a) & elem(y, b) & pair(p, x, y)) -> elem(p, c))
+
+# Uniqueness: two cartesian products of the same sets are equal
+claim cart_prod_unique: forall c1. forall c2. forall a. forall b.
+    ((cart_prod(c1, a, b) & cart_prod(c2, a, b)) -> eq(c1, c2))
+
+# A rel_elem in a cartesian product has components in the factor sets
+claim rel_elem_in_cart_prod: forall c. forall a. forall b. forall x. forall y.
+    ((cart_prod(c, a, b) & rel_elem(c, x, y)) -> (elem(x, a) & elem(y, b)))

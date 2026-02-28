@@ -1,0 +1,938 @@
+# Proof of monotone_is_function: extract is_function from monotone
+proof monotone_is_function:
+    fix f
+    h = assume monotone(f)
+    mdef = use monotone_def
+    mdef1 = forall_elim mdef, f
+    h_expand = iff_elim_l mdef1, h
+    h_func = and_elim_l h_expand
+    h_impl = implies_intro h_func
+    h1 = forall_intro h_impl
+    qed h1
+
+# Proof of monotone_subset: extract subset preservation from monotone
+proof monotone_subset:
+    fix f
+    fix a
+    fix b
+    fix fa
+    fix fb
+    h = assume monotone(f) & subset(a, b) & rel_elem(f, a, fa) & rel_elem(f, b, fb)
+    h_fb = and_elim_r h
+    h_r1 = and_elim_l h
+    h_fa = and_elim_r h_r1
+    h_r2 = and_elim_l h_r1
+    h_sub = and_elim_r h_r2
+    h_mono = and_elim_l h_r2
+    mdef = use monotone_def
+    mdef1 = forall_elim mdef, f
+    h_expand = iff_elim_l mdef1, h_mono
+    h_body = and_elim_r h_expand
+    ms1 = forall_elim h_body, a
+    ms2 = forall_elim ms1, b
+    ms3 = implies_elim ms2, h_sub
+    ms4 = forall_elim ms3, fa
+    ms5 = forall_elim ms4, fb
+    h_rels = and_intro h_fa, h_fb
+    h_result = implies_elim ms5, h_rels
+    h_impl = implies_intro h_result
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_contains_base: for any x in b, x must be in every
+# F-closed set containing b (trivially), so x is in the lfp.
+proof lfp_contains_base:
+    fix l
+    fix f
+    fix b
+    h = assume lfp(l, f, b)
+    # Expand lfp
+    ldef = use lfp_def
+    ldef1 = forall_elim ldef, l
+    ldef2 = forall_elim ldef1, f
+    ldef3 = forall_elim ldef2, b
+    h_mem = iff_elim_l ldef3, h
+    # Expand subset_def
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, b
+    sdef2 = forall_elim sdef1, l
+    # Show forall x. (elem(x, b) -> elem(x, l))
+    fix x
+    h_x_iff = forall_elim h_mem, x
+    # Build: forall c. ((closed(f, c) & subset(b, c)) -> elem(x, c))
+    # assuming elem(x, b)
+    h_xb = assume elem(x, b)
+    fix c
+    h_cc = assume closed(f, c) & subset(b, c)
+    h_bc = and_elim_r h_cc
+    # Expand subset(b, c) to get elem(x, b) -> elem(x, c)
+    sdef3 = forall_elim sdef, b
+    sdef4 = forall_elim sdef3, c
+    h_bc_mem = iff_elim_l sdef4, h_bc
+    h_bc_x = forall_elim h_bc_mem, x
+    h_xc = implies_elim h_bc_x, h_xb
+    h_cc_impl = implies_intro h_xc
+    h_all_c = forall_intro h_cc_impl
+    h_xl = iff_elim_r h_x_iff, h_all_c
+    h_impl = implies_intro h_xl
+    h_all_x = forall_intro h_impl
+    h_sub = iff_elim_r sdef2, h_all_x
+    h_result = implies_intro h_sub
+    h3 = forall_intro h_result
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_subset_closed: expand lfp to get the membership
+# biconditional, then for each x in l derive x in c.
+proof lfp_subset_closed:
+    fix l
+    fix f
+    fix b
+    fix c
+    h = assume lfp(l, f, b) & closed(f, c) & subset(b, c)
+    h_lc = and_elim_l h
+    h_bc = and_elim_r h
+    h_lfp = and_elim_l h_lc
+    h_closed = and_elim_r h_lc
+    # Expand lfp(l, f, b)
+    ldef = use lfp_def
+    ldef1 = forall_elim ldef, l
+    ldef2 = forall_elim ldef1, f
+    ldef3 = forall_elim ldef2, b
+    h_mem = iff_elim_l ldef3, h_lfp
+    # Expand subset_def for subset(l, c)
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, l
+    sdef2 = forall_elim sdef1, c
+    # Show forall x. (elem(x, l) -> elem(x, c))
+    fix x
+    h_x_iff = forall_elim h_mem, x
+    h_xl = assume elem(x, l)
+    h_x_all = iff_elim_l h_x_iff, h_xl
+    # Instantiate with c: need closed(f, c) & subset(b, c)
+    h_x_c = forall_elim h_x_all, c
+    h_premise = and_intro h_closed, h_bc
+    h_xc = implies_elim h_x_c, h_premise
+    h_x_impl = implies_intro h_xc
+    h_all = forall_intro h_x_impl
+    h_sub = iff_elim_r sdef2, h_all
+    h_result = implies_intro h_sub
+    h4 = forall_intro h_result
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_unique: both lfps have the same membership criterion,
+# so extensionality gives equality.
+proof lfp_unique:
+    fix l1
+    fix l2
+    fix f
+    fix b
+    h = assume lfp(l1, f, b) & lfp(l2, f, b)
+    h_lfp1 = and_elim_l h
+    h_lfp2 = and_elim_r h
+    # Expand both lfps
+    ldef = use lfp_def
+    ld1a = forall_elim ldef, l1
+    ld1b = forall_elim ld1a, f
+    ld1c = forall_elim ld1b, b
+    h_iff1 = iff_elim_l ld1c, h_lfp1
+    ld2a = forall_elim ldef, l2
+    ld2b = forall_elim ld2a, f
+    ld2c = forall_elim ld2b, b
+    h_iff2 = iff_elim_l ld2c, h_lfp2
+    # Build forall z. (elem(z, l1) <-> elem(z, l2))
+    fix z
+    h_z1 = forall_elim h_iff1, z
+    h_z2 = forall_elim h_iff2, z
+    # Forward: elem(z, l1) -> elem(z, l2)
+    h_zl1 = assume elem(z, l1)
+    h_all = iff_elim_l h_z1, h_zl1
+    h_zl2 = iff_elim_r h_z2, h_all
+    h_fwd = implies_intro h_zl2
+    # Backward: elem(z, l2) -> elem(z, l1)
+    h_zl2b = assume elem(z, l2)
+    h_allb = iff_elim_l h_z2, h_zl2b
+    h_zl1b = iff_elim_r h_z1, h_allb
+    h_bwd = implies_intro h_zl1b
+    h_ziff = iff_intro h_fwd, h_bwd
+    h_allz = forall_intro h_ziff
+    # Apply extensionality
+    ext = use extensionality
+    ext1 = forall_elim ext, l1
+    ext2 = forall_elim ext1, l2
+    h_eq = iff_elim_r ext2, h_allz
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_closed: the T-closure is F-closed under monotonicity.
+# For each x in F(l), show x is in every F-closed superset of b:
+# by lfp_subset_closed l ⊆ c, by monotonicity F(l) ⊆ F(c), and
+# by closedness F(c) ⊆ c, so F(l) ⊆ c.
+proof lfp_closed:
+    fix l
+    fix f
+    fix b
+    h = assume monotone(f) & lfp(l, f, b) & forall c. ((closed(f, c) & subset(b, c)) -> in_domain(f, c))
+    h_lhs = and_elim_l h
+    h_total = and_elim_r h
+    h_mono = and_elim_l h_lhs
+    h_lfp = and_elim_r h_lhs
+    # Expand lfp definition
+    ldef = use lfp_def
+    ld1 = forall_elim ldef, l
+    ld2 = forall_elim ld1, f
+    ld3 = forall_elim ld2, b
+    h_lfp_exp = iff_elim_l ld3, h_lfp
+    # Setup closed_def for f
+    cdef = use closed_def
+    cdef_f = forall_elim cdef, f
+    cdef_l = forall_elim cdef_f, l
+    # Build: forall fl. (rel_elem(f, l, fl) -> subset(fl, l))
+    fix fl
+    h_rel = assume rel_elem(f, l, fl)
+    # Build: subset(fl, l) via forall x. (elem(x, fl) -> elem(x, l))
+    sdef = use subset_def
+    sdef_fl = forall_elim sdef, fl
+    sdef_fl_l = forall_elim sdef_fl, l
+    fix x
+    h_xfl = assume elem(x, fl)
+    # Show elem(x, l) via lfp backward direction
+    h_x_iff = forall_elim h_lfp_exp, x
+    # Need: forall c. ((closed(f,c) & subset(b,c)) -> elem(x,c))
+    fix c
+    h_cc = assume closed(f, c) & subset(b, c)
+    h_closed_c = and_elim_l h_cc
+    h_sub_bc = and_elim_r h_cc
+    # Get subset(l, c) via lfp_subset_closed
+    lsc = use lfp_subset_closed
+    lsc1 = forall_elim lsc, l
+    lsc2 = forall_elim lsc1, f
+    lsc3 = forall_elim lsc2, b
+    lsc4 = forall_elim lsc3, c
+    h_lsc_pre = and_intro h_lfp, h_closed_c
+    h_lsc_prem = and_intro h_lsc_pre, h_sub_bc
+    h_sub_lc = implies_elim lsc4, h_lsc_prem
+    # Totality: in_domain(f, c)
+    h_total_c = forall_elim h_total, c
+    h_indom = implies_elim h_total_c, h_cc
+    # Expand domain to get exists witness
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, f
+    ddef2 = forall_elim ddef1, c
+    h_exists = iff_elim_l ddef2, h_indom
+    # Open exists scope with witness fc
+    h_relfc = exists_elim h_exists, fc
+    # Use monotone_subset: subset(l, c) & rels -> subset(fl, fc)
+    ms = use monotone_subset
+    ms1 = forall_elim ms, f
+    ms2 = forall_elim ms1, l
+    ms3 = forall_elim ms2, c
+    ms4 = forall_elim ms3, fl
+    ms5 = forall_elim ms4, fc
+    h_ms_p1 = and_intro h_mono, h_sub_lc
+    h_ms_p2 = and_intro h_ms_p1, h_rel
+    h_ms_prem = and_intro h_ms_p2, h_relfc
+    h_sub_fl_fc = implies_elim ms5, h_ms_prem
+    # Get subset(fc, c) from closed(f, c)
+    cdef_c = forall_elim cdef_f, c
+    h_cl_exp = iff_elim_l cdef_c, h_closed_c
+    h_cl_fc = forall_elim h_cl_exp, fc
+    h_sub_fc_c = implies_elim h_cl_fc, h_relfc
+    # Chain: subset(fl, fc) & subset(fc, c) -> subset(fl, c)
+    st = use subset_trans
+    st1 = forall_elim st, fl
+    st2 = forall_elim st1, fc
+    st3 = forall_elim st2, c
+    h_tr = and_intro h_sub_fl_fc, h_sub_fc_c
+    h_sub_fl_c = implies_elim st3, h_tr
+    # elem(x, c) from subset(fl, c) + elem(x, fl)
+    sdef_fl2 = forall_elim sdef, fl
+    sdef_fl_c = forall_elim sdef_fl2, c
+    h_fl_c_mem = iff_elim_l sdef_fl_c, h_sub_fl_c
+    h_xc_impl = forall_elim h_fl_c_mem, x
+    h_xc = implies_elim h_xc_impl, h_xfl
+    # Close exists scope (fc doesn't appear in elem(x, c))
+    h_xc_out = exists_intro h_xc
+    # Close assume: (closed(f,c) & subset(b,c)) -> elem(x,c)
+    h_cc_impl = implies_intro h_xc_out
+    # Close forall c
+    h_all_c = forall_intro h_cc_impl
+    # Get elem(x, l) from lfp backward direction
+    h_xl = iff_elim_r h_x_iff, h_all_c
+    # Close assume: elem(x, fl) -> elem(x, l)
+    h_x_impl = implies_intro h_xl
+    # Close forall x
+    h_all_x = forall_intro h_x_impl
+    # Get subset(fl, l)
+    h_sub_fl_l = iff_elim_r sdef_fl_l, h_all_x
+    # Close assume: rel_elem(f, l, fl) -> subset(fl, l)
+    h_rel_impl = implies_intro h_sub_fl_l
+    # Close forall fl
+    h_all_fl = forall_intro h_rel_impl
+    # Get closed(f, l) from closed_def
+    h_closed_l = iff_elim_r cdef_l, h_all_fl
+    # Close main assume and forall scopes
+    h_main = implies_intro h_closed_l
+    h3 = forall_intro h_main
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_fixed_point: for empty base, F(l) is F-closed and
+# contains the empty base, so l ⊆ F(l) by minimality.
+# F(l) is F-closed because F(F(l)) ⊆ F(l) by monotonicity from
+# F(l) ⊆ l (the closed direction).
+proof lfp_fixed_point:
+    fix l
+    fix f
+    fix e
+    fix fl
+    h = assume monotone(f) & lfp(l, f, e) & (forall x. ~elem(x, e)) & rel_elem(f, l, fl) & closed(f, l)
+    # Extract premises: ((((A & B) & C) & D) & E)
+    h_closed_l = and_elim_r h
+    h_r1 = and_elim_l h
+    h_rel = and_elim_r h_r1
+    h_r2 = and_elim_l h_r1
+    h_empty = and_elim_r h_r2
+    h_r3 = and_elim_l h_r2
+    h_mono = and_elim_l h_r3
+    h_lfp = and_elim_r h_r3
+    # Step 1: Extract subset(fl, l) from closed(f, l)
+    cdef = use closed_def
+    cdef_f = forall_elim cdef, f
+    cdef_l = forall_elim cdef_f, l
+    h_cl_body = iff_elim_l cdef_l, h_closed_l
+    h_cl_fl = forall_elim h_cl_body, fl
+    h_sub_fl_l = implies_elim h_cl_fl, h_rel
+    # Step 2: Show closed(f, fl) — F(F(l)) ⊆ F(l) by monotonicity
+    cdef_fl = forall_elim cdef_f, fl
+    fix fl2
+    h_rel_fl2 = assume rel_elem(f, fl, fl2)
+    # monotone_subset with a=fl, b=l, fa=fl2, fb=fl
+    ms = use monotone_subset
+    ms1 = forall_elim ms, f
+    ms2 = forall_elim ms1, fl
+    ms3 = forall_elim ms2, l
+    ms4 = forall_elim ms3, fl2
+    ms5 = forall_elim ms4, fl
+    h_ms_p1 = and_intro h_mono, h_sub_fl_l
+    h_ms_p2 = and_intro h_ms_p1, h_rel_fl2
+    h_ms_prem = and_intro h_ms_p2, h_rel
+    h_sub_fl2_fl = implies_elim ms5, h_ms_prem
+    h_fl2_impl = implies_intro h_sub_fl2_fl
+    h_all_fl2 = forall_intro h_fl2_impl
+    h_closed_fl = iff_elim_r cdef_fl, h_all_fl2
+    # Step 3: Show subset(e, fl) — vacuous truth from empty e
+    sdef = use subset_def
+    sdef_e = forall_elim sdef, e
+    sdef_e_fl = forall_elim sdef_e, fl
+    fix w
+    h_we = assume elem(w, e)
+    h_not_we = forall_elim h_empty, w
+    h_bot = not_elim h_not_we, h_we
+    h_wfl_let = let elem(w, fl)
+    h_wfl = bottom_elim h_bot, h_wfl_let
+    h_w_impl = implies_intro h_wfl
+    h_all_w = forall_intro h_w_impl
+    h_sub_e_fl = iff_elim_r sdef_e_fl, h_all_w
+    # Step 4: Apply lfp_subset_closed with c = fl
+    lsc = use lfp_subset_closed
+    lsc1 = forall_elim lsc, l
+    lsc2 = forall_elim lsc1, f
+    lsc3 = forall_elim lsc2, e
+    lsc4 = forall_elim lsc3, fl
+    h_lsc_pre = and_intro h_lfp, h_closed_fl
+    h_lsc_prem = and_intro h_lsc_pre, h_sub_e_fl
+    h_sub_l_fl = implies_elim lsc4, h_lsc_prem
+    # Close main assume and forall scopes
+    h_main = implies_intro h_sub_l_fl
+    h4 = forall_intro h_main
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_induction: an inductive subset of the T-closure
+# equals the T-closure, by lfp_subset_closed + subset_antisym.
+proof lfp_induction:
+    fix l
+    fix f
+    fix b
+    fix c
+    h = assume lfp(l, f, b) & closed(f, c) & subset(b, c) & subset(c, l)
+    h_cl = and_elim_r h
+    h_r1 = and_elim_l h
+    h_bc = and_elim_r h_r1
+    h_r2 = and_elim_l h_r1
+    # Apply lfp_subset_closed: (lfp & closed) & subset(b,c) -> subset(l, c)
+    lsc = use lfp_subset_closed
+    lsc1 = forall_elim lsc, l
+    lsc2 = forall_elim lsc1, f
+    lsc3 = forall_elim lsc2, b
+    lsc4 = forall_elim lsc3, c
+    h_prem = and_intro h_r2, h_bc
+    h_lc = implies_elim lsc4, h_prem
+    # subset_antisym: subset(c,l) & subset(l,c) -> eq(c,l)
+    sa = use subset_antisym
+    sa1 = forall_elim sa, c
+    sa2 = forall_elim sa1, l
+    h_both = and_intro h_cl, h_lc
+    h_eq = implies_elim sa2, h_both
+    h_main = implies_intro h_eq
+    hf4 = forall_intro h_main
+    hf3 = forall_intro hf4
+    hf2 = forall_intro hf3
+    hf1 = forall_intro hf2
+    qed hf1
+
+# Proof of lfp_base_monotone: if b1 ⊆ b2, then any F-closed superset
+# of b2 is also a superset of b1, so the membership conditions align.
+proof lfp_base_monotone:
+    fix l1
+    fix l2
+    fix f
+    fix b1
+    fix b2
+    h = assume lfp(l1, f, b1) & lfp(l2, f, b2) & subset(b1, b2)
+    h_lhs = and_elim_l h
+    h_sub_b = and_elim_r h
+    h_lfp1 = and_elim_l h_lhs
+    h_lfp2 = and_elim_r h_lhs
+    # Expand both lfps
+    ldef = use lfp_def
+    ld1a = forall_elim ldef, l1
+    ld1b = forall_elim ld1a, f
+    ld1c = forall_elim ld1b, b1
+    h_iff1 = iff_elim_l ld1c, h_lfp1
+    ld2a = forall_elim ldef, l2
+    ld2b = forall_elim ld2a, f
+    ld2c = forall_elim ld2b, b2
+    h_iff2 = iff_elim_l ld2c, h_lfp2
+    # Show subset(l1, l2)
+    sdef = use subset_def
+    sd1 = forall_elim sdef, l1
+    sd2 = forall_elim sd1, l2
+    fix x
+    h_xl1 = assume elem(x, l1)
+    h_x1 = forall_elim h_iff1, x
+    h_x_all = iff_elim_l h_x1, h_xl1
+    # Show forall c. (closed(f,c) & subset(b2,c) -> elem(x,c))
+    h_x2 = forall_elim h_iff2, x
+    fix c
+    h_cc = assume closed(f, c) & subset(b2, c)
+    h_closed_c = and_elim_l h_cc
+    h_sub_b2c = and_elim_r h_cc
+    # subset_trans: subset(b1, b2) & subset(b2, c) -> subset(b1, c)
+    st = use subset_trans
+    st1 = forall_elim st, b1
+    st2 = forall_elim st1, b2
+    st3 = forall_elim st2, c
+    h_tr = and_intro h_sub_b, h_sub_b2c
+    h_sub_b1c = implies_elim st3, h_tr
+    # Apply l1 membership condition with closed(f,c) & subset(b1,c)
+    h_x_c = forall_elim h_x_all, c
+    h_cc2 = and_intro h_closed_c, h_sub_b1c
+    h_xc = implies_elim h_x_c, h_cc2
+    h_cc_impl = implies_intro h_xc
+    h_all_c = forall_intro h_cc_impl
+    h_xl2 = iff_elim_r h_x2, h_all_c
+    h_x_impl = implies_intro h_xl2
+    h_all_x = forall_intro h_x_impl
+    h_sub = iff_elim_r sd2, h_all_x
+    h_main = implies_intro h_sub
+    h5 = forall_intro h_main
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of closed_intersect (Note 3.7): the intersection of F-closed
+# sets is F-closed. For each member c, use monotonicity to get
+# F(⋂A) ⊆ F(c) ⊆ c, so F(⋂A) ⊆ ⋂A.
+proof closed_intersect:
+    fix f
+    fix i
+    fix a
+    h = assume monotone(f) & gen_intersect(i, a) & forall c. (elem(c, a) -> (closed(f, c) & in_domain(f, c)))
+    h_all_cd = and_elim_r h
+    h_r1 = and_elim_l h
+    h_mono = and_elim_l h_r1
+    h_gi = and_elim_r h_r1
+    # Need: closed(f, i), i.e., forall fi. (rel_elem(f, i, fi) -> subset(fi, i))
+    cdef = use closed_def
+    cdef_f = forall_elim cdef, f
+    cdef_i = forall_elim cdef_f, i
+    fix fi
+    h_rel_fi = assume rel_elem(f, i, fi)
+    # Need: subset(fi, i), i.e., forall x. (elem(x, fi) -> elem(x, i))
+    sdef = use subset_def
+    sdef_fi = forall_elim sdef, fi
+    sdef_fi_i = forall_elim sdef_fi, i
+    fix x
+    h_x_fi = assume elem(x, fi)
+    # Use gen_intersect_intro: need gen_intersect(i,a) & forall y. (elem(y,a) -> elem(x,y))
+    gi_intro = use gen_intersect_intro
+    gi1 = forall_elim gi_intro, i
+    gi2 = forall_elim gi1, a
+    gi3 = forall_elim gi2, x
+    # Build: forall y. (elem(y, a) -> elem(x, y))
+    fix y
+    h_ya = assume elem(y, a)
+    # Get closed(f, y) & in_domain(f, y) from premise
+    h_cd_y = forall_elim h_all_cd, y
+    h_cd = implies_elim h_cd_y, h_ya
+    h_closed_y = and_elim_l h_cd
+    h_dom_y = and_elim_r h_cd
+    # Get subset(i, y) from gen_intersect_subset
+    gis = use gen_intersect_subset
+    gis1 = forall_elim gis, i
+    gis2 = forall_elim gis1, a
+    gis3 = forall_elim gis2, y
+    h_gis_prem = and_intro h_gi, h_ya
+    h_sub_i_y = implies_elim gis3, h_gis_prem
+    # Get witness fy from in_domain(f, y)
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, f
+    ddef2 = forall_elim ddef1, y
+    h_exists_fy = iff_elim_l ddef2, h_dom_y
+    h_rel_fy = exists_elim h_exists_fy, fy
+    # monotone_subset: mono & subset(i,y) & rels -> subset(fi, fy)
+    ms = use monotone_subset
+    ms1 = forall_elim ms, f
+    ms2 = forall_elim ms1, i
+    ms3 = forall_elim ms2, y
+    ms4 = forall_elim ms3, fi
+    ms5 = forall_elim ms4, fy
+    h_ms_p1 = and_intro h_mono, h_sub_i_y
+    h_ms_p2 = and_intro h_ms_p1, h_rel_fi
+    h_ms_prem = and_intro h_ms_p2, h_rel_fy
+    h_sub_fi_fy = implies_elim ms5, h_ms_prem
+    # closed(f, y): rel_elem(f, y, fy) -> subset(fy, y)
+    cdef_y = forall_elim cdef_f, y
+    h_cl_body = iff_elim_l cdef_y, h_closed_y
+    h_cl_fy = forall_elim h_cl_body, fy
+    h_sub_fy_y = implies_elim h_cl_fy, h_rel_fy
+    # subset_trans: subset(fi, fy) & subset(fy, y) -> subset(fi, y)
+    st = use subset_trans
+    st1 = forall_elim st, fi
+    st2 = forall_elim st1, fy
+    st3 = forall_elim st2, y
+    h_tr = and_intro h_sub_fi_fy, h_sub_fy_y
+    h_sub_fi_y = implies_elim st3, h_tr
+    # elem(x, y) from subset(fi, y) + elem(x, fi)
+    sdef_fi2 = forall_elim sdef, fi
+    sdef_fi_y = forall_elim sdef_fi2, y
+    h_mem_fi_y = iff_elim_l sdef_fi_y, h_sub_fi_y
+    h_xy_impl = forall_elim h_mem_fi_y, x
+    h_xy = implies_elim h_xy_impl, h_x_fi
+    # Close exists scope (fy not in elem(x, y))
+    h_xy_out = exists_intro h_xy
+    # Close assume/fix y
+    h_ya_impl = implies_intro h_xy_out
+    h_all_y = forall_intro h_ya_impl
+    # Apply gen_intersect_intro to get elem(x, i)
+    h_gi_prem = and_intro h_gi, h_all_y
+    h_xi = implies_elim gi3, h_gi_prem
+    # Close inner scopes
+    h_x_impl = implies_intro h_xi
+    h_all_x = forall_intro h_x_impl
+    h_sub_fi_i = iff_elim_r sdef_fi_i, h_all_x
+    h_fi_impl = implies_intro h_sub_fi_i
+    h_all_fi = forall_intro h_fi_impl
+    h_closed_i = iff_elim_r cdef_i, h_all_fi
+    h_main = implies_intro h_closed_i
+    hf3 = forall_intro h_main
+    hf2 = forall_intro hf3
+    hf1 = forall_intro hf2
+    qed hf1
+
+# Proof of lfp_complement_closed (Note 3.10c contrapositive):
+# if d = l\b is F-closed, then l ⊆ d (via empty_subset + lfp_subset_closed).
+proof lfp_complement_closed:
+    fix l
+    fix f
+    fix e
+    fix b
+    fix d
+    h = assume lfp(l, f, e) & empty(e) & set_diff(d, l, b) & closed(f, d)
+    h_closed = and_elim_r h
+    h_r1 = and_elim_l h
+    h_diff = and_elim_r h_r1
+    h_r2 = and_elim_l h_r1
+    h_lfp = and_elim_l h_r2
+    h_empty = and_elim_r h_r2
+    # empty_subset: empty(e) -> subset(e, d)
+    es = use empty_subset
+    es1 = forall_elim es, e
+    es2 = forall_elim es1, d
+    h_sub_ed = implies_elim es2, h_empty
+    # lfp_subset_closed: lfp(l,f,e) & closed(f,d) & subset(e,d) -> subset(l,d)
+    lsc = use lfp_subset_closed
+    lsc1 = forall_elim lsc, l
+    lsc2 = forall_elim lsc1, f
+    lsc3 = forall_elim lsc2, e
+    lsc4 = forall_elim lsc3, d
+    h_lsc_p1 = and_intro h_lfp, h_closed
+    h_lsc_prem = and_intro h_lsc_p1, h_sub_ed
+    h_sub_ld = implies_elim lsc4, h_lsc_prem
+    h_main = implies_intro h_sub_ld
+    h5 = forall_intro h_main
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_nonempty_not_closed (Note 3.10c direct form):
+# if b has an element from l, then d = l\b cannot be F-closed.
+# Proof by contradiction: if closed(f,d), then l ⊆ d by
+# lfp_complement_closed, so x ∈ d, so ~elem(x,b) by set_diff.
+proof lfp_nonempty_not_closed:
+    fix l
+    fix f
+    fix e
+    fix b
+    fix d
+    fix x
+    h = assume lfp(l, f, e) & empty(e) & set_diff(d, l, b) & elem(x, b) & elem(x, l)
+    h_xl = and_elim_r h
+    h_r1 = and_elim_l h
+    h_xb = and_elim_r h_r1
+    h_r2 = and_elim_l h_r1
+    h_diff = and_elim_r h_r2
+    h_r3 = and_elim_l h_r2
+    h_lfp = and_elim_l h_r3
+    h_empty = and_elim_r h_r3
+    # Assume closed(f, d) for not_intro
+    h_closed = assume closed(f, d)
+    # empty_subset + lfp_subset_closed -> subset(l, d)
+    es = use empty_subset
+    es1 = forall_elim es, e
+    es2 = forall_elim es1, d
+    h_sub_ed = implies_elim es2, h_empty
+    lsc = use lfp_subset_closed
+    lsc1 = forall_elim lsc, l
+    lsc2 = forall_elim lsc1, f
+    lsc3 = forall_elim lsc2, e
+    lsc4 = forall_elim lsc3, d
+    h_lsc_p1 = and_intro h_lfp, h_closed
+    h_lsc_prem = and_intro h_lsc_p1, h_sub_ed
+    h_sub_ld = implies_elim lsc4, h_lsc_prem
+    # subset(l, d) + elem(x, l) -> elem(x, d)
+    sdef = use subset_def
+    sd1 = forall_elim sdef, l
+    sd2 = forall_elim sd1, d
+    h_ld_mem = iff_elim_l sd2, h_sub_ld
+    h_xd_impl = forall_elim h_ld_mem, x
+    h_xd = implies_elim h_xd_impl, h_xl
+    # diff_elim: set_diff(d,l,b) & elem(x,d) -> elem(x,l) & ~elem(x,b)
+    de = use diff_elim
+    de1 = forall_elim de, d
+    de2 = forall_elim de1, l
+    de3 = forall_elim de2, b
+    de4 = forall_elim de3, x
+    h_de_prem = and_intro h_diff, h_xd
+    h_de = implies_elim de4, h_de_prem
+    h_not_xb = and_elim_r h_de
+    # Contradiction: elem(x, b) & ~elem(x, b)
+    h_bot = not_elim h_not_xb, h_xb
+    h_not_closed = not_intro h_bot
+    h_main = implies_intro h_not_closed
+    h6 = forall_intro h_main
+    h5 = forall_intro h6
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of not_subset_witness: by double negation elimination.
+# Assume ~(exists x. ...), derive forall x. (elem(x,a) -> elem(x,b))
+# via inner double_neg_elim, get subset(a,b), contradiction.
+proof not_subset_witness:
+    fix a
+    fix b
+    h_nsub = assume ~subset(a, b)
+    h_no_ex = assume ~(exists x. (elem(x, a) & ~elem(x, b)))
+    fix x
+    h_xa = assume elem(x, a)
+    h_nxb = assume ~elem(x, b)
+    h_pair = and_intro h_xa, h_nxb
+    h_ex = exists_intro h_pair, x
+    h_bot = not_elim h_no_ex, h_ex
+    h_nnxb = not_intro h_bot
+    h_xb = double_neg_elim h_nnxb
+    h_impl = implies_intro h_xb
+    h_all = forall_intro h_impl
+    sdef = use subset_def
+    sd1 = forall_elim sdef, a
+    sd2 = forall_elim sd1, b
+    h_sub = iff_elim_r sd2, h_all
+    h_bot2 = not_elim h_nsub, h_sub
+    h_nn_ex = not_intro h_bot2
+    h_result = double_neg_elim h_nn_ex
+    h_main = implies_intro h_result
+    h2 = forall_intro h_main
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of diff_not_elem: from set_diff(d,l,b), ~elem(x,d) means
+# ~(elem(x,l) & ~elem(x,b)). With elem(x,l), use excluded_middle
+# on elem(x,b) to derive elem(x,b).
+proof diff_not_elem:
+    fix d
+    fix l
+    fix b
+    fix x
+    h = assume set_diff(d, l, b) & elem(x, l) & ~elem(x, d)
+    h_nxd = and_elim_r h
+    h_r1 = and_elim_l h
+    h_xl = and_elim_r h_r1
+    h_diff = and_elim_l h_r1
+    # Get the biconditional for x
+    dd = use set_diff_def
+    dd1 = forall_elim dd, d
+    dd2 = forall_elim dd1, l
+    dd3 = forall_elim dd2, b
+    h_diff_exp = iff_elim_l dd3, h_diff
+    h_x_iff = forall_elim h_diff_exp, x
+    # excluded_middle on elem(x, b)
+    h_xb_let = let elem(x, b)
+    h_em = excluded_middle h_xb_let
+    # Case 1: elem(x, b) -> elem(x, b)
+    h_c1 = assume elem(x, b)
+    h_c1_impl = implies_intro h_c1
+    # Case 2: ~elem(x, b) -> elem(x, b) (by contradiction)
+    h_nxb = assume ~elem(x, b)
+    h_conj = and_intro h_xl, h_nxb
+    h_xd = iff_elim_r h_x_iff, h_conj
+    h_bot = not_elim h_nxd, h_xd
+    h_xb_let2 = let elem(x, b)
+    h_xb_bot = bottom_elim h_bot, h_xb_let2
+    h_c2_impl = implies_intro h_xb_bot
+    h_xb = or_elim h_em, h_c1_impl, h_c2_impl
+    h_main = implies_intro h_xb
+    h4 = forall_intro h_main
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of not_closed_not_subset: if ~closed(f,c) and f is a function,
+# then any specific image fc cannot be a subset of c (else closed
+# would hold by function uniqueness).
+proof not_closed_not_subset:
+    fix f
+    fix c
+    fix fc
+    h = assume is_function(f) & ~closed(f, c) & rel_elem(f, c, fc)
+    h_rel = and_elim_r h
+    h_r1 = and_elim_l h
+    h_ncl = and_elim_r h_r1
+    h_func = and_elim_l h_r1
+    # Assume subset(fc, c) for contradiction
+    h_sub = assume subset(fc, c)
+    # Build closed(f, c): forall fc'. (rel_elem(f,c,fc') -> subset(fc',c))
+    cdef = use closed_def
+    cdef1 = forall_elim cdef, f
+    cdef2 = forall_elim cdef1, c
+    fix fc2
+    h_rel2 = assume rel_elem(f, c, fc2)
+    # func_unique: eq(fc, fc2)
+    fu = use func_unique
+    fu1 = forall_elim fu, f
+    fu2 = forall_elim fu1, c
+    fu3 = forall_elim fu2, fc
+    fu4 = forall_elim fu3, fc2
+    h_fu_p1 = and_intro h_func, h_rel
+    h_fu_prem = and_intro h_fu_p1, h_rel2
+    h_eq = implies_elim fu4, h_fu_prem
+    # eq_subst: subset(fc, c) -> subset(fc2, c)
+    h_sub2 = eq_subst h_eq, h_sub
+    h_impl2 = implies_intro h_sub2
+    h_all2 = forall_intro h_impl2
+    h_closed = iff_elim_r cdef2, h_all2
+    h_bot = not_elim h_ncl, h_closed
+    h_nsub = not_intro h_bot
+    h_main = implies_intro h_nsub
+    h3 = forall_intro h_main
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of monotone_image_in_closed: chain d ⊆ l → fd ⊆ fl → fl ⊆ l
+# via monotone_subset and closed, giving fd ⊆ l by transitivity.
+proof monotone_image_in_closed:
+    fix f
+    fix d
+    fix l
+    fix fd
+    h = assume monotone(f) & subset(d, l) & closed(f, l) & in_domain(f, l) & rel_elem(f, d, fd)
+    h_rel = and_elim_r h
+    h_r1 = and_elim_l h
+    h_dom_l = and_elim_r h_r1
+    h_r2 = and_elim_l h_r1
+    h_closed_l = and_elim_r h_r2
+    h_r3 = and_elim_l h_r2
+    h_mono = and_elim_l h_r3
+    h_sub_dl = and_elim_r h_r3
+    # Get fl from in_domain(f, l)
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, f
+    ddef2 = forall_elim ddef1, l
+    h_exists_fl = iff_elim_l ddef2, h_dom_l
+    h_rel_fl = exists_elim h_exists_fl, fl
+    # monotone_subset: subset(fd, fl)
+    ms = use monotone_subset
+    ms1 = forall_elim ms, f
+    ms2 = forall_elim ms1, d
+    ms3 = forall_elim ms2, l
+    ms4 = forall_elim ms3, fd
+    ms5 = forall_elim ms4, fl
+    h_ms_p1 = and_intro h_mono, h_sub_dl
+    h_ms_p2 = and_intro h_ms_p1, h_rel
+    h_ms_prem = and_intro h_ms_p2, h_rel_fl
+    h_sub_fd_fl = implies_elim ms5, h_ms_prem
+    # closed(f, l) + rel_elem(f, l, fl) -> subset(fl, l)
+    cdef = use closed_def
+    cdef_f = forall_elim cdef, f
+    cdef_l = forall_elim cdef_f, l
+    h_cl_body = iff_elim_l cdef_l, h_closed_l
+    h_cl_fl = forall_elim h_cl_body, fl
+    h_sub_fl_l = implies_elim h_cl_fl, h_rel_fl
+    # subset_trans: subset(fd, l)
+    st = use subset_trans
+    st1 = forall_elim st, fd
+    st2 = forall_elim st1, fl
+    st3 = forall_elim st2, l
+    h_tr = and_intro h_sub_fd_fl, h_sub_fl_l
+    h_sub_fd_l = implies_elim st3, h_tr
+    # Close exists scope (fl not in subset(fd, l))
+    h_result = exists_intro h_sub_fd_l
+    h_main = implies_intro h_result
+    h4 = forall_intro h_main
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proof of lfp_t_minimal (Note 3.10c positive existential):
+# combines all lemmas to extract a T-minimal element from b.
+proof lfp_t_minimal:
+    fix l
+    fix f
+    fix e
+    fix b
+    fix d
+    fix fd
+    fix w
+    h = assume monotone(f) & lfp(l, f, e) & empty(e) & set_diff(d, l, b) & closed(f, l) & in_domain(f, l) & rel_elem(f, d, fd) & elem(w, b) & elem(w, l)
+    # Extract 9 premises
+    h_wl = and_elim_r h
+    hA = and_elim_l h
+    h_wb = and_elim_r hA
+    hB = and_elim_l hA
+    h_rel = and_elim_r hB
+    hC = and_elim_l hB
+    h_dom_l = and_elim_r hC
+    hD = and_elim_l hC
+    h_closed_l = and_elim_r hD
+    hE = and_elim_l hD
+    h_diff = and_elim_r hE
+    hF = and_elim_l hE
+    h_empty = and_elim_r hF
+    hG = and_elim_l hF
+    h_mono = and_elim_l hG
+    h_lfp = and_elim_r hG
+    # Step 1: ~closed(f, d)
+    lnnc = use lfp_nonempty_not_closed
+    lnnc1 = forall_elim lnnc, l
+    lnnc2 = forall_elim lnnc1, f
+    lnnc3 = forall_elim lnnc2, e
+    lnnc4 = forall_elim lnnc3, b
+    lnnc5 = forall_elim lnnc4, d
+    lnnc6 = forall_elim lnnc5, w
+    h_lnnc_p1 = and_intro h_lfp, h_empty
+    h_lnnc_p2 = and_intro h_lnnc_p1, h_diff
+    h_lnnc_p3 = and_intro h_lnnc_p2, h_wb
+    h_lnnc_prem = and_intro h_lnnc_p3, h_wl
+    h_nclosed = implies_elim lnnc6, h_lnnc_prem
+    # Step 2: is_function(f)
+    mif = use monotone_is_function
+    mif1 = forall_elim mif, f
+    h_func = implies_elim mif1, h_mono
+    # Step 3: ~subset(fd, d)
+    ncns = use not_closed_not_subset
+    ncns1 = forall_elim ncns, f
+    ncns2 = forall_elim ncns1, d
+    ncns3 = forall_elim ncns2, fd
+    h_ncns_p1 = and_intro h_func, h_nclosed
+    h_ncns_prem = and_intro h_ncns_p1, h_rel
+    h_nsub = implies_elim ncns3, h_ncns_prem
+    # Step 4: exists x. (elem(x, fd) & ~elem(x, d))
+    nsw = use not_subset_witness
+    nsw1 = forall_elim nsw, fd
+    nsw2 = forall_elim nsw1, d
+    h_ex = implies_elim nsw2, h_nsub
+    # Step 5: open exists scope with witness z
+    h_witness = exists_elim h_ex, z
+    h_zfd = and_elim_l h_witness
+    h_nzd = and_elim_r h_witness
+    # Step 6: subset(fd, l)
+    ds = use diff_subset
+    ds1 = forall_elim ds, d
+    ds2 = forall_elim ds1, l
+    ds3 = forall_elim ds2, b
+    h_sub_dl = implies_elim ds3, h_diff
+    mic = use monotone_image_in_closed
+    mic1 = forall_elim mic, f
+    mic2 = forall_elim mic1, d
+    mic3 = forall_elim mic2, l
+    mic4 = forall_elim mic3, fd
+    h_mic_p1 = and_intro h_mono, h_sub_dl
+    h_mic_p2 = and_intro h_mic_p1, h_closed_l
+    h_mic_p3 = and_intro h_mic_p2, h_dom_l
+    h_mic_prem = and_intro h_mic_p3, h_rel
+    h_sub_fd_l = implies_elim mic4, h_mic_prem
+    # Step 7: elem(z, l)
+    sdef = use subset_def
+    sd1 = forall_elim sdef, fd
+    sd2 = forall_elim sd1, l
+    h_mem = iff_elim_l sd2, h_sub_fd_l
+    h_zl_impl = forall_elim h_mem, z
+    h_zl = implies_elim h_zl_impl, h_zfd
+    # Step 8: elem(z, b) from diff_not_elem
+    dne = use diff_not_elem
+    dne1 = forall_elim dne, d
+    dne2 = forall_elim dne1, l
+    dne3 = forall_elim dne2, b
+    dne4 = forall_elim dne3, z
+    h_dne_p1 = and_intro h_diff, h_zl
+    h_dne_prem = and_intro h_dne_p1, h_nzd
+    h_zb = implies_elim dne4, h_dne_prem
+    # Step 9: build and close exists scope
+    h_pair = and_intro h_zfd, h_zb
+    h_ex_result = exists_intro h_pair, z
+    h_ex_out = exists_intro h_ex_result
+    h_main = implies_intro h_ex_out
+    h7 = forall_intro h_main
+    h6 = forall_intro h7
+    h5 = forall_intro h6
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

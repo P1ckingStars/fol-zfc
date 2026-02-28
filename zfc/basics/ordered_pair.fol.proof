@@ -927,3 +927,53 @@ proof pair_injective:
     u2 = forall_intro u3
     u1 = forall_intro u2
     qed u1
+
+# Proof of pair_unique: Two pairs with same components are equal sets.
+# Both pair(p,a,b) and pair(q,a,b) give the same membership condition
+# (D1_a | D2_ab), so forall z. (elem(z,p) <-> elem(z,q)), then extensionality.
+proof pair_unique:
+    fix p
+    fix q
+    fix a
+    fix b
+    h = assume pair(p, a, b) & pair(q, a, b)
+    h_pair_p = and_elim_l h
+    h_pair_q = and_elim_r h
+    # Expand pair_def for p
+    pdef = use pair_def
+    pdef_p1 = forall_elim pdef, p
+    pdef_p2 = forall_elim pdef_p1, a
+    pdef_p3 = forall_elim pdef_p2, b
+    h_p_mem = iff_elim_l pdef_p3, h_pair_p
+    # Expand pair_def for q
+    pdef_q1 = forall_elim pdef, q
+    pdef_q2 = forall_elim pdef_q1, a
+    pdef_q3 = forall_elim pdef_q2, b
+    h_q_mem = iff_elim_l pdef_q3, h_pair_q
+    # Show forall z. (elem(z,p) <-> elem(z,q))
+    fix z
+    h_zp = forall_elim h_p_mem, z
+    h_zq = forall_elim h_q_mem, z
+    # Forward: elem(z,p) -> elem(z,q)
+    h_fwd1 = assume elem(z, p)
+    h_fwd2 = iff_elim_l h_zp, h_fwd1
+    h_fwd3 = iff_elim_r h_zq, h_fwd2
+    h_fwd = implies_intro h_fwd3
+    # Backward: elem(z,q) -> elem(z,p)
+    h_bwd1 = assume elem(z, q)
+    h_bwd2 = iff_elim_l h_zq, h_bwd1
+    h_bwd3 = iff_elim_r h_zp, h_bwd2
+    h_bwd = implies_intro h_bwd3
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    # Apply extensionality
+    ext = use extensionality
+    ext1 = forall_elim ext, p
+    ext2 = forall_elim ext1, q
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

@@ -1,0 +1,35 @@
+load("//build:fol.bzl", "fol_library", "fol_proof")
+
+fol_library(
+    name = "induction_lib",
+    header = "induction.fol.def",
+    deps = [
+        "//zfc/basics:functions_lib",
+        "//zfc/basics:set_operations_lib",
+        "//zfc/basics:subset_lib",
+    ],
+)
+
+fol_proof(
+    name = "induction",
+    header = "induction.fol.def",
+    proof = "induction.fol.proof",
+    deps = [
+        "//zfc/basics:functions",
+        "//zfc/basics:set_operations",
+        "//zfc/basics:subset",
+    ],
+)
+
+fol_library(
+    name = "well_founded_lib",
+    header = "well_founded.fol.def",
+    deps = [":induction_lib"],
+)
+
+fol_proof(
+    name = "well_founded",
+    header = "well_founded.fol.def",
+    proof = "well_founded.fol.proof",
+    deps = [":induction"],
+)

@@ -1,0 +1,154 @@
+load("//build:fol.bzl", "fol_library", "fol_proof")
+
+package(default_visibility = ["//visibility:public"])
+
+# Legacy exports for tests that still use load_file_recursive
+exports_files([
+    "axioms.fol",
+    "functions.fol",
+    "ordered_pair.fol",
+    "replacement_choice.fol",
+    "test.fol",
+    "axioms.fol.def",
+    "ordered_pair.fol.def",
+    "ordered_pair.fol.proof",
+    "functions.fol.def",
+    "functions.fol.proof",
+    "replacement_choice.fol.def",
+])
+
+# ============================================================
+# FOL Libraries (axioms + claims, no proofs)
+# ============================================================
+
+fol_library(
+    name = "axioms",
+    header = "axioms.fol.def",
+)
+
+fol_library(
+    name = "ordered_pair_lib",
+    header = "ordered_pair.fol.def",
+    deps = [":axioms"],
+)
+
+fol_library(
+    name = "functions_lib",
+    header = "functions.fol.def",
+    deps = [":ordered_pair_lib"],
+)
+
+fol_library(
+    name = "subset_lib",
+    header = "subset.fol.def",
+    deps = [":axioms"],
+)
+
+fol_library(
+    name = "set_operations_lib",
+    header = "set_operations.fol.def",
+    deps = [":axioms", ":subset_lib"],
+)
+
+fol_library(
+    name = "cartesian_lib",
+    header = "cartesian.fol.def",
+    deps = [":functions_lib"],
+)
+
+fol_library(
+    name = "relations_lib",
+    header = "relations.fol.def",
+    deps = [":functions_lib"],
+)
+
+fol_library(
+    name = "typed_functions_lib",
+    header = "typed_functions.fol.def",
+    deps = [":functions_lib"],
+)
+
+fol_library(
+    name = "identity_lib",
+    header = "identity.fol.def",
+    deps = [":typed_functions_lib"],
+)
+
+fol_library(
+    name = "func_space_lib",
+    header = "func_space.fol.def",
+    deps = [":typed_functions_lib"],
+)
+
+fol_library(
+    name = "replacement_choice_lib",
+    header = "replacement_choice.fol.def",
+    deps = [":functions_lib"],
+)
+
+# ============================================================
+# FOL Proofs (verify all claims are proved)
+# ============================================================
+
+fol_proof(
+    name = "ordered_pair",
+    header = "ordered_pair.fol.def",
+    proof = "ordered_pair.fol.proof",
+    deps = [":axioms"],
+)
+
+fol_proof(
+    name = "functions",
+    header = "functions.fol.def",
+    proof = "functions.fol.proof",
+    deps = [":ordered_pair"],
+)
+
+fol_proof(
+    name = "subset",
+    header = "subset.fol.def",
+    proof = "subset.fol.proof",
+    deps = [":axioms"],
+)
+
+fol_proof(
+    name = "set_operations",
+    header = "set_operations.fol.def",
+    proof = "set_operations.fol.proof",
+    deps = [":axioms", ":subset"],
+)
+
+fol_proof(
+    name = "cartesian",
+    header = "cartesian.fol.def",
+    proof = "cartesian.fol.proof",
+    deps = [":functions"],
+)
+
+fol_proof(
+    name = "relations",
+    header = "relations.fol.def",
+    proof = "relations.fol.proof",
+    deps = [":functions"],
+)
+
+fol_proof(
+    name = "typed_functions",
+    header = "typed_functions.fol.def",
+    proof = "typed_functions.fol.proof",
+    deps = [":functions"],
+)
+
+fol_proof(
+    name = "identity",
+    header = "identity.fol.def",
+    proof = "identity.fol.proof",
+    deps = [":typed_functions"],
+)
+
+fol_proof(
+    name = "func_space",
+    header = "func_space.fol.def",
+    proof = "func_space.fol.proof",
+    deps = [":typed_functions"],
+)

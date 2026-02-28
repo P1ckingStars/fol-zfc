@@ -246,7 +246,7 @@ bool test_claim_not_registered() {
 
 bool test_parse_zfc_axioms() {
     // Read ZFC axioms from file
-    std::ifstream file("zfc/axioms.fol");
+    std::ifstream file("zfc/basics/axioms.fol");
     if (!file.is_open()) {
         std::cout << "[ERROR: Could not open axioms.fol] ";
         return false;
@@ -287,7 +287,7 @@ bool test_parse_zfc_axioms() {
 
 bool test_parse_ordered_pair_proof() {
     // Parse ordered pair header (axioms + claims only, no proofs)
-    std::ifstream file("zfc/ordered_pair.fol.def");
+    std::ifstream file("zfc/basics/ordered_pair.fol.def");
     if (!file.is_open()) {
         std::cout << "[ERROR: Could not open ordered_pair.fol.def] ";
         return false;

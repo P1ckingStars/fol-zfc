@@ -97,3 +97,11 @@ claim pair_second_neq: forall a. forall b. forall c. forall d. forall p. forall 
 # Lemma 9: Second components match in degenerate case (a = b)
 claim pair_second_degenerate: forall a. forall b. forall c. forall d. forall p. forall q.
     ((pair(p, a, b) & pair(q, c, d) & eq(p, q)) -> (eq(a, b) -> eq(b, d)))
+
+# ============================================================
+# Pair Uniqueness: two pairs with same components are equal
+# ============================================================
+
+# Two pairs with same components are equal sets (via extensionality)
+claim pair_unique: forall p. forall q. forall a. forall b.
+    ((pair(p, a, b) & pair(q, a, b)) -> eq(p, q))

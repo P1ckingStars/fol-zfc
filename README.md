@@ -26,8 +26,8 @@ bazel test //test:core_test       # Core logic tests
 bazel test //test:runtime_test    # Runtime and proof execution tests
 
 # Verify proofs via Bazel
-bazel build //zfc:ordered_pair    # Verify ordered pair proofs (15 theorems)
-bazel build //zfc:functions       # Verify function proofs (5 theorems)
+bazel build //zfc/basics:ordered_pair    # Verify ordered pair proofs (15 theorems)
+bazel build //zfc/basics:functions       # Verify function proofs (5 theorems)
 ```
 
 ## Formula Syntax
@@ -192,19 +192,20 @@ test/
 └── runtime_test.cpp      # Runtime and proof execution tests
 
 zfc/
-├── axioms.fol.def             # ZFC axioms 1-8
-├── ordered_pair.fol.def       # Kuratowski ordered pair definitions + claims
-├── ordered_pair.fol.proof     # Ordered pair proofs (15 theorems)
-├── functions.fol.def          # Functions as sets of ordered pairs + claims
-├── functions.fol.proof        # Function proofs (5 theorems)
-├── replacement_choice.fol.def # ZFC axioms 9-10 (replacement, choice)
+└── basics/
+    ├── axioms.fol.def             # ZFC axioms 1-8
+    ├── ordered_pair.fol.def       # Kuratowski ordered pair definitions + claims
+    ├── ordered_pair.fol.proof     # Ordered pair proofs (15 theorems)
+    ├── functions.fol.def          # Functions as sets of ordered pairs + claims
+    ├── functions.fol.proof        # Function proofs (5 theorems)
+    ├── replacement_choice.fol.def # ZFC axioms 9-10 (replacement, choice)
 ```
 
 ## ZFC Axioms
 
 The prover includes all 10 ZFC axioms:
 
-In `axioms.fol.def`:
+In `basics/axioms.fol.def`:
 1. **Extensionality** — Sets with same elements are equal
 2. **Empty Set** — Existence of empty set
 3. **Pairing** — For any a, b, the set {a, b} exists
@@ -214,7 +215,7 @@ In `axioms.fol.def`:
 7. **Foundation** — No infinite descending membership chains
 8. **Separation** — For any set and property, the subset satisfying it exists
 
-In `replacement_choice.fol.def` (depends on functions):
+In `basics/replacement_choice.fol.def` (depends on functions):
 9. **Replacement** — Image of a set under a function exists
 10. **Choice** — Every collection of non-empty sets has a choice function
 
@@ -299,7 +300,7 @@ proof rel_elem_eq:
 
 ### What's Been Proved
 
-The `zfc/` directory contains 20 verified theorems:
+The `zfc/basics/` directory contains 20 verified theorems:
 - **Ordered pairs** (15 theorems) — Kuratowski encoding `(a, b) = {{a}, {a, b}}` with full injectivity: `pair(p, a, b) & pair(q, c, d) & eq(p, q) -> eq(a, c) & eq(b, d)`
 - **Functions** (5 theorems) — Functions as sets of ordered pairs: uniqueness, domain/range membership, injectivity
 
@@ -323,7 +324,7 @@ fol_proof(
 )
 ```
 
-Dependency chain:
+Dependency chain (in `zfc/basics/`):
 ```
 axioms (fol_library)
   └── ordered_pair (fol_proof) — 15 theorems

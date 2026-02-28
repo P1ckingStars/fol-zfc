@@ -57,3 +57,10 @@ claim range_elem: forall f. forall a. forall b.
 # Injective function: same output -> same input
 claim injective_func_unique_input: forall f. forall a. forall b. forall c.
     ((injective(f) & rel_elem(f, a, c) & rel_elem(f, b, c)) -> eq(a, b))
+
+# Composition is associative: j∘(g∘f) = (j∘g)∘f
+claim compose_assoc: forall h. forall f. forall g. forall j. forall gf. forall gj.
+    ((compose(gf, f, g) & compose(gj, g, j) & compose(h, gf, j)) -> compose(h, f, gj))
+
+claim compose_assoc_rev: forall h. forall f. forall g. forall j. forall gf. forall gj.
+    ((compose(gf, f, g) & compose(gj, g, j) & compose(h, f, gj)) -> compose(h, gf, j))

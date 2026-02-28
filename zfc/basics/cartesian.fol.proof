@@ -1,0 +1,176 @@
+# Elimination: forward direction of cart_prod biconditional
+proof cart_prod_elim:
+    fix c
+    fix a
+    fix b
+    fix z
+    h = assume cart_prod(c, a, b) & elem(z, c)
+    h_cp = and_elim_l h
+    h_zc = and_elim_r h
+    cpdef = use cart_prod_def
+    cpdef1 = forall_elim cpdef, c
+    cpdef2 = forall_elim cpdef1, a
+    cpdef3 = forall_elim cpdef2, b
+    h_mem = iff_elim_l cpdef3, h_cp
+    h_z = forall_elim h_mem, z
+    h_result = iff_elim_l h_z, h_zc
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Introduction: reverse direction — build the existential witness
+proof cart_prod_intro:
+    fix c
+    fix a
+    fix b
+    fix x
+    fix y
+    fix p
+    h = assume cart_prod(c, a, b) & elem(x, a) & elem(y, b) & pair(p, x, y)
+    h_pair = and_elim_r h
+    h_left = and_elim_l h
+    h_yb = and_elim_r h_left
+    h_left2 = and_elim_l h_left
+    h_xa = and_elim_r h_left2
+    h_cp = and_elim_l h_left2
+    cpdef = use cart_prod_def
+    cpdef1 = forall_elim cpdef, c
+    cpdef2 = forall_elim cpdef1, a
+    cpdef3 = forall_elim cpdef2, b
+    h_mem = iff_elim_l cpdef3, h_cp
+    h_p = forall_elim h_mem, p
+    # Build exists x. exists y. (elem(x, a) & elem(y, b) & pair(p, x, y))
+    h_conj = and_intro h_xa, h_yb
+    h_conj2 = and_intro h_conj, h_pair
+    h_ex_y = exists_intro h_conj2, y
+    h_ex_xy = exists_intro h_ex_y, x
+    h_result = iff_elim_r h_p, h_ex_xy
+    h_impl = implies_intro h_result
+    h6 = forall_intro h_impl
+    h5 = forall_intro h6
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Uniqueness via extensionality
+proof cart_prod_unique:
+    fix c1
+    fix c2
+    fix a
+    fix b
+    h = assume cart_prod(c1, a, b) & cart_prod(c2, a, b)
+    h_cp1 = and_elim_l h
+    h_cp2 = and_elim_r h
+    cpdef = use cart_prod_def
+    cpdef1a = forall_elim cpdef, c1
+    cpdef1b = forall_elim cpdef1a, a
+    cpdef1c = forall_elim cpdef1b, b
+    h_mem1 = iff_elim_l cpdef1c, h_cp1
+    cpdef2a = forall_elim cpdef, c2
+    cpdef2b = forall_elim cpdef2a, a
+    cpdef2c = forall_elim cpdef2b, b
+    h_mem2 = iff_elim_l cpdef2c, h_cp2
+    fix z
+    h_z1 = forall_elim h_mem1, z
+    h_z2 = forall_elim h_mem2, z
+    h_zc1 = assume elem(z, c1)
+    h_ex = iff_elim_l h_z1, h_zc1
+    h_zc2_fwd = iff_elim_r h_z2, h_ex
+    h_fwd = implies_intro h_zc2_fwd
+    h_zc2 = assume elem(z, c2)
+    h_ex2 = iff_elim_l h_z2, h_zc2
+    h_zc1_bwd = iff_elim_r h_z1, h_ex2
+    h_bwd = implies_intro h_zc1_bwd
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, c1
+    ext2 = forall_elim ext1, c2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# rel_elem in cart_prod implies components are in the factor sets
+# Uses pair_injective to match the two pair representations
+proof rel_elem_in_cart_prod:
+    fix c
+    fix a
+    fix b
+    fix x
+    fix y
+    h = assume cart_prod(c, a, b) & rel_elem(c, x, y)
+    h_cp = and_elim_l h
+    h_rel = and_elim_r h
+    # Expand rel_elem(c, x, y): exists p. (pair(p, x, y) & elem(p, c))
+    rdef = use rel_elem_def
+    rdef1 = forall_elim rdef, c
+    rdef2 = forall_elim rdef1, x
+    rdef3 = forall_elim rdef2, y
+    h_ex = iff_elim_l rdef3, h_rel
+    h_wit = exists_elim h_ex, w
+    # h_wit: pair(w, x, y) & elem(w, c)
+    h_pair_xy = and_elim_l h_wit
+    h_wc = and_elim_r h_wit
+    # From cart_prod + elem(w, c): exists u. exists v. (elem(u,a) & elem(v,b) & pair(w,u,v))
+    cpdef = use cart_prod_def
+    cpdef1 = forall_elim cpdef, c
+    cpdef2 = forall_elim cpdef1, a
+    cpdef3 = forall_elim cpdef2, b
+    h_mem = iff_elim_l cpdef3, h_cp
+    h_w = forall_elim h_mem, w
+    h_ex2 = iff_elim_l h_w, h_wc
+    h_wit2 = exists_elim h_ex2, u
+    h_wit3 = exists_elim h_wit2, v
+    # h_wit3: (elem(u, a) & elem(v, b)) & pair(w, u, v)
+    h_pair_uv = and_elim_r h_wit3
+    h_left = and_elim_l h_wit3
+    h_ua = and_elim_l h_left
+    h_vb = and_elim_r h_left
+    # pair_injective: pair(w,x,y) & pair(w,u,v) & eq(w,w) -> eq(x,u) & eq(y,v)
+    pi = use pair_injective
+    pi1 = forall_elim pi, x
+    pi2 = forall_elim pi1, y
+    pi3 = forall_elim pi2, u
+    pi4 = forall_elim pi3, v
+    pi5 = forall_elim pi4, w
+    pi6 = forall_elim pi5, w
+    refl = use eq_refl
+    refl_w = forall_elim refl, w
+    h_pi_conj = and_intro h_pair_xy, h_pair_uv
+    h_pi_conj2 = and_intro h_pi_conj, refl_w
+    h_eq_pair = implies_elim pi6, h_pi_conj2
+    h_eq_xu = and_elim_l h_eq_pair
+    h_eq_yv = and_elim_r h_eq_pair
+    # eq_sym to get eq(u, x) and eq(v, y)
+    sym = use eq_sym
+    sym_xu1 = forall_elim sym, x
+    sym_xu2 = forall_elim sym_xu1, u
+    h_eq_ux = implies_elim sym_xu2, h_eq_xu
+    sym_yv1 = forall_elim sym, y
+    sym_yv2 = forall_elim sym_yv1, v
+    h_eq_vy = implies_elim sym_yv2, h_eq_yv
+    # eq_subst: eq(u, x), elem(u, a) -> elem(x, a)
+    h_xa = eq_subst h_eq_ux, h_ua
+    # eq_subst: eq(v, y), elem(v, b) -> elem(y, b)
+    h_yb = eq_subst h_eq_vy, h_vb
+    h_result = and_intro h_xa, h_yb
+    # Close three exists scopes (result doesn't contain v, u, or w)
+    h_close_v = exists_intro h_result
+    h_close_u = exists_intro h_close_v
+    h_close_w = exists_intro h_close_u
+    h_impl = implies_intro h_close_w
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

@@ -1,0 +1,504 @@
+# A typed function is a function: extract first conjunct
+proof func_from_to_is_function:
+    fix f
+    fix x
+    fix y
+    h = assume func_from_to(f, x, y)
+    ftdef = use func_from_to_def
+    ftdef1 = forall_elim ftdef, f
+    ftdef2 = forall_elim ftdef1, x
+    ftdef3 = forall_elim ftdef2, y
+    h_body = iff_elim_l ftdef3, h
+    # body = (is_function(f) & forall a. (...)) & forall a. forall b. (...)
+    h_left = and_elim_l h_body
+    h_func = and_elim_l h_left
+    h_impl = implies_intro h_func
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# elem(a, x) -> in_domain(f, a) via the biconditional in the definition
+proof func_from_to_domain:
+    fix f
+    fix x
+    fix y
+    fix a
+    h = assume func_from_to(f, x, y) & elem(a, x)
+    h_ft = and_elim_l h
+    h_ax = and_elim_r h
+    ftdef = use func_from_to_def
+    ftdef1 = forall_elim ftdef, f
+    ftdef2 = forall_elim ftdef1, x
+    ftdef3 = forall_elim ftdef2, y
+    h_body = iff_elim_l ftdef3, h_ft
+    h_left = and_elim_l h_body
+    h_dom = and_elim_r h_left
+    h_a = forall_elim h_dom, a
+    h_result = iff_elim_r h_a, h_ax
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# rel_elem(f, a, b) -> elem(b, y) via the range condition
+proof func_from_to_range:
+    fix f
+    fix x
+    fix y
+    fix a
+    fix b
+    h = assume func_from_to(f, x, y) & rel_elem(f, a, b)
+    h_ft = and_elim_l h
+    h_rel = and_elim_r h
+    ftdef = use func_from_to_def
+    ftdef1 = forall_elim ftdef, f
+    ftdef2 = forall_elim ftdef1, x
+    ftdef3 = forall_elim ftdef2, y
+    h_body = iff_elim_l ftdef3, h_ft
+    h_rng = and_elim_r h_body
+    h_a = forall_elim h_rng, a
+    h_b = forall_elim h_a, b
+    h_result = implies_elim h_b, h_rel
+    h_impl = implies_intro h_result
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Totality: elem(a, x) -> exists b. rel_elem(f, a, b)
+# Uses func_from_to_domain to get in_domain, then expand domain_def
+proof func_from_to_total:
+    fix f
+    fix x
+    fix y
+    fix a
+    h = assume func_from_to(f, x, y) & elem(a, x)
+    h_ft = and_elim_l h
+    h_ax = and_elim_r h
+    # Get in_domain(f, a) via func_from_to_domain
+    ftd = use func_from_to_domain
+    ftd1 = forall_elim ftd, f
+    ftd2 = forall_elim ftd1, x
+    ftd3 = forall_elim ftd2, y
+    ftd4 = forall_elim ftd3, a
+    h_ft_ax = and_intro h_ft, h_ax
+    h_dom = implies_elim ftd4, h_ft_ax
+    # Expand in_domain: exists b. rel_elem(f, a, b)
+    ddef = use domain_def
+    ddef1 = forall_elim ddef, f
+    ddef2 = forall_elim ddef1, a
+    h_ex = iff_elim_l ddef2, h_dom
+    h_impl = implies_intro h_ex
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Surjective proofs
+# ============================================================
+
+# surjective(f,x,y) -> func_from_to(f,x,y): extract first conjunct
+proof surjective_is_func:
+    fix f
+    fix x
+    fix y
+    h = assume surjective(f, x, y)
+    sdef = use surjective_def
+    sdef1 = forall_elim sdef, f
+    sdef2 = forall_elim sdef1, x
+    sdef3 = forall_elim sdef2, y
+    h_body = iff_elim_l sdef3, h
+    h_ft = and_elim_l h_body
+    h_impl = implies_intro h_ft
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# surjective(f,x,y) & elem(b,y) -> exists a. (elem(a,x) & rel_elem(f,a,b))
+proof surjective_onto:
+    fix f
+    fix x
+    fix y
+    fix b
+    h = assume surjective(f, x, y) & elem(b, y)
+    h_surj = and_elim_l h
+    h_by = and_elim_r h
+    sdef = use surjective_def
+    sdef1 = forall_elim sdef, f
+    sdef2 = forall_elim sdef1, x
+    sdef3 = forall_elim sdef2, y
+    h_body = iff_elim_l sdef3, h_surj
+    h_onto = and_elim_r h_body
+    h_b = forall_elim h_onto, b
+    h_result = implies_elim h_b, h_by
+    h_impl = implies_intro h_result
+    h4 = forall_intro h_impl
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Bijective proofs
+# ============================================================
+
+# bijective(f,x,y) -> surjective(f,x,y): extract first conjunct
+proof bijective_is_surjective:
+    fix f
+    fix x
+    fix y
+    h = assume bijective(f, x, y)
+    bdef = use bijective_def
+    bdef1 = forall_elim bdef, f
+    bdef2 = forall_elim bdef1, x
+    bdef3 = forall_elim bdef2, y
+    h_body = iff_elim_l bdef3, h
+    h_surj = and_elim_l h_body
+    h_impl = implies_intro h_surj
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# bijective(f,x,y) -> injective(f): extract second conjunct
+proof bijective_is_injective:
+    fix f
+    fix x
+    fix y
+    h = assume bijective(f, x, y)
+    bdef = use bijective_def
+    bdef1 = forall_elim bdef, f
+    bdef2 = forall_elim bdef1, x
+    bdef3 = forall_elim bdef2, y
+    h_body = iff_elim_l bdef3, h
+    h_inj = and_elim_r h_body
+    h_impl = implies_intro h_inj
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# bijective(f,x,y) -> func_from_to(f,x,y): chain through surjective
+proof bijective_is_func:
+    fix f
+    fix x
+    fix y
+    h = assume bijective(f, x, y)
+    bis = use bijective_is_surjective
+    bis1 = forall_elim bis, f
+    bis2 = forall_elim bis1, x
+    bis3 = forall_elim bis2, y
+    h_surj = implies_elim bis3, h
+    sif = use surjective_is_func
+    sif1 = forall_elim sif, f
+    sif2 = forall_elim sif1, x
+    sif3 = forall_elim sif2, y
+    h_ft = implies_elim sif3, h_surj
+    h_impl = implies_intro h_ft
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# (surjective(f,x,y) & injective(f)) -> bijective(f,x,y): fold definition
+proof bijective_intro:
+    fix f
+    fix x
+    fix y
+    h = assume surjective(f, x, y) & injective(f)
+    bdef = use bijective_def
+    bdef1 = forall_elim bdef, f
+    bdef2 = forall_elim bdef1, x
+    bdef3 = forall_elim bdef2, y
+    h_bij = iff_elim_r bdef3, h
+    h_impl = implies_intro h_bij
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Typed Composition proofs
+# ============================================================
+
+# compose(h,f,g) & func_from_to(f,x,y) & func_from_to(g,y,z) -> func_from_to(h,x,z)
+# Three parts: is_function(h), domain = x, range ⊆ z
+proof compose_func_from_to:
+    fix h
+    fix f
+    fix g
+    fix x
+    fix y
+    fix z
+    h_all = assume compose(h, f, g) & func_from_to(f, x, y) & func_from_to(g, y, z)
+    h_left = and_elim_l h_all
+    h_ft_g = and_elim_r h_all
+    h_comp = and_elim_l h_left
+    h_ft_f = and_elim_r h_left
+    # Extract composition body
+    cdef = use compose_def
+    cdef1 = forall_elim cdef, h
+    cdef2 = forall_elim cdef1, f
+    cdef3 = forall_elim cdef2, g
+    h_cbody = iff_elim_l cdef3, h_comp
+    # Extract is_function for f and g
+    ftif = use func_from_to_is_function
+    ftif_f1 = forall_elim ftif, f
+    ftif_f2 = forall_elim ftif_f1, x
+    ftif_f3 = forall_elim ftif_f2, y
+    h_func_f = implies_elim ftif_f3, h_ft_f
+    ftif_g1 = forall_elim ftif, g
+    ftif_g2 = forall_elim ftif_g1, y
+    ftif_g3 = forall_elim ftif_g2, z
+    h_func_g = implies_elim ftif_g3, h_ft_g
+    fu = use func_unique
+    # === Part 1: is_function(h) ===
+    fix a
+    fix b1
+    fix b2
+    h_both = assume rel_elem(h, a, b1) & rel_elem(h, a, b2)
+    h_hab1 = and_elim_l h_both
+    h_hab2 = and_elim_r h_both
+    # Unfold compose for b1
+    h_cab1 = forall_elim h_cbody, a
+    h_cab1b = forall_elim h_cab1, b1
+    h_ex_m1 = iff_elim_l h_cab1b, h_hab1
+    h_m1_body = exists_elim h_ex_m1, m1
+    h_fam1 = and_elim_l h_m1_body
+    h_gm1b1 = and_elim_r h_m1_body
+    # Unfold compose for b2
+    h_cab2 = forall_elim h_cbody, a
+    h_cab2b = forall_elim h_cab2, b2
+    h_ex_m2 = iff_elim_l h_cab2b, h_hab2
+    h_m2_body = exists_elim h_ex_m2, m2
+    h_fam2 = and_elim_l h_m2_body
+    h_gm2b2 = and_elim_r h_m2_body
+    # func_unique(f): rel_elem(f,a,m1) & rel_elem(f,a,m2) -> eq(m1,m2)
+    fu_f1 = forall_elim fu, f
+    fu_f2 = forall_elim fu_f1, a
+    fu_f3 = forall_elim fu_f2, m1
+    fu_f4 = forall_elim fu_f3, m2
+    h_fu_f = and_intro h_func_f, h_fam1
+    h_fu_f2 = and_intro h_fu_f, h_fam2
+    h_m1m2 = implies_elim fu_f4, h_fu_f2
+    # eq_subst: eq(m1,m2), rel_elem(g,m1,b1) -> rel_elem(g,m2,b1)
+    h_gm2b1 = eq_subst h_m1m2, h_gm1b1
+    # func_unique(g): rel_elem(g,m2,b1) & rel_elem(g,m2,b2) -> eq(b1,b2)
+    fu_g1 = forall_elim fu, g
+    fu_g2 = forall_elim fu_g1, m2
+    fu_g3 = forall_elim fu_g2, b1
+    fu_g4 = forall_elim fu_g3, b2
+    h_fu_g = and_intro h_func_g, h_gm2b1
+    h_fu_g2 = and_intro h_fu_g, h_gm2b2
+    h_b1b2 = implies_elim fu_g4, h_fu_g2
+    # Close m2 scope
+    h_close_m2 = exists_intro h_b1b2
+    # Close m1 scope
+    h_close_m1 = exists_intro h_close_m2
+    h_impl_func = implies_intro h_close_m1
+    h_all_b2 = forall_intro h_impl_func
+    h_all_b1 = forall_intro h_all_b2
+    h_all_a_func = forall_intro h_all_b1
+    fdef = use function_def
+    fdef1 = forall_elim fdef, h
+    h_func_h = iff_elim_r fdef1, h_all_a_func
+    # === Part 2: Domain condition ===
+    fix da
+    # Forward: in_domain(h, da) -> elem(da, x)
+    h_dom = assume in_domain(h, da)
+    ddef = use domain_def
+    ddef_h1 = forall_elim ddef, h
+    ddef_h2 = forall_elim ddef_h1, da
+    h_ex_c = iff_elim_l ddef_h2, h_dom
+    h_wit_c = exists_elim h_ex_c, wc
+    # wc: rel_elem(h, da, wc) -> exists b. (rel_elem(f,da,b) & rel_elem(g,b,wc))
+    h_c_comp = forall_elim h_cbody, da
+    h_c_comp2 = forall_elim h_c_comp, wc
+    h_ex_b = iff_elim_l h_c_comp2, h_wit_c
+    h_wit_b = exists_elim h_ex_b, wb
+    h_fa_wb = and_elim_l h_wit_b
+    # rel_elem(f, da, wb) -> in_domain(f, da) -> elem(da, x)
+    de = use domain_elem
+    de1 = forall_elim de, f
+    de2 = forall_elim de1, da
+    de3 = forall_elim de2, wb
+    h_dom_f = implies_elim de3, h_fa_wb
+    ftdef = use func_from_to_def
+    ftdef_f1 = forall_elim ftdef, f
+    ftdef_f2 = forall_elim ftdef_f1, x
+    ftdef_f3 = forall_elim ftdef_f2, y
+    h_ft_f_body = iff_elim_l ftdef_f3, h_ft_f
+    h_ft_f_left = and_elim_l h_ft_f_body
+    h_ft_f_dom = and_elim_r h_ft_f_left
+    h_da_iff = forall_elim h_ft_f_dom, da
+    h_da_x = iff_elim_l h_da_iff, h_dom_f
+    # Close wb scope
+    h_close_wb = exists_intro h_da_x
+    # Close wc scope
+    h_close_wc = exists_intro h_close_wb
+    h_fwd_dom = implies_intro h_close_wc
+    # Backward: elem(da, x) -> in_domain(h, da)
+    h_da_x2 = assume elem(da, x)
+    # func_from_to_total(f): elem(da, x) -> exists b. rel_elem(f, da, b)
+    ftt = use func_from_to_total
+    ftt_f1 = forall_elim ftt, f
+    ftt_f2 = forall_elim ftt_f1, x
+    ftt_f3 = forall_elim ftt_f2, y
+    ftt_f4 = forall_elim ftt_f3, da
+    h_ftt_conj = and_intro h_ft_f, h_da_x2
+    h_ex_fb = implies_elim ftt_f4, h_ftt_conj
+    h_fb_wit = exists_elim h_ex_fb, vb
+    # vb: rel_elem(f, da, vb). Get elem(vb, y) via func_from_to_range
+    ftr = use func_from_to_range
+    ftr_f1 = forall_elim ftr, f
+    ftr_f2 = forall_elim ftr_f1, x
+    ftr_f3 = forall_elim ftr_f2, y
+    ftr_f4 = forall_elim ftr_f3, da
+    ftr_f5 = forall_elim ftr_f4, vb
+    h_ftr_conj = and_intro h_ft_f, h_fb_wit
+    h_vb_y = implies_elim ftr_f5, h_ftr_conj
+    # func_from_to_total(g): elem(vb, y) -> exists c. rel_elem(g, vb, c)
+    ftt_g1 = forall_elim ftt, g
+    ftt_g2 = forall_elim ftt_g1, y
+    ftt_g3 = forall_elim ftt_g2, z
+    ftt_g4 = forall_elim ftt_g3, vb
+    h_ftt_g_conj = and_intro h_ft_g, h_vb_y
+    h_ex_gc = implies_elim ftt_g4, h_ftt_g_conj
+    h_gc_wit = exists_elim h_ex_gc, vc
+    # vc: rel_elem(g, vb, vc). Build rel_elem(h, da, vc) via compose
+    h_fg = and_intro h_fb_wit, h_gc_wit
+    h_ex_fg = exists_intro h_fg, vb
+    h_comp_da = forall_elim h_cbody, da
+    h_comp_vc = forall_elim h_comp_da, vc
+    h_rel_hvc = iff_elim_r h_comp_vc, h_ex_fg
+    # domain_elem: rel_elem(h, da, vc) -> in_domain(h, da)
+    de_h1 = forall_elim de, h
+    de_h2 = forall_elim de_h1, da
+    de_h3 = forall_elim de_h2, vc
+    h_dom_h = implies_elim de_h3, h_rel_hvc
+    # Close vc scope
+    h_close_vc = exists_intro h_dom_h
+    # Close vb scope
+    h_close_vb = exists_intro h_close_vc
+    h_bwd_dom = implies_intro h_close_vb
+    h_dom_iff = iff_intro h_fwd_dom, h_bwd_dom
+    h_dom_all = forall_intro h_dom_iff
+    # === Part 3: Range ⊆ z ===
+    fix ra
+    fix rb
+    h_rel_h = assume rel_elem(h, ra, rb)
+    h_comp_ra = forall_elim h_cbody, ra
+    h_comp_rb = forall_elim h_comp_ra, rb
+    h_ex_mid = iff_elim_l h_comp_rb, h_rel_h
+    h_mid_wit = exists_elim h_ex_mid, vm
+    h_f_ra_vm = and_elim_l h_mid_wit
+    h_g_vm_rb = and_elim_r h_mid_wit
+    # func_from_to_range(g): rel_elem(g, vm, rb) -> elem(rb, z)
+    ftr_g1 = forall_elim ftr, g
+    ftr_g2 = forall_elim ftr_g1, y
+    ftr_g3 = forall_elim ftr_g2, z
+    ftr_g4 = forall_elim ftr_g3, vm
+    ftr_g5 = forall_elim ftr_g4, rb
+    h_ftr_g_conj = and_intro h_ft_g, h_g_vm_rb
+    h_rb_z = implies_elim ftr_g5, h_ftr_g_conj
+    # Close vm scope
+    h_close_vm = exists_intro h_rb_z
+    h_rng_impl = implies_intro h_close_vm
+    h_rng_b = forall_intro h_rng_impl
+    h_rng_a = forall_intro h_rng_b
+    # === Assemble func_from_to(h, x, z) ===
+    h_p1p2 = and_intro h_func_h, h_dom_all
+    h_p123 = and_intro h_p1p2, h_rng_a
+    ftdef_h1 = forall_elim ftdef, h
+    ftdef_h2 = forall_elim ftdef_h1, x
+    ftdef_h3 = forall_elim ftdef_h2, z
+    h_ft_h = iff_elim_r ftdef_h3, h_p123
+    h_impl = implies_intro h_ft_h
+    r6 = forall_intro h_impl
+    r5 = forall_intro r6
+    r4 = forall_intro r5
+    r3 = forall_intro r4
+    r2 = forall_intro r3
+    r1 = forall_intro r2
+    qed r1
+
+# compose(h,f,g) & injective(f) & injective(g) -> injective(h)
+# From rel_elem(h,a,c) and rel_elem(h,b,c), unfold both via compose,
+# use injective(g) to equate intermediates, use injective(f) to equate a,b.
+proof compose_injective:
+    fix h
+    fix f
+    fix g
+    h_all = assume compose(h, f, g) & injective(f) & injective(g)
+    h_left = and_elim_l h_all
+    h_inj_g = and_elim_r h_all
+    h_comp = and_elim_l h_left
+    h_inj_f = and_elim_r h_left
+    cdef = use compose_def
+    cdef1 = forall_elim cdef, h
+    cdef2 = forall_elim cdef1, f
+    cdef3 = forall_elim cdef2, g
+    h_cbody = iff_elim_l cdef3, h_comp
+    ifui = use injective_func_unique_input
+    fix a
+    fix b
+    fix c
+    h_both = assume rel_elem(h, a, c) & rel_elem(h, b, c)
+    h_hac = and_elim_l h_both
+    h_hbc = and_elim_r h_both
+    # Unfold compose for (a, c)
+    h_comp_ac = forall_elim h_cbody, a
+    h_comp_ac2 = forall_elim h_comp_ac, c
+    h_ex_m1 = iff_elim_l h_comp_ac2, h_hac
+    h_m1_body = exists_elim h_ex_m1, m1
+    h_fam1 = and_elim_l h_m1_body
+    h_gm1c = and_elim_r h_m1_body
+    # Unfold compose for (b, c)
+    h_comp_bc = forall_elim h_cbody, b
+    h_comp_bc2 = forall_elim h_comp_bc, c
+    h_ex_m2 = iff_elim_l h_comp_bc2, h_hbc
+    h_m2_body = exists_elim h_ex_m2, m2
+    h_fbm2 = and_elim_l h_m2_body
+    h_gm2c = and_elim_r h_m2_body
+    # injective(g): rel_elem(g,m1,c) & rel_elem(g,m2,c) -> eq(m1,m2)
+    ifui_g1 = forall_elim ifui, g
+    ifui_g2 = forall_elim ifui_g1, m1
+    ifui_g3 = forall_elim ifui_g2, m2
+    ifui_g4 = forall_elim ifui_g3, c
+    h_g_conj = and_intro h_inj_g, h_gm1c
+    h_g_conj2 = and_intro h_g_conj, h_gm2c
+    h_m1m2 = implies_elim ifui_g4, h_g_conj2
+    # eq_subst: eq(m1,m2), rel_elem(f,a,m1) -> rel_elem(f,a,m2)
+    h_fam2 = eq_subst h_m1m2, h_fam1
+    # injective(f): rel_elem(f,a,m2) & rel_elem(f,b,m2) -> eq(a,b)
+    ifui_f1 = forall_elim ifui, f
+    ifui_f2 = forall_elim ifui_f1, a
+    ifui_f3 = forall_elim ifui_f2, b
+    ifui_f4 = forall_elim ifui_f3, m2
+    h_f_conj = and_intro h_inj_f, h_fam2
+    h_f_conj2 = and_intro h_f_conj, h_fbm2
+    h_ab = implies_elim ifui_f4, h_f_conj2
+    # Close m2 scope
+    h_close_m2 = exists_intro h_ab
+    # Close m1 scope
+    h_close_m1 = exists_intro h_close_m2
+    h_impl_inner = implies_intro h_close_m1
+    h_all_c = forall_intro h_impl_inner
+    h_all_b = forall_intro h_all_c
+    h_all_a = forall_intro h_all_b
+    idef = use injective_def
+    idef1 = forall_elim idef, h
+    h_inj_h = iff_elim_r idef1, h_all_a
+    h_impl = implies_intro h_inj_h
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1

@@ -97,7 +97,7 @@ bool test_runtime_load() {
 
 bool test_runtime_load_file() {
     Runtime rt;
-    auto result = rt.load_file_recursive("zfc/ordered_pair.fol");
+    auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol");
 
     if (!result.ok()) {
         std::cout << "[" << result.error() << "] ";
@@ -715,7 +715,7 @@ Runtime& load_ordered_pair_axioms() {
     static Runtime rt;
     static bool loaded = false;
     if (!loaded) {
-        auto result = rt.load_file_recursive("zfc/ordered_pair.fol");
+        auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol");
         if (!result.ok()) {
             throw std::runtime_error("Failed to load ordered_pair.fol: " + result.error().to_string());
         }
@@ -781,7 +781,7 @@ bool test_execute_ordered_pair_proofs() {
     Runtime rt;
 
     // Load the ordered_pair.fol file with proofs (recursive to handle includes)
-    auto result = rt.load_file_recursive("zfc/ordered_pair.fol");
+    auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol");
     if (!result.ok()) {
         std::cout << "[load error: " << result.error() << "] ";
         return false;
@@ -818,7 +818,7 @@ bool test_execute_ordered_pair_proofs() {
 bool test_fol_test_file() {
     Runtime rt;
 
-    auto result = rt.load_file_recursive("zfc/test.fol");
+    auto result = rt.load_file_recursive("zfc/basics/test.fol");
     if (!result.ok()) {
         std::cout << "[load error: " << result.error() << "] ";
         return false;
@@ -846,7 +846,7 @@ bool test_split_ordered_pair() {
     Runtime rt;
 
     // Load the header (includes axioms.fol.def recursively)
-    auto header_result = rt.load_file_recursive("zfc/ordered_pair.fol.def");
+    auto header_result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
     if (!header_result.ok()) {
         std::cout << "[header load error: " << header_result.error() << "] ";
         return false;
@@ -864,7 +864,7 @@ bool test_split_ordered_pair() {
     std::cout << "[" << claims_before.size() << " claims] ";
 
     // Load the proof file
-    std::ifstream proof_file("zfc/ordered_pair.fol.proof");
+    std::ifstream proof_file("zfc/basics/ordered_pair.fol.proof");
     if (!proof_file.is_open()) {
         std::cout << "[could not open proof file] ";
         return false;
@@ -909,7 +909,7 @@ bool test_split_functions() {
     Runtime rt;
 
     // Load ordered_pair header + proof first (as a dependency)
-    auto op_header = rt.load_file_recursive("zfc/ordered_pair.fol.def");
+    auto op_header = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
     if (!op_header.ok()) {
         std::cout << "[op header load error: " << op_header.error() << "] ";
         return false;
@@ -917,7 +917,7 @@ bool test_split_functions() {
     rt.execute_all_proofs(op_header.value());
 
     // Load ordered_pair proofs
-    std::ifstream op_proof_file("zfc/ordered_pair.fol.proof");
+    std::ifstream op_proof_file("zfc/basics/ordered_pair.fol.proof");
     std::stringstream op_buf;
     op_buf << op_proof_file.rdbuf();
     std::string op_error;
@@ -933,7 +933,7 @@ bool test_split_functions() {
     }
 
     // Now load functions header (#pragma once will skip already-loaded axioms.fol.def and ordered_pair.fol.def)
-    auto func_header = rt.load_file_recursive("zfc/functions.fol.def");
+    auto func_header = rt.load_file_recursive("zfc/basics/functions.fol.def");
     if (!func_header.ok()) {
         std::cout << "[func header load error: " << func_header.error() << "] ";
         return false;
@@ -943,7 +943,7 @@ bool test_split_functions() {
     auto claims_before = rt.context().claims();
 
     // Load functions proofs
-    std::ifstream func_proof_file("zfc/functions.fol.proof");
+    std::ifstream func_proof_file("zfc/basics/functions.fol.proof");
     std::stringstream func_buf;
     func_buf << func_proof_file.rdbuf();
     std::string func_error;

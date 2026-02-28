@@ -1,0 +1,160 @@
+include "../basics/functions.fol.def"
+include "../basics/subset.fol.def"
+include "../basics/set_operations.fol.def"
+
+# ============================================================
+# Monotone Set Operators (Note 3.1)
+# ============================================================
+#
+# A monotone operator is a function that preserves the subset
+# ordering: A ⊆ B implies F(A) ⊆ F(B).
+
+# monotone(f) means f is a monotone function on sets
+@def(monotone) axiom monotone_def: forall f.
+    (monotone(f) <->
+        (is_function(f) &
+         forall a. forall b. (subset(a, b) ->
+             forall fa. forall fb. ((rel_elem(f, a, fa) & rel_elem(f, b, fb)) ->
+                 subset(fa, fb)))))
+
+# ============================================================
+# F-Closed Sets and Least Fixed Point (Note 3.6)
+# ============================================================
+#
+# A set C is F-closed if F(C) ⊆ C. The least fixed point
+# (T-closure) over base b is the smallest F-closed set
+# containing b: an element belongs to the lfp iff it belongs
+# to every F-closed set that contains b.
+
+# closed(f, c) means c is an F-closed set: F(c) ⊆ c
+@def(closed) axiom closed_def: forall f. forall c.
+    (closed(f, c) <-> forall fc. (rel_elem(f, c, fc) -> subset(fc, c)))
+
+# lfp(l, f, b) means l is the T-closure of b: the smallest
+# F-closed set containing b
+@def(lfp) axiom lfp_def: forall l. forall f. forall b.
+    (lfp(l, f, b) <->
+        forall x. (elem(x, l) <->
+            forall c. ((closed(f, c) & subset(b, c)) -> elem(x, c))))
+
+# ============================================================
+# Extraction Lemmas
+# ============================================================
+
+# Monotone operators are functions
+claim monotone_is_function: forall f.
+    (monotone(f) -> is_function(f))
+
+# Monotone operators preserve subset ordering
+claim monotone_subset: forall f. forall a. forall b. forall fa. forall fb.
+    ((monotone(f) & subset(a, b) & rel_elem(f, a, fa) & rel_elem(f, b, fb)) ->
+     subset(fa, fb))
+
+# ============================================================
+# Basic Properties
+# ============================================================
+
+# The T-closure contains the base set
+claim lfp_contains_base: forall l. forall f. forall b.
+    (lfp(l, f, b) -> subset(b, l))
+
+# The T-closure is a subset of every F-closed set containing the base
+claim lfp_subset_closed: forall l. forall f. forall b. forall c.
+    ((lfp(l, f, b) & closed(f, c) & subset(b, c)) -> subset(l, c))
+
+# The T-closure is unique (by extensionality)
+claim lfp_unique: forall l1. forall l2. forall f. forall b.
+    ((lfp(l1, f, b) & lfp(l2, f, b)) -> eq(l1, l2))
+
+# ============================================================
+# Knaster-Tarski Fixed Point Theorem (Note 3.6)
+# ============================================================
+#
+# The T-closure is F-closed, and for empty base it is a true
+# fixed point: F(T-bar(empty)) = T-bar(empty).
+
+# The T-closure is F-closed (requires monotonicity and that F
+# is defined on all F-closed supersets of the base)
+claim lfp_closed: forall l. forall f. forall b.
+    ((monotone(f) & lfp(l, f, b) &
+      forall c. ((closed(f, c) & subset(b, c)) -> in_domain(f, c))) ->
+     closed(f, l))
+
+# For empty base: l ⊆ F(l), making the T-closure a true fixed
+# point. Combined with lfp_closed, this gives F(l) = l.
+claim lfp_fixed_point: forall l. forall f. forall e. forall fl.
+    ((monotone(f) & lfp(l, f, e) & (forall x. ~elem(x, e)) &
+      rel_elem(f, l, fl) & closed(f, l)) ->
+     subset(l, fl))
+
+# T-induction (Note 3.10): an inductive subset of T-bar(b) equals T-bar(b)
+claim lfp_induction: forall l. forall f. forall b. forall c.
+    ((lfp(l, f, b) & closed(f, c) & subset(b, c) & subset(c, l)) -> eq(c, l))
+
+# The T-closure is monotone in the base: b1 ⊆ b2 implies T-bar(b1) ⊆ T-bar(b2)
+claim lfp_base_monotone: forall l1. forall l2. forall f. forall b1. forall b2.
+    ((lfp(l1, f, b1) & lfp(l2, f, b2) & subset(b1, b2)) -> subset(l1, l2))
+
+# ============================================================
+# Intersection of Closed Sets (Note 3.7)
+# ============================================================
+#
+# The T-closed sets are closed under arbitrary intersections:
+# if A is a collection of T-closed sets, then ⋂A is T-closed.
+# Requires monotonicity and that F is defined on each member.
+
+claim closed_intersect: forall f. forall i. forall a.
+    ((monotone(f) & gen_intersect(i, a) &
+      forall c. (elem(c, a) -> (closed(f, c) & in_domain(f, c)))) ->
+     closed(f, i))
+
+# ============================================================
+# Well-Ordering Principle (Note 3.10c)
+# ============================================================
+#
+# For an inductive operator, any non-empty subset B of the lfp
+# has a complement l\B that is not F-closed. Equivalently:
+# if l\B IS F-closed, then l ⊆ l\B (so B ∩ l = ∅).
+
+# Contrapositive: if d = l\b is F-closed, then l ⊆ d
+claim lfp_complement_closed: forall l. forall f. forall e. forall b. forall d.
+    ((lfp(l, f, e) & empty(e) & set_diff(d, l, b) & closed(f, d)) ->
+     subset(l, d))
+
+# Direct form: a non-empty subset forces its complement to not be F-closed
+claim lfp_nonempty_not_closed: forall l. forall f. forall e. forall b. forall d. forall x.
+    ((lfp(l, f, e) & empty(e) & set_diff(d, l, b) &
+      elem(x, b) & elem(x, l)) ->
+     ~closed(f, d))
+
+# ============================================================
+# Positive Existential Form (Note 3.10c)
+# ============================================================
+#
+# Any non-empty B ⊆ l contains a "T-minimal element":
+# an x ∈ B that also belongs to F(l\B).
+
+# Utility: ~subset gives a witness element
+claim not_subset_witness: forall a. forall b.
+    (~subset(a, b) -> exists x. (elem(x, a) & ~elem(x, b)))
+
+# Utility: x ∈ l and x ∉ l\b implies x ∈ b
+claim diff_not_elem: forall d. forall l. forall b. forall x.
+    ((set_diff(d, l, b) & elem(x, l) & ~elem(x, d)) -> elem(x, b))
+
+# If f is a function and c is not F-closed, a specific image is not a subset
+claim not_closed_not_subset: forall f. forall c. forall fc.
+    ((is_function(f) & ~closed(f, c) & rel_elem(f, c, fc)) -> ~subset(fc, c))
+
+# The image of a subset of l stays in l when l is F-closed
+claim monotone_image_in_closed: forall f. forall d. forall l. forall fd.
+    ((monotone(f) & subset(d, l) & closed(f, l) & in_domain(f, l) &
+      rel_elem(f, d, fd)) ->
+     subset(fd, l))
+
+# T-minimal element: non-empty b ⊆ l has an element in F(l\b)
+claim lfp_t_minimal: forall l. forall f. forall e. forall b. forall d. forall fd. forall w.
+    ((monotone(f) & lfp(l, f, e) & empty(e) & set_diff(d, l, b) &
+      closed(f, l) & in_domain(f, l) & rel_elem(f, d, fd) &
+      elem(w, b) & elem(w, l)) ->
+     exists x. (elem(x, fd) & elem(x, b)))

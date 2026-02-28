@@ -1,0 +1,84 @@
+include "induction.fol.def"
+
+# ============================================================
+# Well-Founded Relations (Note 3.37)
+# ============================================================
+#
+# Let ≺ ⊆ X² be a binary relation on a set X.
+# The monotone operator induced by ≺ is:
+#   T_≺ : P(X) → P(X)
+#   A ↦ {x ∈ X | ∀y ≺ x. y ∈ A}
+#
+# A subset A ⊆ X is ≺-closed if T_≺(A) ⊆ A, i.e., for every
+# x ∈ X, whenever all ≺-predecessors of x are in A, then x ∈ A.
+# The relation ≺ is well-founded on X if the only ≺-closed
+# subset of X is X itself (the induction principle).
+#
+# In our formalization, rel_elem(r, y, z) represents y ≺ z.
+
+# prec_closed(a, r, x): A is ≺-closed in X
+@def(prec_closed) axiom prec_closed_def: forall a. forall r. forall x.
+    (prec_closed(a, r, x) <->
+        forall z. ((elem(z, x) &
+            forall y. ((elem(y, x) & rel_elem(r, y, z)) -> elem(y, a))) ->
+            elem(z, a)))
+
+# well_founded(r, x): ≺ is well-founded on X
+@def(well_founded) axiom well_founded_def: forall r. forall x.
+    (well_founded(r, x) <->
+        forall a. ((subset(a, x) & prec_closed(a, r, x)) -> subset(x, a)))
+
+# ============================================================
+# Basic Properties
+# ============================================================
+
+# X is always ≺-closed in X (trivially: if z ∈ X then z ∈ X)
+claim prec_closed_full: forall r. forall x. prec_closed(x, r, x)
+
+# Well-founded induction: a ≺-closed subset of X equals X
+claim wf_induction: forall r. forall x. forall a.
+    ((well_founded(r, x) & subset(a, x) & prec_closed(a, r, x)) -> eq(a, x))
+
+# The intersection of ≺-closed sets is ≺-closed
+claim prec_closed_intersect: forall i. forall a. forall r. forall x.
+    ((gen_intersect(i, a) &
+      forall c. (elem(c, a) -> prec_closed(c, r, x))) ->
+     prec_closed(i, r, x))
+
+# ============================================================
+# Minimal Element Characterization (Note 3.40c)
+# ============================================================
+#
+# Every non-empty subset B ⊆ X of a well-founded set has a
+# ≺-minimal element: an x ∈ B with no ≺-predecessors in B.
+
+# The complement of a non-empty subset is not ≺-closed
+claim wf_not_prec_closed: forall r. forall x. forall b. forall d. forall w.
+    ((well_founded(r, x) & subset(b, x) & set_diff(d, x, b) &
+      elem(w, b)) ->
+     ~prec_closed(d, r, x))
+
+# From ~prec_closed, extract a witness element
+claim not_prec_closed_witness: forall a. forall r. forall x.
+    (~prec_closed(a, r, x) ->
+     exists z. (elem(z, x) & ~elem(z, a) &
+         forall y. ((elem(y, x) & rel_elem(r, y, z)) -> elem(y, a))))
+
+# Every non-empty subset of a well-founded set has a ≺-minimal element
+claim wf_minimal: forall r. forall x. forall b. forall d. forall w.
+    ((well_founded(r, x) & subset(b, x) & set_diff(d, x, b) &
+      elem(w, b)) ->
+     exists z. (elem(z, b) &
+         forall y. ((elem(y, x) & rel_elem(r, y, z)) -> ~elem(y, b))))
+
+# ============================================================
+# Well-Founded Implies No Self-Loops (Note 3.45)
+# ============================================================
+#
+# A well-founded relation is irreflexive: no element relates
+# to itself. The proof uses wf_minimal with a singleton set.
+
+claim wf_no_self_loop: forall r. forall x. forall a. forall s. forall d.
+    ((well_founded(r, x) & elem(a, x) & singleton(s, a) &
+      set_diff(d, x, s)) ->
+     ~rel_elem(r, a, a))
