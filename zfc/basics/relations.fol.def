@@ -89,3 +89,36 @@ claim image_unique: forall t1. forall t2. forall r. forall a.
 claim rel_ext: forall r. forall s.
     ((is_relation(r) & is_relation(s) &
       forall a. forall b. (rel_elem(r, a, b) <-> rel_elem(s, a, b))) -> eq(r, s))
+
+# ============================================================
+# Binary Relation Properties (Note 3.44)
+# ============================================================
+#
+# A binary relation ≺ ⊆ X² can have various structural properties.
+# In our formalization, rel_elem(r, a, b) represents a ≺ b.
+
+# reflexive(r, x): every element is related to itself
+@def(reflexive) axiom reflexive_def: forall r. forall x.
+    (reflexive(r, x) <-> forall a. (elem(a, x) -> rel_elem(r, a, a)))
+
+# irreflexive(r, x): no element is related to itself
+@def(irreflexive) axiom irreflexive_def: forall r. forall x.
+    (irreflexive(r, x) <-> forall a. (elem(a, x) -> ~rel_elem(r, a, a)))
+
+# symmetric_rel(r, x): a ≺ b implies b ≺ a
+@def(symmetric_rel) axiom symmetric_rel_def: forall r. forall x.
+    (symmetric_rel(r, x) <-> forall a. forall b.
+        ((elem(a, x) & elem(b, x) & rel_elem(r, a, b)) -> rel_elem(r, b, a)))
+
+# antisymmetric(r, x): a ≺ b and b ≺ a implies a = b
+@def(antisymmetric) axiom antisymmetric_def: forall r. forall x.
+    (antisymmetric(r, x) <-> forall a. forall b.
+        ((elem(a, x) & elem(b, x) & rel_elem(r, a, b) & rel_elem(r, b, a)) ->
+         eq(a, b)))
+
+# transitive_rel(r, x): a ≺ b and b ≺ c implies a ≺ c
+@def(transitive_rel) axiom transitive_rel_def: forall r. forall x.
+    (transitive_rel(r, x) <-> forall a. forall b. forall c.
+        ((elem(a, x) & elem(b, x) & elem(c, x) &
+          rel_elem(r, a, b) & rel_elem(r, b, c)) ->
+         rel_elem(r, a, c)))

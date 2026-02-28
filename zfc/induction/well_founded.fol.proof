@@ -120,3 +120,286 @@ proof prec_closed_intersect:
     hf2 = forall_intro hf3
     hf1 = forall_intro hf2
     qed hf1
+
+# ============================================================
+# Proof of wf_not_prec_closed (Note 3.40c)
+# The complement d = x\b of a non-empty subset is not ≺-closed.
+# If it were, well_founded would give x ⊆ d, but then w ∈ b
+# would give w ∈ d, contradicting set_diff (w ∉ b).
+# ============================================================
+proof wf_not_prec_closed:
+    fix r
+    fix x
+    fix b
+    fix d
+    fix w
+    h = assume well_founded(r, x) & subset(b, x) & set_diff(d, x, b) & elem(w, b)
+    # ((wf & sub) & diff) & wb
+    h_wb = and_elim_r h
+    h_lhs = and_elim_l h
+    h_diff = and_elim_r h_lhs
+    h_lhs2 = and_elim_l h_lhs
+    h_wf = and_elim_l h_lhs2
+    h_sub_bx = and_elim_r h_lhs2
+    # Assume prec_closed(d, r, x) for contradiction
+    h_pc = assume prec_closed(d, r, x)
+    # diff_subset: subset(d, x)
+    ds = use diff_subset
+    ds1 = forall_elim ds, d
+    ds2 = forall_elim ds1, x
+    ds3 = forall_elim ds2, b
+    h_sub_dx = implies_elim ds3, h_diff
+    # well_founded: subset(d,x) & prec_closed(d,r,x) -> subset(x,d)
+    wfdef = use well_founded_def
+    wfdef1 = forall_elim wfdef, r
+    wfdef2 = forall_elim wfdef1, x
+    h_wf_body = iff_elim_l wfdef2, h_wf
+    h_wf_d = forall_elim h_wf_body, d
+    h_prem = and_intro h_sub_dx, h_pc
+    h_sub_xd = implies_elim h_wf_d, h_prem
+    # elem(w, b) & subset(b, x) -> elem(w, x)
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, b
+    sdef2 = forall_elim sdef1, x
+    h_bx_body = iff_elim_l sdef2, h_sub_bx
+    h_bx_w = forall_elim h_bx_body, w
+    h_wx = implies_elim h_bx_w, h_wb
+    # subset(x, d) & elem(w, x) -> elem(w, d)
+    sdef3 = forall_elim sdef, x
+    sdef4 = forall_elim sdef3, d
+    h_xd_body = iff_elim_l sdef4, h_sub_xd
+    h_xd_w = forall_elim h_xd_body, w
+    h_wd = implies_elim h_xd_w, h_wx
+    # diff_elim: set_diff(d,x,b) & elem(w,d) -> ~elem(w,b)
+    de = use diff_elim
+    de1 = forall_elim de, d
+    de2 = forall_elim de1, x
+    de3 = forall_elim de2, b
+    de4 = forall_elim de3, w
+    h_de_prem = and_intro h_diff, h_wd
+    h_de = implies_elim de4, h_de_prem
+    h_not_wb = and_elim_r h_de
+    # Contradiction
+    h_bot = not_elim h_not_wb, h_wb
+    h_not_pc = not_intro h_bot
+    h_impl = implies_intro h_not_pc
+    h5 = forall_intro h_impl
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof of not_prec_closed_witness
+# From ~prec_closed(a, r, x), extract a witness z ∈ x with
+# ~elem(z, a) and all predecessors in a.
+# Uses double_neg_elim: assume ~∃z.(...), derive prec_closed
+# by inner double_neg_elim, contradict ~prec_closed.
+# ============================================================
+proof not_prec_closed_witness:
+    fix a
+    fix r
+    fix x
+    h_not_pc = assume ~prec_closed(a, r, x)
+    # Outer double_neg_elim: assume ~(exists z. ...)
+    h_no_ex = assume ~(exists z. (elem(z, x) & ~elem(z, a) & forall y. ((elem(y, x) & rel_elem(r, y, z)) -> elem(y, a))))
+    # Build prec_closed(a, r, x) to get contradiction
+    pcdef = use prec_closed_def
+    pcd1 = forall_elim pcdef, a
+    pcd2 = forall_elim pcd1, r
+    pcd3 = forall_elim pcd2, x
+    fix z0
+    h_z_prem = assume elem(z0, x) & forall y. ((elem(y, x) & rel_elem(r, y, z0)) -> elem(y, a))
+    h_z0x = and_elim_l h_z_prem
+    h_all_y = and_elim_r h_z_prem
+    # elem(z0, a) by inner double_neg_elim
+    h_not_z0a = assume ~elem(z0, a)
+    h_pair = and_intro h_z0x, h_not_z0a
+    h_triple = and_intro h_pair, h_all_y
+    h_ex = exists_intro h_triple, z0
+    h_bot_inner = not_elim h_no_ex, h_ex
+    h_nn_inner = not_intro h_bot_inner
+    h_z0a = double_neg_elim h_nn_inner
+    # Close inner scopes
+    h_z_impl = implies_intro h_z0a
+    h_all_z = forall_intro h_z_impl
+    h_pc = iff_elim_r pcd3, h_all_z
+    # Contradiction with ~prec_closed
+    h_bot = not_elim h_not_pc, h_pc
+    h_nn = not_intro h_bot
+    h_result = double_neg_elim h_nn
+    h_main = implies_intro h_result
+    h3 = forall_intro h_main
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof of wf_minimal (Note 3.40c)
+# Chain wf_not_prec_closed and not_prec_closed_witness.
+# The witness z from ~prec_closed has z ∈ x, z ∉ d=x\b
+# (so z ∈ b by diff_not_elem), and all predecessors in d
+# (so not in b by diff_elim).
+# ============================================================
+proof wf_minimal:
+    fix r
+    fix x
+    fix b
+    fix d
+    fix w
+    h = assume well_founded(r, x) & subset(b, x) & set_diff(d, x, b) & elem(w, b)
+    # ((wf & sub) & diff) & wb
+    h_wb = and_elim_r h
+    h_lhs = and_elim_l h
+    h_diff = and_elim_r h_lhs
+    h_lhs2 = and_elim_l h_lhs
+    h_wf = and_elim_l h_lhs2
+    h_sub_bx = and_elim_r h_lhs2
+    # Apply wf_not_prec_closed
+    wnpc = use wf_not_prec_closed
+    wnpc1 = forall_elim wnpc, r
+    wnpc2 = forall_elim wnpc1, x
+    wnpc3 = forall_elim wnpc2, b
+    wnpc4 = forall_elim wnpc3, d
+    wnpc5 = forall_elim wnpc4, w
+    h_wnpc_p1 = and_intro h_wf, h_sub_bx
+    h_wnpc_p2 = and_intro h_wnpc_p1, h_diff
+    h_wnpc_prem = and_intro h_wnpc_p2, h_wb
+    h_not_pc = implies_elim wnpc5, h_wnpc_prem
+    # Apply not_prec_closed_witness
+    npcw = use not_prec_closed_witness
+    npcw1 = forall_elim npcw, d
+    npcw2 = forall_elim npcw1, r
+    npcw3 = forall_elim npcw2, x
+    h_ex_z = implies_elim npcw3, h_not_pc
+    # exists_elim: witness z0
+    h_wit = exists_elim h_ex_z, z0
+    # h_wit: (elem(z0, x) & ~elem(z0, d)) & forall y. (... -> elem(y, d))
+    h_wit_l = and_elim_l h_wit
+    h_all_yd = and_elim_r h_wit
+    h_z0x = and_elim_l h_wit_l
+    h_not_z0d = and_elim_r h_wit_l
+    # diff_not_elem: set_diff(d,x,b) & elem(z0,x) & ~elem(z0,d) -> elem(z0,b)
+    dne = use diff_not_elem
+    dne1 = forall_elim dne, d
+    dne2 = forall_elim dne1, x
+    dne3 = forall_elim dne2, b
+    dne4 = forall_elim dne3, z0
+    h_dne_p1 = and_intro h_diff, h_z0x
+    h_dne_prem = and_intro h_dne_p1, h_not_z0d
+    h_z0b = implies_elim dne4, h_dne_prem
+    # Build: forall y. ((elem(y,x) & rel_elem(r,y,z0)) -> ~elem(y,b))
+    de = use diff_elim
+    fix y0
+    h_y_prem = assume elem(y0, x) & rel_elem(r, y0, z0)
+    h_yd_impl = forall_elim h_all_yd, y0
+    h_y0d = implies_elim h_yd_impl, h_y_prem
+    # diff_elim: set_diff(d,x,b) & elem(y0,d) -> ~elem(y0,b)
+    de1 = forall_elim de, d
+    de2 = forall_elim de1, x
+    de3 = forall_elim de2, b
+    de4 = forall_elim de3, y0
+    h_de_prem = and_intro h_diff, h_y0d
+    h_de = implies_elim de4, h_de_prem
+    h_not_y0b = and_elim_r h_de
+    h_y_impl = implies_intro h_not_y0b
+    h_all_y = forall_intro h_y_impl
+    # Build exists: elem(z0, b) & forall y. (...)
+    h_conj = and_intro h_z0b, h_all_y
+    h_ex_result = exists_intro h_conj, z0
+    # Close exists_elim scope
+    h_closed = exists_intro h_ex_result
+    h_main = implies_intro h_closed
+    h5 = forall_intro h_main
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof of wf_no_self_loop (Note 3.45)
+# If well_founded(r, x) then no element relates to itself.
+# Given singleton(s, a) and set_diff(d, x, s), apply wf_minimal
+# to get a minimal element z of s. Since s = {a}, z = a.
+# Then the universal says ~rel_elem(r, a, a) (via eq_subst).
+# ============================================================
+proof wf_no_self_loop:
+    fix r
+    fix x
+    fix a
+    fix s
+    fix d
+    h = assume well_founded(r, x) & elem(a, x) & singleton(s, a) & set_diff(d, x, s)
+    # ((wf & ax) & sing) & diff
+    h_diff = and_elim_r h
+    h_lhs = and_elim_l h
+    h_sing = and_elim_r h_lhs
+    h_lhs2 = and_elim_l h_lhs
+    h_wf = and_elim_l h_lhs2
+    h_ax = and_elim_r h_lhs2
+    # Step 1: Show subset(s, x)
+    sdef = use singleton_def
+    sdef1 = forall_elim sdef, s
+    sdef2 = forall_elim sdef1, a
+    h_sing_body = iff_elim_l sdef2, h_sing
+    subdef = use subset_def
+    sub1 = forall_elim subdef, s
+    sub2 = forall_elim sub1, x
+    sym = use eq_sym
+    fix z
+    h_zs = assume elem(z, s)
+    h_z_iff = forall_elim h_sing_body, z
+    h_za = iff_elim_l h_z_iff, h_zs
+    sym1 = forall_elim sym, z
+    sym2 = forall_elim sym1, a
+    h_az = implies_elim sym2, h_za
+    h_zx = eq_subst h_az, h_ax
+    h_impl_z = implies_intro h_zx
+    h_all_z = forall_intro h_impl_z
+    h_sub_sx = iff_elim_r sub2, h_all_z
+    # Step 2: Show elem(a, s)
+    er = use eq_refl
+    er1 = forall_elim er, a
+    h_a_iff = forall_elim h_sing_body, a
+    h_as = iff_elim_r h_a_iff, er1
+    # Step 3: Assume rel_elem(r, a, a) for contradiction
+    h_raa = assume rel_elem(r, a, a)
+    # Apply wf_minimal
+    wm = use wf_minimal
+    wm1 = forall_elim wm, r
+    wm2 = forall_elim wm1, x
+    wm3 = forall_elim wm2, s
+    wm4 = forall_elim wm3, d
+    wm5 = forall_elim wm4, a
+    h_wm_p1 = and_intro h_wf, h_sub_sx
+    h_wm_p2 = and_intro h_wm_p1, h_diff
+    h_wm_prem = and_intro h_wm_p2, h_as
+    h_ex_min = implies_elim wm5, h_wm_prem
+    # exists_elim: witness z0
+    h_min = exists_elim h_ex_min, z0
+    h_z0s = and_elim_l h_min
+    h_univ = and_elim_r h_min
+    # From singleton: eq(z0, a)
+    h_z0_iff = forall_elim h_sing_body, z0
+    h_z0a = iff_elim_l h_z0_iff, h_z0s
+    # eq_subst: replace z0 with a in h_univ
+    h_univ_a = eq_subst h_z0a, h_univ
+    # h_univ_a: forall y. ((elem(y, x) & rel_elem(r, y, a)) -> ~elem(y, s))
+    h_ua = forall_elim h_univ_a, a
+    h_prem_a = and_intro h_ax, h_raa
+    h_not_as = implies_elim h_ua, h_prem_a
+    # Contradiction: elem(a, s) and ~elem(a, s)
+    h_bot = not_elim h_not_as, h_as
+    # Close exists scope
+    h_bot2 = exists_intro h_bot
+    # Close assume scope -> ~rel_elem(r, a, a)
+    h_not_raa = not_intro h_bot2
+    h_main = implies_intro h_not_raa
+    h5 = forall_intro h_main
+    h4 = forall_intro h5
+    h3 = forall_intro h4
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
