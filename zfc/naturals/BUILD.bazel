@@ -1,0 +1,35 @@
+load("//build:fol.bzl", "fol_library", "fol_proof")
+
+package(default_visibility = ["//visibility:public"])
+
+fol_library(
+    name = "naturals_lib",
+    header = "naturals.fol.def",
+    deps = [
+        "//zfc/basics:ordered_pair_lib",
+        "//zfc/basics:set_operations_lib",
+    ],
+)
+
+fol_proof(
+    name = "naturals",
+    header = "naturals.fol.def",
+    proof = "naturals.fol.proof",
+    deps = [
+        "//zfc/basics:ordered_pair",
+        "//zfc/basics:set_operations",
+    ],
+)
+
+fol_library(
+    name = "nat_properties_lib",
+    header = "nat_properties.fol.def",
+    deps = [":naturals_lib"],
+)
+
+fol_proof(
+    name = "nat_properties",
+    header = "nat_properties.fol.def",
+    proof = "nat_properties.fol.proof",
+    deps = [":naturals"],
+)
