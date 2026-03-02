@@ -1,0 +1,344 @@
+# ============================================================
+# Proof 1: succ_unique
+# Both s1 and s2 have the same membership condition, so they
+# are equal by extensionality.
+# ============================================================
+proof succ_unique:
+    fix s1
+    fix s2
+    fix n
+    h = assume succ(s1, n) & succ(s2, n)
+    h_s1 = and_elim_l h
+    h_s2 = and_elim_r h
+    scdef = use succ_def
+    scdef1 = forall_elim scdef, s1
+    scdef2 = forall_elim scdef1, n
+    h_s1_mem = iff_elim_l scdef2, h_s1
+    scdef3 = forall_elim scdef, s2
+    scdef4 = forall_elim scdef3, n
+    h_s2_mem = iff_elim_l scdef4, h_s2
+    fix z
+    h_z1 = forall_elim h_s1_mem, z
+    h_z2 = forall_elim h_s2_mem, z
+    h_zs1 = assume elem(z, s1)
+    h_disj = iff_elim_l h_z1, h_zs1
+    h_zs2 = iff_elim_r h_z2, h_disj
+    h_fwd = implies_intro h_zs2
+    h_zs2b = assume elem(z, s2)
+    h_disj2 = iff_elim_l h_z2, h_zs2b
+    h_zs1b = iff_elim_r h_z1, h_disj2
+    h_bwd = implies_intro h_zs1b
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, s1
+    ext2 = forall_elim ext1, s2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 2: inductive_set_exists
+# The axiom of infinity gives us I containing ∅ and closed
+# under von Neumann successor. We show I is inductive.
+# ============================================================
+proof inductive_set_exists:
+    h_inf = use infinity
+    h_I = exists_elim h_inf, wI
+    h_has_empty = and_elim_l h_I
+    h_inf_closed = and_elim_r h_I
+
+    # Part 1: Show exists e. (elem(e, wI) & empty(e))
+    h_e = exists_elim h_has_empty, e0
+    h_e0_in = and_elim_l h_e
+    h_e0_nelem = and_elim_r h_e
+    edef = use empty_def
+    edef1 = forall_elim edef, e0
+    h_empty_e0 = iff_elim_r edef1, h_e0_nelem
+    h_p1_conj = and_intro h_e0_in, h_empty_e0
+    h_p1_ex = exists_intro h_p1_conj, e0
+    h_p1 = exists_intro h_p1_ex
+
+    # Part 2: Show forall x. (elem(x, wI) -> forall s. (succ(s, x) -> elem(s, wI)))
+    fix x0
+    h_x0_in = assume elem(x0, wI)
+    h_x0_cl = forall_elim h_inf_closed, x0
+    h_ex_y = implies_elim h_x0_cl, h_x0_in
+    h_y = exists_elim h_ex_y, y0
+    h_y0_in = and_elim_l h_y
+    h_y0_mem = and_elim_r h_y
+    fix s0
+    h_succ = assume succ(s0, x0)
+    scdef = use succ_def
+    scdef1 = forall_elim scdef, s0
+    scdef2 = forall_elim scdef1, x0
+    h_s0_mem = iff_elim_l scdef2, h_succ
+    # Show eq(s0, y0): both have same membership condition
+    fix z0
+    h_z_s = forall_elim h_s0_mem, z0
+    h_z_y = forall_elim h_y0_mem, z0
+    h_zs0 = assume elem(z0, s0)
+    h_disj1 = iff_elim_l h_z_s, h_zs0
+    h_zy0 = iff_elim_r h_z_y, h_disj1
+    h_fwd = implies_intro h_zy0
+    h_zy0b = assume elem(z0, y0)
+    h_disj2 = iff_elim_l h_z_y, h_zy0b
+    h_zs0b = iff_elim_r h_z_s, h_disj2
+    h_bwd = implies_intro h_zs0b
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all_z = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, s0
+    ext2 = forall_elim ext1, y0
+    h_eq_sy = iff_elim_r ext2, h_all_z
+    # From eq(s0, y0) and elem(y0, wI), derive elem(s0, wI)
+    esym = use eq_sym
+    esym1 = forall_elim esym, s0
+    esym2 = forall_elim esym1, y0
+    h_eq_ys = implies_elim esym2, h_eq_sy
+    h_s0_in = eq_subst h_eq_ys, h_y0_in
+    # Close scopes: succ assume, s0 fix, y0 exists
+    h_succ_impl = implies_intro h_s0_in
+    h_forall_s = forall_intro h_succ_impl
+    h_p2_closed = exists_intro h_forall_s
+    # Close x0 assume and fix
+    h_x0_impl = implies_intro h_p2_closed
+    h_p2 = forall_intro h_x0_impl
+
+    # Combine to show inductive_set(wI)
+    h_both = and_intro h_p1, h_p2
+    isdef = use inductive_set_def
+    isdef1 = forall_elim isdef, wI
+    h_ind = iff_elim_r isdef1, h_both
+    h_ex = exists_intro h_ind, wI
+    h_result = exists_intro h_ex
+    qed h_result
+
+# ============================================================
+# Proof 3: nat_set_exists
+# From inductive_set_exists get an inductive set wI.
+# Apply separation_nat to get wN = {x ∈ wI : x in every inductive set}.
+# Show nat_set(wN).
+# ============================================================
+proof nat_set_exists:
+    ie = use inductive_set_exists
+    h_ie = exists_elim ie, wI
+    sep = use separation_nat
+    sep1 = forall_elim sep, wI
+    h_sep = exists_elim sep1, wN
+    # h_sep: forall x. (elem(x, wN) <-> (elem(x, wI) & forall a. (inductive_set(a) -> elem(x, a))))
+    nsdef = use nat_set_def
+    nsdef1 = forall_elim nsdef, wN
+    fix x0
+    h_x0 = forall_elim h_sep, x0
+    # Forward: elem(x0, wN) -> forall a. (inductive_set(a) -> elem(x0, a))
+    h_in_N = assume elem(x0, wN)
+    h_conj = iff_elim_l h_x0, h_in_N
+    h_in_all = and_elim_r h_conj
+    h_fwd = implies_intro h_in_all
+    # Backward: forall a. (inductive_set(a) -> elem(x0, a)) -> elem(x0, wN)
+    h_all_a = assume forall a. (inductive_set(a) -> elem(x0, a))
+    h_wI_impl = forall_elim h_all_a, wI
+    h_in_wI = implies_elim h_wI_impl, h_ie
+    h_conj2 = and_intro h_in_wI, h_all_a
+    h_in_N2 = iff_elim_r h_x0, h_conj2
+    h_bwd = implies_intro h_in_N2
+    h_iff = iff_intro h_fwd, h_bwd
+    h_forall = forall_intro h_iff
+    h_nat = iff_elim_r nsdef1, h_forall
+    h_ex = exists_intro h_nat, wN
+    h_closed_N = exists_intro h_ex
+    h_result = exists_intro h_closed_N
+    qed h_result
+
+# ============================================================
+# Proof 4: nat_set_unique
+# Both n1, n2 have the same membership characterization.
+# By extensionality they are equal.
+# ============================================================
+proof nat_set_unique:
+    fix n1
+    fix n2
+    h = assume nat_set(n1) & nat_set(n2)
+    h_nat1 = and_elim_l h
+    h_nat2 = and_elim_r h
+    nsdef = use nat_set_def
+    nsdef1 = forall_elim nsdef, n1
+    h_n1 = iff_elim_l nsdef1, h_nat1
+    nsdef2 = forall_elim nsdef, n2
+    h_n2 = iff_elim_l nsdef2, h_nat2
+    fix x
+    h_x1 = forall_elim h_n1, x
+    h_x2 = forall_elim h_n2, x
+    h_xn1 = assume elem(x, n1)
+    h_all1 = iff_elim_l h_x1, h_xn1
+    h_xn2 = iff_elim_r h_x2, h_all1
+    h_fwd = implies_intro h_xn2
+    h_xn2b = assume elem(x, n2)
+    h_all2 = iff_elim_l h_x2, h_xn2b
+    h_xn1b = iff_elim_r h_x1, h_all2
+    h_bwd = implies_intro h_xn1b
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+    ext = use extensionality
+    ext1 = forall_elim ext, n1
+    ext2 = forall_elim ext1, n2
+    h_eq = iff_elim_r ext2, h_all
+    h_impl = implies_intro h_eq
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 5: zero_in_nat
+# empty(e) means e is in every inductive set (each contains an
+# empty element, which by empty_unique equals e).
+# By nat_set_def, elem(e, n).
+# ============================================================
+proof zero_in_nat:
+    fix n
+    fix e
+    h = assume nat_set(n) & empty(e)
+    h_nat = and_elim_l h
+    h_empty = and_elim_r h
+    nsdef = use nat_set_def
+    nsdef1 = forall_elim nsdef, n
+    h_n = iff_elim_l nsdef1, h_nat
+    h_e_iff = forall_elim h_n, e
+    # Show: forall a. (inductive_set(a) -> elem(e, a))
+    fix a0
+    h_ind = assume inductive_set(a0)
+    isdef = use inductive_set_def
+    isdef1 = forall_elim isdef, a0
+    h_body = iff_elim_l isdef1, h_ind
+    h_has_empty = and_elim_l h_body
+    # h_has_empty: exists e0. (elem(e0, a0) & empty(e0))
+    h_e0 = exists_elim h_has_empty, e0
+    h_e0_in = and_elim_l h_e0
+    h_e0_empty = and_elim_r h_e0
+    # empty(e) & empty(e0) -> eq(e, e0)
+    eu = use empty_unique
+    eu1 = forall_elim eu, e
+    eu2 = forall_elim eu1, e0
+    h_both = and_intro h_empty, h_e0_empty
+    h_eq = implies_elim eu2, h_both
+    # eq(e0, e) via eq_sym, then eq_subst to get elem(e, a0)
+    esym = use eq_sym
+    esym1 = forall_elim esym, e
+    esym2 = forall_elim esym1, e0
+    h_eq_rev = implies_elim esym2, h_eq
+    h_e_in_a = eq_subst h_eq_rev, h_e0_in
+    # Close e0 exists scope
+    h_e_in_a_closed = exists_intro h_e_in_a
+    h_impl_a = implies_intro h_e_in_a_closed
+    h_forall_a = forall_intro h_impl_a
+    h_e_in_n = iff_elim_r h_e_iff, h_forall_a
+    h_impl = implies_intro h_e_in_n
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 6: succ_in_nat
+# x ∈ n means x is in every inductive set. For any inductive a,
+# a is closed under successor, so succ(s, x) ∈ a.
+# Hence s is in every inductive set, so s ∈ n.
+# ============================================================
+proof succ_in_nat:
+    fix n
+    fix x
+    fix s
+    h = assume nat_set(n) & elem(x, n) & succ(s, x)
+    h_left = and_elim_l h
+    h_succ = and_elim_r h
+    h_nat = and_elim_l h_left
+    h_xn = and_elim_r h_left
+    nsdef = use nat_set_def
+    nsdef1 = forall_elim nsdef, n
+    h_n = iff_elim_l nsdef1, h_nat
+    h_x_iff = forall_elim h_n, x
+    h_x_all = iff_elim_l h_x_iff, h_xn
+    # Show: forall a. (inductive_set(a) -> elem(s, a))
+    fix a0
+    h_ind = assume inductive_set(a0)
+    h_xa_impl = forall_elim h_x_all, a0
+    h_x_in_a = implies_elim h_xa_impl, h_ind
+    isdef = use inductive_set_def
+    isdef1 = forall_elim isdef, a0
+    h_body = iff_elim_l isdef1, h_ind
+    h_closure = and_elim_r h_body
+    h_cl_x = forall_elim h_closure, x
+    h_cl_x_impl = implies_elim h_cl_x, h_x_in_a
+    h_cl_s = forall_elim h_cl_x_impl, s
+    h_s_in_a = implies_elim h_cl_s, h_succ
+    h_impl_a = implies_intro h_s_in_a
+    h_forall_a = forall_intro h_impl_a
+    h_s_iff = forall_elim h_n, s
+    h_s_in_n = iff_elim_r h_s_iff, h_forall_a
+    h_impl = implies_intro h_s_in_n
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 7: nat_set_smallest
+# Every element of n is in every inductive set (by nat_set_def),
+# hence in a. This gives subset(n, a).
+# ============================================================
+proof nat_set_smallest:
+    fix n
+    fix a
+    h = assume nat_set(n) & inductive_set(a)
+    h_nat = and_elim_l h
+    h_ind = and_elim_r h
+    nsdef = use nat_set_def
+    nsdef1 = forall_elim nsdef, n
+    h_n = iff_elim_l nsdef1, h_nat
+    fix x0
+    h_x_iff = forall_elim h_n, x0
+    h_xn = assume elem(x0, n)
+    h_x_all = iff_elim_l h_x_iff, h_xn
+    h_a_impl = forall_elim h_x_all, a
+    h_xa = implies_elim h_a_impl, h_ind
+    h_impl_x = implies_intro h_xa
+    h_forall = forall_intro h_impl_x
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, n
+    sdef2 = forall_elim sdef1, a
+    h_sub = iff_elim_r sdef2, h_forall
+    h_impl = implies_intro h_sub
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 8: nat_induction
+# nat_set_smallest gives subset(n, a). Combined with subset(a, n)
+# and subset_antisym, we get eq(a, n).
+# ============================================================
+proof nat_induction:
+    fix n
+    fix a
+    h = assume nat_set(n) & subset(a, n) & inductive_set(a)
+    h_left = and_elim_l h
+    h_ind = and_elim_r h
+    h_nat = and_elim_l h_left
+    h_sub_an = and_elim_r h_left
+    nss = use nat_set_smallest
+    nss1 = forall_elim nss, n
+    nss2 = forall_elim nss1, a
+    h_nat_ind = and_intro h_nat, h_ind
+    h_sub_na = implies_elim nss2, h_nat_ind
+    sa = use subset_antisym
+    sa1 = forall_elim sa, a
+    sa2 = forall_elim sa1, n
+    h_both = and_intro h_sub_an, h_sub_na
+    h_eq = implies_elim sa2, h_both
+    h_impl = implies_intro h_eq
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1

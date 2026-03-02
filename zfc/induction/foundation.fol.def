@@ -1,0 +1,95 @@
+include "well_founded.fol.def"
+
+# ============================================================
+# Axiom of Foundation as Well-Foundedness (Note 3.98)
+# ============================================================
+#
+# Note 3.98: For any set X, the membership relation ∈_X ⊆ X²
+# is well-founded. That is:
+#   For any A ⊆ X, if every x ∈ X with x ⊆ A is in A, then A = X.
+# Equivalently:
+#   Every non-empty B ⊆ X has an ∈-minimal element,
+#   i.e., some x ∈ B with x ∩ B = ∅.
+#
+# This connects the Foundation axiom (axiom 7) to the abstract
+# well-foundedness machinery developed in well_founded.fol.def.
+#
+# Consequences:
+#   - No set is a member of itself (3.99)
+#   - No cycles x ∈ y ∈ x (3.100)
+#   - No infinite descending chains x₀ ∋ x₁ ∋ x₂ ∋ ... (3.101)
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# elem_relation(r, x): r encodes the membership relation ∈ restricted to x
+# i.e., rel_elem(r, a, b) ↔ (a ∈ b ∧ a ∈ x ∧ b ∈ x)
+# In our encoding: (a, b) ∈ r iff a ∈ b, with domain and range in x.
+@def(elem_relation) axiom elem_relation_def: forall r. forall x.
+    (elem_relation(r, x) <->
+        forall a. forall b. (rel_elem(r, a, b) <-> (elem(a, b) & elem(a, x) & elem(b, x))))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For foundation_prec_closed: {z ∈ A : forall y. ((elem(y,x) & elem(y,z)) -> elem(y,a))}
+axiom separation_elem_preds: forall A. forall x. forall a. exists B. forall z.
+    (elem(z, B) <-> (elem(z, A) &
+        forall y. ((elem(y, x) & elem(y, z)) -> elem(y, a))))
+
+# For foundation_wf induction
+axiom separation_prec_closed_elem: forall A. forall a. forall x. exists B. forall z.
+    (elem(z, B) <-> (elem(z, A) &
+        (forall y. ((elem(y, x) & elem(y, z)) -> elem(y, a)) -> elem(z, a))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# ∈ on any set x is ≺-closed iff "downward closed" under membership
+# This connects prec_closed to the Foundation axiom's hypothesis.
+claim elem_prec_closed: forall a. forall r. forall x.
+    ((elem_relation(r, x) & subset(a, x)) ->
+     (prec_closed(a, r, x) <->
+        forall z. ((elem(z, x) &
+            forall y. ((elem(y, x) & elem(y, z)) -> elem(y, a))) ->
+            elem(z, a))))
+
+# Foundation axiom implies ∈_x is well-founded (Note 3.98)
+# Proof: Let A ⊆ X be ≺-closed where ≺ = ∈_X.
+# Then for every z ∈ X, if all y ∈ z ∩ X are in A, then z ∈ A.
+# Foundation says every non-empty subset of X has an ∈-disjoint
+# element, which gives the well-ordering property.
+claim foundation_wf: forall r. forall x.
+    (elem_relation(r, x) -> well_founded(r, x))
+
+# A direct consequence: ∈-induction on any set x
+# For any A ⊆ x, if A is ∈-closed in x, then A = x.
+claim foundation_induction: forall r. forall x. forall a.
+    ((elem_relation(r, x) & subset(a, x) &
+      forall z. ((elem(z, x) &
+          forall y. ((elem(y, x) & elem(y, z)) -> elem(y, a))) ->
+          elem(z, a))) ->
+     eq(a, x))
+
+# No set is a member of itself (Note 3.99)
+# Proof: by Foundation on {x}, the minimal element cannot be x itself
+# (This is already proved as not_self_elem in nat_properties,
+# but we can re-derive it from foundation_wf.)
+claim foundation_no_self_elem: forall x. ~elem(x, x)
+
+# No membership cycles of length 2 (Note 3.100)
+# a ∈ b and b ∈ a is impossible: consider {a, b} and apply Foundation.
+# (The antecedent is contradictory, so the conclusion is vacuously true,
+# but the negation form is more directly useful.)
+claim foundation_no_2_cycle: forall a. forall b.
+    ~(elem(a, b) & elem(b, a))
+
+# Any transitive set has well-founded ∈ (Note 3.104/3.106)
+# A transitive set x satisfies x ⊆ P(x), so ∈_x is well-founded
+# by Foundation.
+claim transitive_set_wf_elem: forall x. forall r.
+    (((forall u. (elem(u, x) -> subset(u, x))) & elem_relation(r, x)) ->
+     well_founded(r, x))

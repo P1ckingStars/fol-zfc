@@ -1,0 +1,138 @@
+include "nat_add.fol.def"
+
+# ============================================================
+# Natural Number Multiplication (Notes 3.160-3.161)
+# ============================================================
+#
+# Multiplication is defined recursively via ordinal arithmetic
+# specialized to natural numbers:
+#   a * 0 = 0
+#   a * S(b) = (a * b) + a
+#
+# We use the same witness function approach as addition.
+# mul_witness(f, a, b, n) encodes a function f satisfying:
+#   f(0) = 0
+#   f(S(x)) = f(x) + a
+# Then a * b = f(b).
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# mul_witness(f, a, b, n): f encodes partial products for a * _
+# from 0 up to b, within nat_set n.
+#   f(0) = 0 (empty set)
+#   f(S(x)) = f(x) + a
+@def(mul_witness) axiom mul_witness_def: forall f. forall a. forall b. forall n.
+    (mul_witness(f, a, b, n) <->
+        (nat_set(n) & elem(a, n) & elem(b, n) & is_function(f) &
+         (forall x. forall y. (rel_elem(f, x, y) -> (elem(x, b) | eq(x, b)))) &
+         (forall e. forall z. ((empty(e) & empty(z)) -> rel_elem(f, e, z))) &
+         (forall x. forall y. forall sx. forall sy.
+            ((elem(x, b) & rel_elem(f, x, y) & succ(sx, x) & nat_add(sy, y, a)) ->
+             rel_elem(f, sx, sy)))))
+
+# nat_mul(p, a, b): p = a * b
+@def(nat_mul) axiom nat_mul_def: forall p. forall a. forall b.
+    (nat_mul(p, a, b) <-> exists f. exists n.
+        (mul_witness(f, a, b, n) & rel_elem(f, b, p)))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For mul_exists induction: {b in A : exists p. nat_mul(p, a, b)}
+axiom separation_mul_exists: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) & exists p. nat_mul(p, a, b)))
+
+# For mul_unique induction
+axiom separation_mul_unique: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall p1. forall p2. ((nat_mul(p1, a, b) & nat_mul(p2, a, b)) -> eq(p1, p2))))
+
+# For mul_in_nat induction
+axiom separation_mul_in_nat: forall A. forall a. forall n. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall p. (nat_mul(p, a, b) -> elem(p, n))))
+
+# For mul_zero_left induction: {a in A : nat_mul(e, e, a)} with param e (empty)
+axiom separation_mul_zero_left: forall A. forall e. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) & nat_mul(e, e, a)))
+
+# For mul_comm induction: {b in A : forall p. (nat_mul(p, a, b) -> nat_mul(p, b, a))}
+axiom separation_mul_comm: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall p. (nat_mul(p, a, b) -> nat_mul(p, b, a))))
+
+# For mul_dist_add induction on c
+axiom separation_mul_dist: forall A. forall a. forall b. exists B. forall c.
+    (elem(c, B) <-> (elem(c, A) &
+        forall bc. forall ab. forall ac. forall abc1. forall abc2.
+            ((nat_add(bc, b, c) & nat_mul(ab, a, b) & nat_mul(ac, a, c) &
+              nat_mul(abc1, a, bc) & nat_add(abc2, ab, ac)) -> eq(abc1, abc2))))
+
+# For mul_assoc induction on c
+axiom separation_mul_assoc: forall A. forall a. forall b. exists B. forall c.
+    (elem(c, B) <-> (elem(c, A) &
+        forall ab. forall bc. forall s1. forall s2.
+            ((nat_mul(ab, a, b) & nat_mul(bc, b, c) &
+              nat_mul(s1, ab, c) & nat_mul(s2, a, bc)) -> eq(s1, s2))))
+
+# ============================================================
+# Basic Claims
+# ============================================================
+
+# Base case: a * 0 = 0
+claim mul_zero: forall n. forall a. forall e.
+    ((nat_set(n) & elem(a, n) & empty(e)) -> nat_mul(e, a, e))
+
+# Successor step: a * S(b) = (a * b) + a
+claim mul_succ: forall n. forall a. forall b. forall p. forall sb. forall pa.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & nat_mul(p, a, b) &
+      succ(sb, b) & nat_add(pa, p, a)) -> nat_mul(pa, a, sb))
+
+# Existence: for any a, b in N, a * b exists
+claim mul_exists: forall n. forall a. forall b.
+    ((nat_set(n) & elem(a, n) & elem(b, n)) -> exists p. nat_mul(p, a, b))
+
+# Uniqueness: a * b is unique
+claim mul_unique: forall a. forall b. forall p1. forall p2.
+    ((nat_mul(p1, a, b) & nat_mul(p2, a, b)) -> eq(p1, p2))
+
+# Closure: if a, b in N, then a * b in N
+claim mul_in_nat: forall n. forall a. forall b. forall p.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & nat_mul(p, a, b)) -> elem(p, n))
+
+# ============================================================
+# Algebraic Properties (Notes 3.157, 3.160-3.161)
+# ============================================================
+
+# Left zero: 0 * a = 0
+claim mul_zero_left: forall n. forall a. forall e.
+    ((nat_set(n) & elem(a, n) & empty(e)) -> nat_mul(e, e, a))
+
+# Right identity: a * 1 = a (where 1 = S(0))
+claim mul_one: forall n. forall a. forall e. forall one.
+    ((nat_set(n) & elem(a, n) & empty(e) & succ(one, e)) -> nat_mul(a, a, one))
+
+# Left identity: 1 * a = a
+claim mul_one_left: forall n. forall a. forall e. forall one.
+    ((nat_set(n) & elem(a, n) & empty(e) & succ(one, e)) -> nat_mul(a, one, a))
+
+# Commutativity: a * b = b * a (Note 3.161)
+claim mul_comm: forall n. forall a. forall b. forall p.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & nat_mul(p, a, b)) -> nat_mul(p, b, a))
+
+# Right distributivity: a * (b + c) = a * b + a * c
+claim mul_dist_add: forall n. forall a. forall b. forall c.
+    forall bc. forall ab. forall ac. forall abc1. forall abc2.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & elem(c, n) &
+      nat_add(bc, b, c) & nat_mul(ab, a, b) & nat_mul(ac, a, c) &
+      nat_mul(abc1, a, bc) & nat_add(abc2, ab, ac)) -> eq(abc1, abc2))
+
+# Associativity: (a * b) * c = a * (b * c)
+claim mul_assoc: forall n. forall a. forall b. forall c.
+    forall ab. forall bc. forall s1. forall s2.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & elem(c, n) &
+      nat_mul(ab, a, b) & nat_mul(bc, b, c) &
+      nat_mul(s1, ab, c) & nat_mul(s2, a, bc)) -> eq(s1, s2))

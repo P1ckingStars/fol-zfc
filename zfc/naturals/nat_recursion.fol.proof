@@ -1,0 +1,28 @@
+# ============================================================
+# Proofs for Recursive Definition and Strong Induction
+# ============================================================
+
+# Existence via Knaster-Tarski / inductive construction (Note 3.50)
+proof rec_fun_exists: UNPROVED
+    use nat_induction
+    use zero_in_nat
+    use succ_in_nat
+
+# Uniqueness by induction on x (Note 3.50)
+proof rec_fun_unique: UNPROVED
+    use nat_induction
+    use func_unique
+    use zero_in_nat
+
+# Totality by induction on x
+proof rec_fun_total: UNPROVED
+    use nat_induction
+    use rec_fun_exists
+
+# Strong induction from ordinary induction + transitivity (Note 3.67)
+# Proof idea: by ordinary induction show {x in N : x subset a} is inductive,
+# using nat_is_transitive to know each x in N is a transitive set.
+proof strong_induction: UNPROVED
+    use nat_induction
+    use nat_is_transitive
+    use nat_transitive

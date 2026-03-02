@@ -1,0 +1,27 @@
+include "naturals.fol.def"
+
+# ============================================================
+# Basic Set Existence Lemmas
+# ============================================================
+#
+# These follow directly from ZFC axioms (pairing, union) and
+# provide building blocks for arithmetic constructions.
+
+# ============================================================
+# Claims
+# ============================================================
+
+# For any x, the singleton {x} exists
+claim singleton_exists: forall x. exists s. singleton(s, x)
+
+# For any x, y, the doubleton {x, y} exists
+claim doubleton_exists: forall x. forall y. exists d. doubleton(d, x, y)
+
+# For any a, b, the ordered pair (a, b) exists
+claim pair_exists: forall a. forall b. exists p. pair(p, a, b)
+
+# For any a, b, the binary union a cup b exists
+claim binary_union_exists: forall a. forall b. exists c. binary_union(c, a, b)
+
+# For any x, the successor x cup {x} exists
+claim succ_exists: forall x. exists s. succ(s, x)

@@ -1,0 +1,46 @@
+# ============================================================
+# Proofs for Foundation as Well-Foundedness
+# ============================================================
+
+# ∈-preclosure equivalence
+proof elem_prec_closed: UNPROVED
+    use prec_closed_def
+    use elem_relation_def
+    use subset_def
+
+# Foundation axiom implies ∈_x is well-founded (Note 3.98)
+# Key idea: for any ≺-closed A ⊆ X (where ≺ = ∈_X),
+# suppose X \ A is non-empty. By Foundation, X \ A has an
+# element z disjoint from X \ A, meaning z ∩ (X \ A) = ∅,
+# so all elements of z in X are in A. Since A is ≺-closed,
+# z ∈ A, contradicting z ∈ X \ A.
+proof foundation_wf: UNPROVED
+    use well_founded_def
+    use elem_relation_def
+    use prec_closed_def
+    use foundation
+    use subset_def
+
+# ∈-induction from foundation_wf
+proof foundation_induction: UNPROVED
+    use foundation_wf
+    use wf_induction
+    use elem_prec_closed
+
+# No set is a member of itself (Note 3.99)
+# By Foundation on {x}: the minimal element of {x} is x,
+# and x must be disjoint from {x}, so x ∉ x.
+proof foundation_no_self_elem: UNPROVED
+    use foundation
+
+# No 2-cycles (Note 3.100)
+# By Foundation on {a, b}: minimal element is either a or b.
+# If a: a disjoint from {a,b} means a ∉ a and b ∉ a, but b ∈ a. Contradiction unless a=b.
+# Similarly for b.
+proof foundation_no_2_cycle: UNPROVED
+    use foundation
+
+# Transitive sets have well-founded ∈
+proof transitive_set_wf_elem: UNPROVED
+    use foundation_wf
+    use elem_relation_def

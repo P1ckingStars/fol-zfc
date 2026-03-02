@@ -1,0 +1,107 @@
+# ============================================================
+# Proofs for Ordinal Numbers
+# ============================================================
+
+# Every element of an ordinal is an ordinal (Note 3.128(iii))
+# If ordinal(α) and β ∈ α, then:
+#   - β is transitive (from ordinal_def, since all elements of α are transitive)
+#   - Every u ∈ β is transitive: since α is transitive, β ⊆ α,
+#     so u ∈ α, hence transitive (from ordinal_def).
+proof ordinal_elem_ordinal: UNPROVED
+    use ordinal_def
+    use transitive_set_abs_def
+    use subset_def
+
+# Ordinal is transitive (extraction from definition)
+proof ordinal_is_transitive: UNPROVED
+    use ordinal_def
+
+# ∈ on ordinal is well-founded (from Foundation)
+proof ordinal_wf: UNPROVED
+    use foundation_wf
+
+# ∈ on ordinal is transitive (Note 3.128)
+# If a ∈ b ∈ c and a,b,c ∈ α, then c is transitive (all elements
+# of α are transitive), so b ∈ c gives b ⊆ c, then a ∈ b gives a ∈ c.
+proof ordinal_elem_transitive: UNPROVED
+    use ordinal_def
+    use transitive_set_abs_def
+    use elem_relation_def
+    use transitive_rel_def
+    use subset_def
+
+# Trichotomy for ordinals (Note 3.128)
+# By ∈-induction on α. For β, γ ∈ α, both are ordinals
+# (by ordinal_elem_ordinal). Consider β ∩ γ; it equals one
+# of β or γ, giving the comparison.
+proof ordinal_elem_trichotomous: UNPROVED
+    use ordinal_def
+    use ordinal_elem_ordinal
+    use elem_relation_def
+    use trichotomous_def
+    use foundation_wf
+    use wf_induction
+    use subset_def
+    use extensionality
+
+# ∈ on ordinal is well-order (combines above)
+proof ordinal_well_ordered: UNPROVED
+    use well_order_def
+    use partial_well_order_def
+    use ordinal_wf
+    use ordinal_elem_transitive
+    use ordinal_elem_trichotomous
+
+# Subset iff elem or equal for ordinals
+proof ordinal_subset_iff: UNPROVED
+    use ordinal_def
+    use subset_def
+    use extensionality
+    use ordinal_elem_trichotomous
+    use ordinal_comparable
+
+# Ordinals are comparable
+proof ordinal_comparable: UNPROVED
+    use ordinal_def
+    use ordinal_elem_ordinal
+    use ordinal_elem_trichotomous
+    use subset_def
+
+# Transfinite induction (Note 3.130)
+# The class ON is well-ordered by ∈.
+# For induction: given property closed under ∈, show all ordinals satisfy it.
+# Uses Foundation + ordinal_elem_ordinal.
+proof transfinite_induction: UNPROVED
+    use ordinal_def
+    use foundation_wf
+    use wf_induction
+    use ordinal_elem_ordinal
+
+# Empty set is ordinal (vacuously transitive, vacuously all elements transitive)
+proof empty_is_ordinal: UNPROVED
+    use ordinal_def
+    use transitive_set_abs_def
+    use empty_def
+
+# Successor of ordinal is ordinal
+# S(α) = α ∪ {α} is transitive: elements are either in α (⊆ α ⊆ S(α))
+# or equal to α (⊆ S(α)). Every element of S(α) is transitive:
+# elements of α are transitive (ordinal(α)), and α itself is transitive.
+proof succ_ordinal: UNPROVED
+    use ordinal_def
+    use transitive_set_abs_def
+    use ordinal_is_transitive
+    use subset_def
+
+# Ordinal is in its successor
+proof ordinal_in_succ: UNPROVED
+    use eq_refl
+
+# Ordinals not bounded by any set (Burali-Forti consequence)
+# Uses the fact that if all ordinals were in A, then
+# {α ∈ A : ordinal(α)} would be a set of all ordinals,
+# which would itself be an ordinal, leading to α ∈ α.
+proof ordinal_not_in_set: UNPROVED
+    use ordinal_def
+    use separation_ordinal
+    use foundation_no_self_elem

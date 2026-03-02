@@ -1,0 +1,96 @@
+# ============================================================
+# Proofs for Natural Number Multiplication
+# ============================================================
+
+# a * 0 = 0: construct f = {(0, 0)} as singleton
+# Step condition vacuous (nothing in empty set)
+proof mul_zero: UNPROVED
+    use add_zero
+
+# a * S(b) = (a * b) + a: extend witness function
+proof mul_succ: UNPROVED
+    use add_succ
+    use add_exists
+
+# Existence by induction on b
+# Base: a * 0 = 0 exists (mul_zero)
+# Step: a * S(b) = (a * b) + a exists (IH + add_exists)
+proof mul_exists: UNPROVED
+    use mul_zero
+    use mul_succ
+    use nat_induction
+    use add_exists
+
+# Uniqueness by induction on b
+proof mul_unique: UNPROVED
+    use nat_induction
+    use add_unique
+
+# Closure by induction on b
+# Base: a * 0 = 0 in N (zero_in_nat)
+# Step: a * S(b) = (a * b) + a in N (IH + add_in_nat)
+proof mul_in_nat: UNPROVED
+    use mul_exists
+    use add_in_nat
+    use nat_induction
+    use zero_in_nat
+
+# 0 * a = 0 by induction on a
+# Base: 0 * 0 = 0 (mul_zero)
+# Step: 0 * S(a) = (0 * a) + 0 = 0 + 0 = 0 (IH + add_zero)
+proof mul_zero_left: UNPROVED
+    use mul_zero
+    use mul_succ
+    use nat_induction
+    use add_zero
+
+# a * 1 = a: a * S(0) = (a * 0) + a = 0 + a = a
+proof mul_one: UNPROVED
+    use mul_zero
+    use mul_succ
+    use add_zero_left
+
+# 1 * a = a by induction on a
+# Base: 1 * 0 = 0 (mul_zero)
+# Step: 1 * S(a) = (1 * a) + 1 = a + 1 = S(a) (IH + add_succ)
+proof mul_one_left: UNPROVED
+    use mul_zero
+    use mul_succ
+    use nat_induction
+    use add_zero_left
+    use add_succ
+
+# Commutativity by induction on b (Note 3.161)
+# Proof parallels add_comm: uses mul_zero_left, mul_succ_left analog
+proof mul_comm: UNPROVED
+    use mul_zero
+    use mul_zero_left
+    use mul_succ
+    use nat_induction
+    use mul_unique
+    use add_comm
+
+# Right distributivity by induction on c
+# Base: a*(b+0) = a*b = a*b + a*0 (since a*0 = 0 and x+0=x)
+# Step: a*(b+S(c)) = a*S(b+c) = a*(b+c) + a
+#       = (a*b + a*c) + a [IH] = a*b + (a*c + a) = a*b + a*S(c)
+proof mul_dist_add: UNPROVED
+    use mul_zero
+    use mul_succ
+    use nat_induction
+    use add_assoc
+    use add_comm
+    use add_unique
+    use mul_unique
+
+# Associativity by induction on c
+# Base: (a*b)*0 = 0 = a*(b*0) = a*0 = 0
+# Step: (a*b)*S(c) = (a*b)*c + a*b
+#       = a*(b*c) + a*b [IH] = a*(b*c + b) = a*(b*S(c))
+proof mul_assoc: UNPROVED
+    use mul_zero
+    use mul_succ
+    use nat_induction
+    use mul_dist_add
+    use mul_unique
+    use add_unique

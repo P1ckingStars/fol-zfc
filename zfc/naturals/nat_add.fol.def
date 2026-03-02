@@ -1,0 +1,79 @@
+include "nat_basics.fol.def"
+include "nat_order.fol.def"
+include "../basics/functions.fol.def"
+
+# ============================================================
+# Natural Number Addition
+# ============================================================
+#
+# Addition is defined via an existential witness: a finite function
+# f encoding partial sums from 0 to b. This makes uniqueness
+# trivial via func_unique.
+#
+# Key idea: nat_add(s, a, b) means s = a + b, witnessed by
+# a function f satisfying the recursion:
+#   f(0) = a
+#   f(S(x)) = S(f(x)) for x < b
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# add_witness(f, a, b, n): f is a function satisfying the addition
+# recursion for a, from 0 up to b, within nat_set n.
+@def(add_witness) axiom add_witness_def: forall f. forall a. forall b. forall n.
+    (add_witness(f, a, b, n) <->
+        (nat_set(n) & elem(a, n) & elem(b, n) & is_function(f) &
+         (forall x. forall y. (rel_elem(f, x, y) -> (elem(x, b) | eq(x, b)))) &
+         (forall e. (empty(e) -> rel_elem(f, e, a))) &
+         (forall x. forall y. forall sx. forall sy.
+            ((elem(x, b) & rel_elem(f, x, y) & succ(sx, x) & succ(sy, y)) ->
+             rel_elem(f, sx, sy)))))
+
+# nat_add(s, a, b): s = a + b
+@def(nat_add) axiom nat_add_def: forall s. forall a. forall b.
+    (nat_add(s, a, b) <-> exists f. exists n.
+        (add_witness(f, a, b, n) & rel_elem(f, b, s)))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For add_exists induction: {b in A : exists s. nat_add(s, a, b)}
+axiom separation_add_exists: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) & exists s. nat_add(s, a, b)))
+
+# For add_unique induction: {b in A : forall s1 s2. (nat_add(s1,a,b) & nat_add(s2,a,b) -> eq(s1,s2))}
+axiom separation_add_unique: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall s1. forall s2. ((nat_add(s1, a, b) & nat_add(s2, a, b)) -> eq(s1, s2))))
+
+# For add_in_nat induction: {b in A : forall s. (nat_add(s,a,b) -> elem(s,n))}
+axiom separation_add_in_nat: forall A. forall a. forall n. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall s. (nat_add(s, a, b) -> elem(s, n))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Base case: a + 0 = a
+claim add_zero: forall n. forall a. forall e.
+    ((nat_set(n) & elem(a, n) & empty(e)) -> nat_add(a, a, e))
+
+# Successor step: if a + b = s, then a + S(b) = S(s)
+claim add_succ: forall n. forall a. forall b. forall s. forall sb. forall ss.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & nat_add(s, a, b) &
+      succ(sb, b) & succ(ss, s)) -> nat_add(ss, a, sb))
+
+# Existence: for any a, b in N, a + b exists
+claim add_exists: forall n. forall a. forall b.
+    ((nat_set(n) & elem(a, n) & elem(b, n)) -> exists s. nat_add(s, a, b))
+
+# Uniqueness: a + b is unique
+claim add_unique: forall a. forall b. forall s1. forall s2.
+    ((nat_add(s1, a, b) & nat_add(s2, a, b)) -> eq(s1, s2))
+
+# Closure: if a, b in N, then a + b in N
+claim add_in_nat: forall n. forall a. forall b. forall s.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & nat_add(s, a, b)) -> elem(s, n))

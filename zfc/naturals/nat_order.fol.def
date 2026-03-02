@@ -1,0 +1,55 @@
+include "nat_properties.fol.def"
+
+# ============================================================
+# Ordering on Natural Numbers: Trichotomy and Well-Ordering
+# ============================================================
+#
+# Key results:
+#   - ℕ is a transitive set (elem(x, n) -> subset(x, n))
+#   - Membership in ℕ is closed downward (elem(y, x) & elem(x, n) -> elem(y, n))
+#   - Subset implies membership or equality for naturals
+#   - Trichotomy: any two naturals are comparable by ∈
+#   - Well-ordering: every non-empty subset of ℕ has a least element
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# {x in A : subset(x, A)} -- for proving N is transitive
+axiom separation_subset_self: forall A. exists B. forall x.
+    (elem(x, B) <-> (elem(x, A) & subset(x, A)))
+
+# {b in A : forall a in A. (subset(a, b) -> (elem(a, b) | eq(a, b)))}
+axiom separation_subset_implies_elem: forall A. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall a. (elem(a, A) -> (subset(a, b) -> (elem(a, b) | eq(a, b))))))
+
+# {b in A : forall a in A. (elem(a, b) | eq(a, b) | elem(b, a))}
+axiom separation_trichotomy: forall A. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall a. (elem(a, A) -> (elem(a, b) | eq(a, b) | elem(b, a)))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# 1. N is a transitive set: every element of N is a subset of N
+claim nat_is_transitive: forall n.
+    (nat_set(n) -> forall x. (elem(x, n) -> subset(x, n)))
+
+# 2. Membership in N is closed downward
+claim nat_elem_is_nat: forall n. forall x. forall y.
+    ((nat_set(n) & elem(x, n) & elem(y, x)) -> elem(y, n))
+
+# 3. For naturals, subset implies membership or equality
+claim nat_subset_elem: forall n. forall a. forall b.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & subset(a, b)) -> (elem(a, b) | eq(a, b)))
+
+# 4. Trichotomy: any two naturals are comparable
+claim nat_trichotomy: forall n. forall a. forall b.
+    ((nat_set(n) & elem(a, n) & elem(b, n)) -> (elem(a, b) | eq(a, b) | elem(b, a)))
+
+# 5. Well-ordering: every non-empty subset of N has a least element
+claim nat_well_ordered: forall n. forall A.
+    ((nat_set(n) & subset(A, n) & (exists x. elem(x, A))) ->
+        exists y. (elem(y, A) & forall z. (elem(z, A) -> (eq(z, y) | elem(y, z)))))

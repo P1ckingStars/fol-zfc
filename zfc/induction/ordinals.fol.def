@@ -1,0 +1,152 @@
+include "relation_props.fol.def"
+include "foundation.fol.def"
+
+# ============================================================
+# Ordinal Numbers (Notes 3.128-3.132)
+# ============================================================
+#
+# An ordinal number is a transitive set that is well-ordered
+# by the membership relation ∈.
+#
+# Note 3.128: The following are equivalent for a set α:
+#   (i) α is transitive and ∈_α is a well-order
+#   (ii) α is transitive and ∈_α is well-founded
+#   (iii) α is transitive, each β ∈ α is transitive, and ∈_α is well-founded
+#
+# The ordering on ordinals is: α < β iff α ∈ β, and
+# α ≤ β iff α ∈ β or α = β iff α ⊆ β.
+#
+# Note 3.130: The class ON of all ordinals is well-ordered by ∈.
+# Note 3.131 (Burali-Forti): ON is a proper class (not a set).
+# Note 3.132: For any set A, there exists mex(A) ∉ A.
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# transitive_set_abs(x): x is a transitive set (every member is a subset)
+# This is the same as transitive_set from nat_properties, but
+# defined here to avoid circular dependencies with naturals.
+# Note: if both definitions are loaded, the second is skipped
+# by #pragma-once on the file level.
+@def(transitive_set_abs) axiom transitive_set_abs_def: forall x.
+    (transitive_set_abs(x) <->
+        forall u. (elem(u, x) -> forall v. (elem(v, u) -> elem(v, x))))
+
+# ordinal(a): a is an ordinal number (Note 3.128)
+# A set α is an ordinal if it is hereditarily transitive:
+# α is transitive and every element of α is transitive.
+# Equivalently (Note 3.128): α is transitive and ∈_α is a well-order.
+# Since Foundation makes ∈ well-founded on any set, we only need
+# the transitivity conditions; well-ordering then follows.
+@def(ordinal) axiom ordinal_def: forall a.
+    (ordinal(a) <->
+        (transitive_set_abs(a) &
+         forall u. (elem(u, a) -> transitive_set_abs(u))))
+
+# ord_elem(a, b): a < b as ordinals (a ∈ b)
+# This is just elem(a, b) but we define it for clarity.
+@def(ord_elem) axiom ord_elem_def: forall a. forall b.
+    (ord_elem(a, b) <-> elem(a, b))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For ordinal_elem_ordinal induction
+axiom separation_ordinal: forall A. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) & ordinal(a)))
+
+# For ordinal_subset_elem
+axiom separation_ord_subset: forall A. forall b. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) & subset(a, b)))
+
+# ============================================================
+# Basic Properties
+# ============================================================
+
+# Every element of an ordinal is an ordinal (Note 3.128(iii))
+# Proof: if α is ordinal and β ∈ α, then β is transitive
+# (because α is transitive, so β ⊆ α, and β is ∈-downward-closed
+# since α is transitive), and ∈_β is well-founded (restriction
+# of ∈_α to β).
+claim ordinal_elem_ordinal: forall a. forall b.
+    ((ordinal(a) & elem(b, a)) -> ordinal(b))
+
+# An ordinal is transitive
+claim ordinal_is_transitive: forall a.
+    (ordinal(a) -> transitive_set_abs(a))
+
+# ∈ on an ordinal is well-founded
+claim ordinal_wf: forall a. forall r.
+    ((ordinal(a) & elem_relation(r, a)) -> well_founded(r, a))
+
+# ============================================================
+# Ordering Properties (Note 3.128-3.130)
+# ============================================================
+
+# ∈ on an ordinal is transitive (follows from α being transitive)
+# If a ∈ b ∈ c and a, b, c ∈ α, then a ∈ c since b ⊆ α and α transitive.
+claim ordinal_elem_transitive: forall a. forall r.
+    ((ordinal(a) & elem_relation(r, a)) -> transitive_rel(r, a))
+
+# ∈ on an ordinal is trichotomous
+# Proof: by ∈-induction. For any β, γ ∈ α, either β ∈ γ, β = γ, or γ ∈ β.
+# This uses Foundation + transitivity of α.
+claim ordinal_elem_trichotomous: forall a. forall r.
+    ((ordinal(a) & elem_relation(r, a)) -> trichotomous(r, a))
+
+# ∈ on an ordinal is a well-order
+claim ordinal_well_ordered: forall a. forall r.
+    ((ordinal(a) & elem_relation(r, a)) -> well_order(r, a))
+
+# For ordinals, α ⊆ β iff α ∈ β or α = β
+claim ordinal_subset_iff: forall a. forall b.
+    ((ordinal(a) & ordinal(b)) ->
+     (subset(a, b) <-> (elem(a, b) | eq(a, b))))
+
+# Ordinals are comparable: for any two ordinals, one is a subset of the other
+claim ordinal_comparable: forall a. forall b.
+    ((ordinal(a) & ordinal(b)) -> (subset(a, b) | subset(b, a)))
+
+# ============================================================
+# Transfinite Induction (Note 3.130)
+# ============================================================
+
+# Principle of transfinite induction:
+# For any set s of ordinals, if every ordinal α with α ⊆ s
+# is in s, then every ordinal is in s.
+# (This is the induction principle for the class ON.)
+#
+# We state this for ordinals within a given set, since we
+# cannot quantify over the proper class ON.
+claim transfinite_induction: forall s.
+    ((forall a. ((ordinal(a) & forall b. ((ordinal(b) & elem(b, a)) -> elem(b, s))) -> elem(a, s))) ->
+     forall a. (ordinal(a) -> elem(a, s)))
+
+# ============================================================
+# Empty Set and Successor Ordinals
+# ============================================================
+
+# The empty set is an ordinal (the smallest ordinal, 0)
+claim empty_is_ordinal: forall e. (empty(e) -> ordinal(e))
+
+# The successor of an ordinal is an ordinal
+# S(α) = α ∪ {α} is transitive and well-ordered by ∈
+claim succ_ordinal: forall a. forall sa.
+    ((ordinal(a) & forall z. (elem(z, sa) <-> (elem(z, a) | eq(z, a)))) ->
+     ordinal(sa))
+
+# Every ordinal is an element of its successor
+claim ordinal_in_succ: forall a. forall sa.
+    ((ordinal(a) & forall z. (elem(z, sa) <-> (elem(z, a) | eq(z, a)))) ->
+     elem(a, sa))
+
+# ============================================================
+# Minimum Excluded Ordinal (Note 3.132)
+# ============================================================
+
+# For any set A, there is an ordinal not in A.
+# mex(A) = min{α ∈ ON : α ∉ A} exists because ON is a proper class.
+claim ordinal_not_in_set: forall A.
+    exists a. (ordinal(a) & ~elem(a, A))
