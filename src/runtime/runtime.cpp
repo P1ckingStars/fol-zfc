@@ -308,7 +308,13 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
             return MAKE_ERROR << "UNPROVED: unknown claim '" << proof.claim_name << "'";
         }
         ctx_.add_unproved_theorem(proof.claim_name, claim.value());
-        proof_deps_[proof.claim_name] = {};
+        std::unordered_set<std::string> deps;
+        for (const auto& step : proof.steps) {
+            if (step.kind == ParsedProofStep::Kind::Use) {
+                deps.insert(step.rule_name);
+            }
+        }
+        proof_deps_[proof.claim_name] = std::move(deps);
         return util::Ok();
     }
 

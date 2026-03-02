@@ -50,7 +50,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %type <node> formula iff_formula implies_formula or_formula and_formula
 %type <node> unary_formula atom predicate term
 %type <node> statement proof_block proof_step rule_call
-%type <node_list> term_list statement_list proof_step_list id_list
+%type <node_list> term_list statement_list proof_step_list id_list unproved_deps
 
 /* Precedence: lowest to highest */
 %left IFF
@@ -199,10 +199,19 @@ proof_block
         $$ = ASTNode::make_proof_block(*$2, $4);
         delete $2;
     }
-    | PROOF IDENTIFIER COLON UNPROVED {
-        $$ = ASTNode::make_proof_block(*$2, new std::vector<ASTNode*>());
+    | PROOF IDENTIFIER COLON UNPROVED unproved_deps {
+        $$ = ASTNode::make_proof_block(*$2, $5);
         $$->rule_name = "UNPROVED";
         delete $2;
+    }
+    ;
+
+unproved_deps
+    : /* empty */ { $$ = new std::vector<ASTNode*>(); }
+    | unproved_deps USE IDENTIFIER {
+        $$ = $1;
+        $$->push_back(ASTNode::make_proof_step(ASTNode::ProofStepUse, "", *$3, nullptr, nullptr));
+        delete $3;
     }
     ;
 

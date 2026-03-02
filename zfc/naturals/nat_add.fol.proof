@@ -261,6 +261,12 @@ proof add_zero:
 
 # Proofs 2-5: Not yet completed — require domain bound analysis
 proof add_succ: UNPROVED
+
 proof add_exists: UNPROVED
+    use add_zero
+    use add_succ
+
 proof add_unique: UNPROVED
+
 proof add_in_nat: UNPROVED
+    use add_exists
