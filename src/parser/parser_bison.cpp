@@ -439,8 +439,9 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
 ParsedProof convert_proof_block(const ASTNode* proof_node, GlobalContext& ctx) {
     ParsedProof proof;
     proof.claim_name = proof_node->name;
+    proof.unproved = (proof_node->rule_name == "UNPROVED");
 
-    if (proof_node->steps) {
+    if (!proof.unproved && proof_node->steps) {
         for (const ASTNode* step_node : *proof_node->steps) {
             proof.steps.push_back(convert_proof_step(step_node, ctx));
         }

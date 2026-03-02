@@ -262,6 +262,9 @@ class GlobalContext {
     // Predicates that have been defined via @def (predicate name -> axiom name)
     std::unordered_map<std::string, std::string> defined_predicates_;
 
+    // Theorems marked UNPROVED (assumed without proof)
+    std::unordered_set<std::string> unproved_theorems_;
+
 public:
     // Access the shared formula registry
     FormulaRegistry& formulas() { return formulas_; }
@@ -301,6 +304,20 @@ public:
     void add_theorem(const std::string& name, SentenceHandle sentence) {
         named_theorems_[name] = sentence;
         known_.insert(sentence);
+    }
+
+    void add_unproved_theorem(const std::string& name, SentenceHandle sentence) {
+        named_theorems_[name] = sentence;
+        known_.insert(sentence);
+        unproved_theorems_.insert(name);
+    }
+
+    bool is_unproved(const std::string& name) const {
+        return unproved_theorems_.count(name) > 0;
+    }
+
+    const std::unordered_set<std::string>& unproved_theorems() const {
+        return unproved_theorems_;
     }
 
     bool is_known(SentenceHandle sentence) const {

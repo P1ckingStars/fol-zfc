@@ -45,6 +45,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %token IFF_INTRO IFF_ELIM_L IFF_ELIM_R
 %token FORALL_INTRO FORALL_ELIM EXISTS_INTRO EXISTS_ELIM
 %token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE EQ_SUBST
+%token UNPROVED
 
 %type <node> formula iff_formula implies_formula or_formula and_formula
 %type <node> unary_formula atom predicate term
@@ -196,6 +197,11 @@ term
 proof_block
     : PROOF IDENTIFIER COLON proof_step_list {
         $$ = ASTNode::make_proof_block(*$2, $4);
+        delete $2;
+    }
+    | PROOF IDENTIFIER COLON UNPROVED {
+        $$ = ASTNode::make_proof_block(*$2, new std::vector<ASTNode*>());
+        $$->rule_name = "UNPROVED";
         delete $2;
     }
     ;

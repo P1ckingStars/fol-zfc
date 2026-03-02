@@ -60,6 +60,7 @@ FormulaHandle parse_formula_with_vars(
 struct ParsedProof {
     std::string claim_name;
     std::vector<ParsedProofStep> steps;
+    bool unproved = false;  // true if declared as "proof name: UNPROVED"
 };
 
 // Represents an include directive

@@ -298,6 +298,20 @@ static FormulaResult execute_rule(
 }
 
 util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
+    // Handle UNPROVED proofs: register claim as unproved theorem
+    if (proof.unproved) {
+        auto claim = ctx_.find_claim(proof.claim_name);
+        if (!claim.has_value()) {
+            claim = ctx_.find_known(proof.claim_name);
+        }
+        if (!claim.has_value()) {
+            return MAKE_ERROR << "UNPROVED: unknown claim '" << proof.claim_name << "'";
+        }
+        ctx_.add_unproved_theorem(proof.claim_name, claim.value());
+        proof_deps_[proof.claim_name] = {};
+        return util::Ok();
+    }
+
     auto pctx = prove(proof.claim_name);
 
     std::unordered_map<std::string, FormulaHandle> steps;
@@ -381,6 +395,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                 if (!result.ok()) {
                     return MAKE_ERROR << step_desc << ": " << result.error().to_string();
                 }
+                proof_deps_[proof.claim_name] = pctx.used();
                 return util::Ok();
             }
         }
@@ -429,6 +444,7 @@ FormulaResult ProofContext::use(const std::string& name) {
     if (!found.has_value()) {
         return MAKE_ERROR << "Unknown axiom/theorem: " << name;
     }
+    used_names_.insert(name);
     SentenceHandle s = found.value();
     return stack_.use_theorem(s);
 }

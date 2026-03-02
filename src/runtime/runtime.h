@@ -7,6 +7,7 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -17,6 +18,7 @@ class ProofContext;
 // Runtime manages axioms/theorems and creates proof contexts
 class Runtime {
     GlobalContext ctx_;
+    std::unordered_map<std::string, std::unordered_set<std::string>> proof_deps_;
 
 public:
     Runtime() = default;
@@ -56,6 +58,11 @@ private:
 public:
     const GlobalContext& context() const { return ctx_; }
 
+    // Proof dependency graph: proof name -> set of axiom/theorem names used
+    const std::unordered_map<std::string, std::unordered_set<std::string>>& proof_deps() const {
+        return proof_deps_;
+    }
+
     // Create a proof context for proving a claim
     ProofContext prove(const std::string& claim_name);
     ProofContext prove(SentenceHandle goal);
@@ -68,6 +75,7 @@ class ProofContext {
     SentenceHandle goal_;
     std::string name_;
     bool completed_ = false;
+    std::unordered_set<std::string> used_names_;
 
 public:
     ProofContext(Runtime& rt, const std::string& name, SentenceHandle goal);
@@ -136,6 +144,7 @@ public:
     SentenceHandle goal() const { return goal_; }
     const std::string& name() const { return name_; }
     bool is_completed() const { return completed_; }
+    const std::unordered_set<std::string>& used() const { return used_names_; }
 };
 
 }  // namespace logic

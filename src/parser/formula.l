@@ -77,6 +77,7 @@ static int col = 1;
 "eq_subst"      { return EQ_SUBST; }
 "include"       { return INCLUDE; }
 "@def"          { return DEF; }
+"UNPROVED"      { return UNPROVED; }
 
 \"[^"]*\"       {
     // String literal - strip quotes
