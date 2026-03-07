@@ -65,8 +65,12 @@ public:
         struct EssHyp {
             std::string mm_label;
             std::string fol_formula;  // translated
+            WffPtr ast;               // parsed AST
         };
         std::vector<EssHyp> ess_hyps;
+
+        // Conclusion AST (parsed from assertion expression)
+        WffPtr conclusion_ast;
 
         // Copy of frame data for proof simulation
         std::vector<std::string> hyp_labels;

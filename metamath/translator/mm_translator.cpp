@@ -98,9 +98,10 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
         // Translate the $e expression (skip leading "|-")
         size_t start = (!eh->expression.empty() && eh->expression[0] == "|-")
                            ? 1 : 0;
+        WffPtr ast = parse_mm_wff(eh->expression, start, info);
         std::string fol = translate_expr(eh->expression, start, info);
 
-        info.ess_hyps.push_back({frame.hyp_labels[i], fol});
+        info.ess_hyps.push_back({frame.hyp_labels[i], fol, ast});
     }
 
     return true;
@@ -3396,33 +3397,39 @@ bool MmTranslator::translate(const std::string& label,
     // Translate the conclusion expression (skip "|-")
     size_t start = (!thm->expression.empty() && thm->expression[0] == "|-")
                        ? 1 : 0;
+    info.conclusion_ast = parse_mm_wff(thm->expression, start, info);
     std::string conclusion = translate_expr(thm->expression, start, info);
 
-    // Build the claim formula: forall S_i. forall u0. (H1 -> (H2 -> ... -> C))
-    std::string formula = conclusion;
+    // Build the full claim AST: forall S_i. forall u0. (H1 -> (H2 -> ... -> C))
+    WffPtr claim_ast = info.conclusion_ast;
+    for (int i = static_cast<int>(info.ess_hyps.size()) - 1; i >= 0; --i) {
+        claim_ast = wff_binary(WffNode::Op::Implies,
+                               info.ess_hyps[i].ast, claim_ast);
+    }
+    claim_ast = wff_forall(info.dummy_var, claim_ast);
+    for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0; --i) {
+        claim_ast = wff_forall(info.set_var_order[i], claim_ast);
+    }
 
-    // Wrap with essential hypothesis implications (reverse order)
+    // Build the claim formula string
+    std::string formula = conclusion;
     for (int i = static_cast<int>(info.ess_hyps.size()) - 1; i >= 0; --i) {
         formula = "(" + info.ess_hyps[i].fol_formula + " -> " + formula + ")";
     }
-
-    // Wrap with forall for dummy variable
     formula = "forall " + info.dummy_var + ". " + formula;
-
-    // Wrap with forall for set variables (reverse order for outermost first)
     for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0;
          --i) {
         formula = "forall " + info.set_var_order[i] + ". " + formula;
     }
 
     // Determine which setvars actually appear in the formula
-    // (needed for bridge theorem instantiation)
     for (const auto& sv : info.setvars) {
         if (formula.find(sv) != std::string::npos) {
             info.used_setvars.push_back(sv);
         }
     }
     for (int i = static_cast<int>(info.used_setvars.size()) - 1; i >= 0; --i) {
+        claim_ast = wff_forall(info.used_setvars[i], claim_ast);
         formula = "forall " + info.used_setvars[i] + ". " + formula;
     }
 
@@ -3437,74 +3444,49 @@ bool MmTranslator::translate(const std::string& label,
     result.fol_label = sanitize_label(label);
     result.claim_formula = formula;
 
-    // --- Special-case: tru (|- T.) ---
-    // Claim: forall u0. (elem(u0, u0) -> elem(u0, u0)), trivially provable.
-    if (label == "tru") {
-        ProofState state;
-        state.emit("fix " + info.dummy_var);
-        std::string h1 = state.fresh();
-        state.emit(h1 + " = assume elem(" + info.dummy_var + ", " + info.dummy_var + ")");
-        std::string h2 = state.fresh();
-        state.emit(h2 + " = implies_intro " + h1);
-        std::string h3 = state.fresh();
-        state.emit(h3 + " = forall_intro " + h2);
-        state.emit("qed " + h3);
-        result.proof_lines = std::move(state.lines);
-        translated_set_.insert(label);
-        frame_cache_.emplace(label, std::move(info));
-        return true;
-    }
-
-    // --- Detect trivial claims (A <-> A) or (A -> A) after vacuous quantifier stripping ---
+    // --- Detect trivial claims (A <-> A) or (A -> A) via AST ---
     {
-        // Strip outer quantifiers from the formula to find the body
-        std::string body = formula;
+        // Strip outer forall quantifiers from the full claim AST
+        const WffNode* body = claim_ast.get();
         std::vector<std::string> quant_vars;
-        // Match "forall VAR. " prefix repeatedly
-        while (body.size() > 8 && body.substr(0, 7) == "forall ") {
-            auto dot_pos = body.find(". ", 7);
-            if (dot_pos == std::string::npos) break;
-            quant_vars.push_back(body.substr(7, dot_pos - 7));
-            body = body.substr(dot_pos + 2);
+        while (body && body->kind == WffNode::Kind::Forall) {
+            quant_vars.push_back(body->name);
+            body = body->left.get();
         }
-        // Strip outer parens if present
-        if (body.size() >= 2 && body.front() == '(' && body.back() == ')') {
-            // Check if first '(' matches the last ')'
-            int depth = 1;
-            bool matches_end = true;
-            for (size_t i = 1; i < body.size() - 1; ++i) {
-                if (body[i] == '(') ++depth;
-                else if (body[i] == ')') --depth;
-                if (depth == 0) { matches_end = false; break; }
-            }
-            if (matches_end) {
-                body = body.substr(1, body.size() - 2);
+
+        bool is_trivial_iff = false, is_trivial_impl = false;
+        std::string trivial_sub;
+
+        // Verum body: renders to (A -> A), trivially provable as identity impl
+        if (body && body->kind == WffNode::Kind::Verum) {
+            is_trivial_impl = true;
+            auto renderer = make_claim_renderer(info);
+            // Verum renders as (elem(d, s) -> elem(d, s)); extract the inner part
+            std::string verum_str = emit_fol(*body, renderer);
+            // The verum string is "(X -> X)"; extract X (between "(" and " -> ")
+            auto arrow = verum_str.find(" -> ");
+            if (arrow != std::string::npos && verum_str.front() == '(')
+                trivial_sub = verum_str.substr(1, arrow - 1);
+            else
+                trivial_sub = verum_str; // fallback
+        }
+
+        if (body && body->kind == WffNode::Kind::Binary) {
+            // Compare rendered strings to handle Verum/Falsum equivalences
+            auto renderer = make_claim_renderer(info);
+            std::string lhs_str = emit_fol(*body->left, renderer);
+            std::string rhs_str = emit_fol(*body->right, renderer);
+            if (body->op == WffNode::Op::Iff && lhs_str == rhs_str) {
+                is_trivial_iff = true;
+                trivial_sub = std::move(lhs_str);
+            } else if (body->op == WffNode::Op::Implies && lhs_str == rhs_str) {
+                is_trivial_impl = true;
+                trivial_sub = std::move(lhs_str);
             }
         }
-        // Find top-level binary operator position (respects parentheses)
-        auto find_toplevel = [&](const std::string& op) -> size_t {
-            int depth = 0;
-            for (size_t i = 0; i + op.size() <= body.size(); ++i) {
-                if (body[i] == '(') ++depth;
-                else if (body[i] == ')') --depth;
-                else if (depth == 0 && body.substr(i, op.size()) == op) return i;
-            }
-            return std::string::npos;
-        };
-        auto check_trivial = [&](const std::string& op) -> bool {
-            auto pos = find_toplevel(op);
-            if (pos == std::string::npos) return false;
-            std::string lhs = body.substr(0, pos);
-            std::string rhs = body.substr(pos + op.size());
-            return lhs == rhs;
-    };
-        bool is_trivial_iff = check_trivial(" <-> ");
-        bool is_trivial_impl = !is_trivial_iff && check_trivial(" -> ");
 
         if (is_trivial_iff || is_trivial_impl) {
-            // Find the repeated sub-formula
-            std::string op = is_trivial_iff ? " <-> " : " -> ";
-            std::string sub = body.substr(0, find_toplevel(op));
+            const std::string& sub = trivial_sub;
 
             ProofState tstate;
             for (const auto& sv : info.used_setvars)
@@ -3512,11 +3494,8 @@ bool MmTranslator::translate(const std::string& label,
             for (const auto& sv : info.set_var_order)
                 tstate.emit("fix " + sv);
             tstate.emit("fix " + info.dummy_var);
-            // Note: ess_hyps are already encoded as implications in the body,
-            // so we don't emit separate assume/implies_intro for them.
 
             if (is_trivial_iff) {
-                // A <-> A: prove via two identity implications
                 std::string h1 = tstate.fresh();
                 tstate.emit(h1 + " = assume " + sub);
                 std::string h2 = tstate.fresh();
@@ -3535,7 +3514,6 @@ bool MmTranslator::translate(const std::string& label,
                 }
                 tstate.emit("qed " + last);
             } else {
-                // A -> A: identity implication
                 std::string h1 = tstate.fresh();
                 tstate.emit(h1 + " = assume " + sub);
                 std::string h2 = tstate.fresh();
