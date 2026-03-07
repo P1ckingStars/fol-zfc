@@ -1,0 +1,29 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "wff_ast",
+    srcs = ["wff_ast.cpp"],
+    hdrs = ["wff_ast.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "mm_translator",
+    srcs = ["mm_translator.cpp"],
+    hdrs = ["mm_translator.h"],
+    deps = [
+        "//metamath/parser:mm_database",
+        "//metamath/verifier:mm_verifier",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "mm_to_fol",
+    srcs = ["mm_to_fol.cpp"],
+    deps = [
+        ":mm_translator",
+        "//metamath/parser:mm_database",
+    ],
+)
