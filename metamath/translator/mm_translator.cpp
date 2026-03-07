@@ -47,67 +47,6 @@ std::vector<std::string> MmTranslator::collect_set_vars(
 }
 
 // ===================================================================
-// Frame analysis
-// ===================================================================
-
-bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
-                                     std::string* error) {
-    const MandatoryFrame& frame = thm.frame;
-    info.hyp_labels = frame.hyp_labels;
-    info.is_floating = frame.is_floating;
-
-    // Classify variables from $f hypotheses
-    for (size_t i = 0; i < frame.hyp_labels.size(); ++i) {
-        if (!frame.is_floating[i]) continue;
-
-        const FloatingHyp* fh = db_.get_float_hyp(frame.hyp_labels[i]);
-        if (!fh) {
-            if (error) *error = "floating hyp not found: " + frame.hyp_labels[i];
-            return false;
-        }
-
-        if (fh->typecode == "wff") {
-            std::string set_var = "S_" + fh->variable;
-            info.wff_to_set[fh->variable] = set_var;
-            info.set_var_order.push_back(set_var);
-        } else if (fh->typecode == "setvar") {
-            info.setvars.push_back(fh->variable);
-        } else if (fh->typecode == "class") {
-            if (error) *error = "class variables not yet supported";
-            return false;
-        }
-    }
-
-    // Choose a dummy setvar that doesn't clash with existing setvars
-    info.dummy_var = "u0";
-    while (std::find(info.setvars.begin(), info.setvars.end(),
-                     info.dummy_var) != info.setvars.end()) {
-        info.dummy_var += "0";
-    }
-
-    // Build essential hypothesis info
-    for (size_t i = 0; i < frame.hyp_labels.size(); ++i) {
-        if (frame.is_floating[i]) continue;
-
-        const EssentialHyp* eh = db_.get_ess_hyp(frame.hyp_labels[i]);
-        if (!eh) {
-            if (error) *error = "essential hyp not found: " + frame.hyp_labels[i];
-            return false;
-        }
-
-        // Translate the $e expression (skip leading "|-")
-        size_t start = (!eh->expression.empty() && eh->expression[0] == "|-")
-                           ? 1 : 0;
-        WffPtr ast = parse_mm_wff(eh->expression, start, info);
-        std::string fol = translate_expr(eh->expression, start, info);
-
-        info.ess_hyps.push_back({frame.hyp_labels[i], fol, ast});
-    }
-
-    return true;
-}
-
-// ===================================================================
 // Expression translation
 // ===================================================================
 
@@ -280,7 +219,9 @@ struct WffParser {
     }
 };
 
-// Default leaf renderer: converts Var/Literal/Verum/Falsum to FOL strings
+// Leaf renderer: converts Var/Literal/Verum/Falsum to FOL strings.
+// IMPORTANT: The returned lambda captures `info` by reference.
+// The caller must ensure `info` outlives the lambda.
 LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
     return [&info](const WffNode& node) -> std::string {
         switch (node.kind) {
@@ -323,6 +264,67 @@ std::string MmTranslator::translate_expr(const Expression& tokens,
                                           const FrameInfo& info) const {
     WffPtr ast = parse_mm_wff(tokens, start, info);
     return emit_fol(*ast, make_claim_renderer(info));
+}
+
+// ===================================================================
+// Frame analysis
+// ===================================================================
+
+bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
+                                     std::string* error) {
+    const MandatoryFrame& frame = thm.frame;
+    info.hyp_labels = frame.hyp_labels;
+    info.is_floating = frame.is_floating;
+
+    // Classify variables from $f hypotheses
+    for (size_t i = 0; i < frame.hyp_labels.size(); ++i) {
+        if (!frame.is_floating[i]) continue;
+
+        const FloatingHyp* fh = db_.get_float_hyp(frame.hyp_labels[i]);
+        if (!fh) {
+            if (error) *error = "floating hyp not found: " + frame.hyp_labels[i];
+            return false;
+        }
+
+        if (fh->typecode == "wff") {
+            std::string set_var = "S_" + fh->variable;
+            info.wff_to_set[fh->variable] = set_var;
+            info.set_var_order.push_back(set_var);
+        } else if (fh->typecode == "setvar") {
+            info.setvars.push_back(fh->variable);
+        } else if (fh->typecode == "class") {
+            if (error) *error = "class variables not yet supported";
+            return false;
+        }
+    }
+
+    // Choose a dummy setvar that doesn't clash with existing setvars
+    info.dummy_var = "u0";
+    while (std::find(info.setvars.begin(), info.setvars.end(),
+                     info.dummy_var) != info.setvars.end()) {
+        info.dummy_var += "0";
+    }
+
+    // Build essential hypothesis info
+    for (size_t i = 0; i < frame.hyp_labels.size(); ++i) {
+        if (frame.is_floating[i]) continue;
+
+        const EssentialHyp* eh = db_.get_ess_hyp(frame.hyp_labels[i]);
+        if (!eh) {
+            if (error) *error = "essential hyp not found: " + frame.hyp_labels[i];
+            return false;
+        }
+
+        // Translate the $e expression (skip leading "|-")
+        size_t start = (!eh->expression.empty() && eh->expression[0] == "|-")
+                           ? 1 : 0;
+        WffPtr ast = parse_mm_wff(eh->expression, start, info);
+        std::string fol = emit_fol(*ast, make_claim_renderer(info));
+
+        info.ess_hyps.push_back({frame.hyp_labels[i], fol, ast});
+    }
+
+    return true;
 }
 
 // ===================================================================
@@ -3398,7 +3400,7 @@ bool MmTranslator::translate(const std::string& label,
     size_t start = (!thm->expression.empty() && thm->expression[0] == "|-")
                        ? 1 : 0;
     info.conclusion_ast = parse_mm_wff(thm->expression, start, info);
-    std::string conclusion = translate_expr(thm->expression, start, info);
+    std::string conclusion = emit_fol(*info.conclusion_ast, make_claim_renderer(info));
 
     // Build the full claim AST: forall S_i. forall u0. (H1 -> (H2 -> ... -> C))
     WffPtr claim_ast = info.conclusion_ast;
@@ -3448,27 +3450,21 @@ bool MmTranslator::translate(const std::string& label,
     {
         // Strip outer forall quantifiers from the full claim AST
         const WffNode* body = claim_ast.get();
-        std::vector<std::string> quant_vars;
+        int num_foralls = 0;
         while (body && body->kind == WffNode::Kind::Forall) {
-            quant_vars.push_back(body->name);
+            ++num_foralls;
             body = body->left.get();
         }
 
         bool is_trivial_iff = false, is_trivial_impl = false;
         std::string trivial_sub;
 
-        // Verum body: renders to (A -> A), trivially provable as identity impl
+        // Verum body: renders to (elem(d,s) -> elem(d,s)), trivially provable
         if (body && body->kind == WffNode::Kind::Verum) {
             is_trivial_impl = true;
-            auto renderer = make_claim_renderer(info);
-            // Verum renders as (elem(d, s) -> elem(d, s)); extract the inner part
-            std::string verum_str = emit_fol(*body, renderer);
-            // The verum string is "(X -> X)"; extract X (between "(" and " -> ")
-            auto arrow = verum_str.find(" -> ");
-            if (arrow != std::string::npos && verum_str.front() == '(')
-                trivial_sub = verum_str.substr(1, arrow - 1);
-            else
-                trivial_sub = verum_str; // fallback
+            std::string s = info.set_var_order.empty()
+                ? info.dummy_var : info.set_var_order[0];
+            trivial_sub = "elem(" + info.dummy_var + ", " + s + ")";
         }
 
         if (body && body->kind == WffNode::Kind::Binary) {
@@ -3507,7 +3503,7 @@ bool MmTranslator::translate(const std::string& label,
                 std::string h5 = tstate.fresh();
                 tstate.emit(h5 + " = iff_intro " + h2 + ", " + h4);
                 std::string last = h5;
-                for (int i = (int)quant_vars.size() - 1; i >= 0; --i) {
+                for (int i = num_foralls - 1; i >= 0; --i) {
                     std::string h = tstate.fresh();
                     tstate.emit(h + " = forall_intro " + last);
                     last = h;
@@ -3519,7 +3515,7 @@ bool MmTranslator::translate(const std::string& label,
                 std::string h2 = tstate.fresh();
                 tstate.emit(h2 + " = implies_intro " + h1);
                 std::string last = h2;
-                for (int i = (int)quant_vars.size() - 1; i >= 0; --i) {
+                for (int i = num_foralls - 1; i >= 0; --i) {
                     std::string h = tstate.fresh();
                     tstate.emit(h + " = forall_intro " + last);
                     last = h;
