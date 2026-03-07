@@ -55,11 +55,17 @@ public:
         // Dummy setvar for 0-ary wff encoding (e.g. "u0")
         std::string dummy_var;
 
-        // Setvar variables from the frame
+        // Setvar variables from the frame (includes class vars treated as setvars)
         std::vector<std::string> setvars;
+
+        // Class variables (subset of setvars — those from $f class declarations)
+        std::unordered_set<std::string> class_vars;
 
         // Setvars that actually appear in the FOL formula (subset of setvars)
         std::vector<std::string> used_setvars;
+
+        // Whether the claim formula includes the dummy var quantifier
+        bool needs_dummy = true;
 
         // Essential hypotheses in frame order
         struct EssHyp {

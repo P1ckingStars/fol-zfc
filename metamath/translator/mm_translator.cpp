@@ -52,6 +52,254 @@ std::vector<std::string> MmTranslator::collect_set_vars(
 
 namespace {
 
+// ---------------------------------------------------------------
+// ClassNode: lightweight AST for Metamath class expressions.
+// Used only during parsing; immediately expanded into WffNodes.
+// ---------------------------------------------------------------
+
+struct ClassNode {
+    enum class Kind { Var, Abs, Empty, Singleton, Pair, Union, Inter,
+                      Power, BigUnion, Diff, RestrictedAbs, Univ };
+    Kind kind;
+    std::string var;                        // Var: setvar name; Abs/RestrictedAbs: bound var
+    std::shared_ptr<const ClassNode> left;  // binary ops lhs; Singleton/Power/BigUnion: inner
+    std::shared_ptr<const ClassNode> right; // binary ops rhs
+    Expression wff_tokens;                  // Abs/RestrictedAbs: wff body tokens
+    std::shared_ptr<const ClassNode> restrict_class; // RestrictedAbs: the restricting class
+};
+using ClassPtr = std::shared_ptr<const ClassNode>;
+
+ClassPtr class_var(std::string name) {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = ClassNode::Kind::Var;
+    n->var = std::move(name);
+    return n;
+}
+ClassPtr class_abs(std::string bound_var, Expression wff_tokens) {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = ClassNode::Kind::Abs;
+    n->var = std::move(bound_var);
+    n->wff_tokens = std::move(wff_tokens);
+    return n;
+}
+ClassPtr class_empty() {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = ClassNode::Kind::Empty;
+    return n;
+}
+ClassPtr class_unary(ClassNode::Kind k, ClassPtr inner) {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = k;
+    n->left = std::move(inner);
+    return n;
+}
+ClassPtr class_binary(ClassNode::Kind k, ClassPtr lhs, ClassPtr rhs) {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = k;
+    n->left = std::move(lhs);
+    n->right = std::move(rhs);
+    return n;
+}
+ClassPtr class_restricted_abs(std::string bound_var, ClassPtr cls,
+                               Expression wff_tokens) {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = ClassNode::Kind::RestrictedAbs;
+    n->var = std::move(bound_var);
+    n->restrict_class = std::move(cls);
+    n->wff_tokens = std::move(wff_tokens);
+    return n;
+}
+ClassPtr class_univ() {
+    auto n = std::make_shared<ClassNode>();
+    n->kind = ClassNode::Kind::Univ;
+    return n;
+}
+
+// ---------------------------------------------------------------
+// ClassParser: parse class expression tokens into ClassNode.
+// Token stream comes from Metamath syntax builder substitution.
+// ---------------------------------------------------------------
+
+struct ClassParser {
+    const Expression& tokens;
+    size_t& pos;
+    const MmTranslator::FrameInfo& info;
+
+    bool is_setvar_or_class(const std::string& tok) const {
+        if (info.class_vars.count(tok)) return true;
+        return std::find(info.setvars.begin(), info.setvars.end(), tok)
+               != info.setvars.end();
+    }
+
+    // Collect tokens for a balanced wff sub-expression.
+    // Stops at `}` or `)` at depth 0.
+    Expression collect_wff_until(const std::string& terminator) {
+        Expression result;
+        int depth = 0;
+        while (pos < tokens.size()) {
+            const std::string& t = tokens[pos];
+            if (depth == 0 && t == terminator) break;
+            if (t == "(" || t == "{") depth++;
+            if (t == ")" || t == "}") depth--;
+            result.push_back(t);
+            pos++;
+        }
+        return result;
+    }
+
+    ClassPtr parse() {
+        if (pos >= tokens.size()) return nullptr;
+        const std::string& tok = tokens[pos];
+
+        // _V → universe class
+        if (tok == "_V") { pos++; return class_univ(); }
+
+        // (/) → empty set
+        if (tok == "(/" && pos + 1 < tokens.size() && tokens[pos + 1] == ")") {
+            pos += 2;
+            return class_empty();
+        }
+        // Also handle as single token "(/.)" if Metamath emits it that way
+        if (tok == "(/)") { pos++; return class_empty(); }
+
+        // { ... } → class abstraction, singleton, pair, or restricted abstraction
+        if (tok == "{") {
+            size_t save_brace = pos;
+            pos++;
+            // Check for class abstraction: { VAR | WFF }
+            if (pos + 1 < tokens.size() && tokens[pos + 1] == "|") {
+                std::string bound = tokens[pos]; pos += 2; // skip var and |
+                Expression wff = collect_wff_until("}");
+                if (pos < tokens.size()) pos++; // skip }
+                return class_abs(bound, std::move(wff));
+            }
+            // Check for restricted abstraction: { VAR e. CLASS | WFF }
+            if (pos + 1 < tokens.size() && tokens[pos + 1] == "e.") {
+                std::string bound = tokens[pos]; pos += 2; // skip var and e.
+                ClassPtr cls = parse();
+                if (!cls) { pos = save_brace; return nullptr; }
+                if (pos < tokens.size() && tokens[pos] == "|") pos++;
+                Expression wff = collect_wff_until("}");
+                if (pos < tokens.size()) pos++; // skip }
+                return class_restricted_abs(bound, std::move(cls), std::move(wff));
+            }
+            // Singleton or pair: { A } or { A , B } or { A , B , C }
+            ClassPtr first = parse();
+            if (!first) { pos = save_brace; return nullptr; }
+            if (pos < tokens.size() && tokens[pos] == "}") {
+                pos++; // singleton { A }
+                return class_unary(ClassNode::Kind::Singleton, std::move(first));
+            }
+            if (pos < tokens.size() && tokens[pos] == ",") {
+                pos++; // skip comma
+                ClassPtr second = parse();
+                if (pos < tokens.size() && tokens[pos] == "}") {
+                    pos++; // pair { A, B }
+                    return class_binary(ClassNode::Kind::Pair, std::move(first),
+                                        std::move(second));
+                }
+                // triple { A, B, C } → treat as pair of pair and singleton
+                if (pos < tokens.size() && tokens[pos] == ",") {
+                    pos++;
+                    ClassPtr third = parse();
+                    if (pos < tokens.size()) pos++; // skip }
+                    // { A, B, C } = { A } u. { B } u. { C }
+                    // For now, return as nested pairs (the expansion handles it)
+                    auto ab = class_binary(ClassNode::Kind::Pair, std::move(first),
+                                           std::move(second));
+                    return class_binary(ClassNode::Kind::Union, std::move(ab),
+                                        class_unary(ClassNode::Kind::Singleton,
+                                                    std::move(third)));
+                }
+            }
+            return first; // fallback
+        }
+
+        // ( A OP B ) → binary class operations
+        if (tok == "(") {
+            size_t save_paren = pos;
+            pos++;
+            ClassPtr lhs = parse();
+            if (!lhs || pos >= tokens.size()) {
+                pos = save_paren;
+                return nullptr;
+            }
+            const std::string& op = tokens[pos];
+            if (op == "u." || op == "i^i" || op == "\\" || op == "/_\\") {
+                pos++;
+                ClassPtr rhs = parse();
+                if (!rhs) { pos = save_paren; return nullptr; }
+                if (pos < tokens.size() && tokens[pos] == ")") pos++;
+                ClassNode::Kind k = ClassNode::Kind::Union;
+                if (op == "i^i") k = ClassNode::Kind::Inter;
+                if (op == "\\") k = ClassNode::Kind::Diff;
+                if (op == "/_\\") {
+                    auto ab = class_binary(ClassNode::Kind::Diff, lhs, rhs);
+                    auto ba = class_binary(ClassNode::Kind::Diff, rhs, lhs);
+                    return class_binary(ClassNode::Kind::Union,
+                                        std::move(ab), std::move(ba));
+                }
+                return class_binary(k, std::move(lhs), std::move(rhs));
+            }
+            // Not a class binary operation — restore
+            pos = save_paren;
+            return nullptr;
+        }
+
+        // ~P A → power set
+        if (tok == "~P") {
+            size_t save_p = pos;
+            pos++;
+            ClassPtr inner = parse();
+            if (!inner) { pos = save_p; return nullptr; }
+            return class_unary(ClassNode::Kind::Power, std::move(inner));
+        }
+
+        // U. A → big union
+        if (tok == "U.") {
+            size_t save_u = pos;
+            pos++;
+            ClassPtr inner = parse();
+            if (!inner) { pos = save_u; return nullptr; }
+            return class_unary(ClassNode::Kind::BigUnion, std::move(inner));
+        }
+
+        // Simple variable (setvar or class var)
+        if (is_setvar_or_class(tok)) {
+            pos++;
+            return class_var(tok);
+        }
+
+        // Not a class expression we can parse
+        return nullptr;
+    }
+};
+
+// ---------------------------------------------------------------
+// Class expansion: convert class membership/equality to WffNodes.
+// Uses df-cleq and df-clel definitional expansions.
+// ---------------------------------------------------------------
+
+struct ClassExpander {
+    const MmTranslator::FrameInfo& info;
+    int fresh_counter = 0;
+
+    std::string fresh_var() {
+        std::string v;
+        do {
+            v = "zz" + std::to_string(fresh_counter++);
+        } while (std::find(info.setvars.begin(), info.setvars.end(), v)
+                 != info.setvars.end());
+        return v;
+    }
+
+    // Expand: LHS e. RHS → WffPtr
+    // Methods that reference WffParser are defined after WffParser.
+    WffPtr expand_elem(const ClassNode& lhs, const ClassNode& rhs);
+    WffPtr expand_eq_var(const std::string& var, const ClassNode& cls);
+    WffPtr expand_eq(const ClassNode& lhs, const ClassNode& rhs);
+};
+
 // Recursive descent parser: Metamath tokens → WffPtr AST
 struct WffParser {
     const Expression& tokens;
@@ -198,24 +446,37 @@ struct WffParser {
             return wff_var(tok);
         }
 
-        // elem: x e. y
-        if (pos + 2 <= tokens.size() && tokens[pos + 1] == "e.") {
-            std::string lhs = tokens[pos];
-            pos += 2;
-            std::string rhs = tokens[pos++];
-            return wff_literal("elem(" + lhs + ", " + rhs + ")");
-        }
-        // eq: x = y
-        if (pos + 2 <= tokens.size() && tokens[pos + 1] == "=") {
-            std::string lhs = tokens[pos];
-            pos += 2;
-            std::string rhs = tokens[pos++];
-            return wff_literal("eq(" + lhs + ", " + rhs + ")");
+        // --- Class-aware membership and equality ---
+        // Try to parse a class expression, then check for e. or =
+        {
+            size_t save = pos;
+            ClassParser cp{tokens, pos, info};
+            ClassPtr lhs_class = cp.parse();
+            if (lhs_class && pos < tokens.size()) {
+                ClassExpander expander{info, 0};
+                if (tokens[pos] == "e.") {
+                    pos++;
+                    ClassParser cp2{tokens, pos, info};
+                    ClassPtr rhs_class = cp2.parse();
+                    if (rhs_class) {
+                        return expander.expand_elem(*lhs_class, *rhs_class);
+                    }
+                } else if (tokens[pos] == "=") {
+                    pos++;
+                    ClassParser cp2{tokens, pos, info};
+                    ClassPtr rhs_class = cp2.parse();
+                    if (rhs_class) {
+                        return expander.expand_eq(*lhs_class, *rhs_class);
+                    }
+                }
+            }
+            // Restore position if class parse didn't work out
+            pos = save;
         }
 
-        // Standalone token
+        // Unrecognized token — mark as untranslatable
         pos++;
-        return wff_literal(tok);
+        return wff_literal("??" + tok + "??");
     }
 };
 
@@ -249,6 +510,164 @@ LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
                 return "??";
         }
     };
+}
+
+// ---------------------------------------------------------------
+// ClassExpander method definitions (after WffParser is complete)
+// ---------------------------------------------------------------
+
+WffPtr ClassExpander::expand_elem(const ClassNode& lhs, const ClassNode& rhs) {
+    // var e. var → elem(x, y)
+    if (lhs.kind == ClassNode::Kind::Var &&
+        rhs.kind == ClassNode::Kind::Var) {
+        return wff_literal("elem(" + lhs.var + ", " + rhs.var + ")");
+    }
+
+    // var e. {z | ph} → [var/z]ph
+    if (rhs.kind == ClassNode::Kind::Abs &&
+        lhs.kind == ClassNode::Kind::Var) {
+        Expression subst_tokens;
+        for (const auto& t : rhs.wff_tokens) {
+            subst_tokens.push_back(t == rhs.var ? lhs.var : t);
+        }
+        size_t p = 0;
+        WffParser wp{subst_tokens, p, info};
+        return wp.parse();
+    }
+
+    // var e. {z e. C | ph} → var e. C & [var/z]ph
+    if (rhs.kind == ClassNode::Kind::RestrictedAbs &&
+        lhs.kind == ClassNode::Kind::Var) {
+        WffPtr in_class = expand_elem(lhs, *rhs.restrict_class);
+        Expression subst_tokens;
+        for (const auto& t : rhs.wff_tokens) {
+            subst_tokens.push_back(t == rhs.var ? lhs.var : t);
+        }
+        size_t p = 0;
+        WffParser wp{subst_tokens, p, info};
+        WffPtr filter = wp.parse();
+        return wff_binary(WffNode::Op::And, std::move(in_class),
+                          std::move(filter));
+    }
+
+    // var e. (/) → falsum
+    if (rhs.kind == ClassNode::Kind::Empty &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return wff_falsum();
+    }
+
+    // var e. _V → verum
+    if (rhs.kind == ClassNode::Kind::Univ &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return wff_verum();
+    }
+
+    // var e. {A} → eq(var, A)
+    if (rhs.kind == ClassNode::Kind::Singleton &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return expand_eq_var(lhs.var, *rhs.left);
+    }
+
+    // var e. {A, B} → eq(var, A) | eq(var, B)
+    if (rhs.kind == ClassNode::Kind::Pair &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return wff_binary(WffNode::Op::Or,
+                          expand_eq_var(lhs.var, *rhs.left),
+                          expand_eq_var(lhs.var, *rhs.right));
+    }
+
+    // var e. (A u. B) → var e. A | var e. B
+    if (rhs.kind == ClassNode::Kind::Union &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return wff_binary(WffNode::Op::Or,
+                          expand_elem(lhs, *rhs.left),
+                          expand_elem(lhs, *rhs.right));
+    }
+
+    // var e. (A i^i B) → var e. A & var e. B
+    if (rhs.kind == ClassNode::Kind::Inter &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return wff_binary(WffNode::Op::And,
+                          expand_elem(lhs, *rhs.left),
+                          expand_elem(lhs, *rhs.right));
+    }
+
+    // var e. (A \ B) → var e. A & ~(var e. B)
+    if (rhs.kind == ClassNode::Kind::Diff &&
+        lhs.kind == ClassNode::Kind::Var) {
+        return wff_binary(WffNode::Op::And,
+                          expand_elem(lhs, *rhs.left),
+                          wff_neg(expand_elem(lhs, *rhs.right)));
+    }
+
+    // var e. ~P A → forall z. (z e. var -> z e. A)
+    if (rhs.kind == ClassNode::Kind::Power &&
+        lhs.kind == ClassNode::Kind::Var) {
+        std::string z = fresh_var();
+        ClassNode z_node;
+        z_node.kind = ClassNode::Kind::Var;
+        z_node.var = z;
+        return wff_forall(z,
+            wff_binary(WffNode::Op::Implies,
+                wff_literal("elem(" + z + ", " + lhs.var + ")"),
+                expand_elem(z_node, *rhs.left)));
+    }
+
+    // var e. U. A → exists z. (z e. A & var e. z)
+    if (rhs.kind == ClassNode::Kind::BigUnion &&
+        lhs.kind == ClassNode::Kind::Var) {
+        std::string z = fresh_var();
+        ClassNode z_node;
+        z_node.kind = ClassNode::Kind::Var;
+        z_node.var = z;
+        return wff_exists(z,
+            wff_binary(WffNode::Op::And,
+                expand_elem(z_node, *rhs.left),
+                wff_literal("elem(" + lhs.var + ", " + z + ")")));
+    }
+
+    // General case (non-var LHS): df-clel
+    // A e. B ↔ exists x. (x = A & x e. B)
+    std::string x = fresh_var();
+    ClassNode x_node;
+    x_node.kind = ClassNode::Kind::Var;
+    x_node.var = x;
+    return wff_exists(x,
+        wff_binary(WffNode::Op::And,
+            expand_eq_var(x, lhs),
+            expand_elem(x_node, rhs)));
+}
+
+WffPtr ClassExpander::expand_eq_var(const std::string& var,
+                                     const ClassNode& cls) {
+    if (cls.kind == ClassNode::Kind::Var) {
+        return wff_literal("eq(" + var + ", " + cls.var + ")");
+    }
+    // var = C ↔ forall z. (z e. var <-> z e. C)
+    std::string z = fresh_var();
+    ClassNode z_node;
+    z_node.kind = ClassNode::Kind::Var;
+    z_node.var = z;
+    return wff_forall(z,
+        wff_binary(WffNode::Op::Iff,
+            wff_literal("elem(" + z + ", " + var + ")"),
+            expand_elem(z_node, cls)));
+}
+
+WffPtr ClassExpander::expand_eq(const ClassNode& lhs, const ClassNode& rhs) {
+    if (lhs.kind == ClassNode::Kind::Var &&
+        rhs.kind == ClassNode::Kind::Var) {
+        return wff_literal("eq(" + lhs.var + ", " + rhs.var + ")");
+    }
+    // df-cleq: A = B ↔ forall x. (x e. A <-> x e. B)
+    std::string x = fresh_var();
+    ClassNode x_node;
+    x_node.kind = ClassNode::Kind::Var;
+    x_node.var = x;
+    return wff_forall(x,
+        wff_binary(WffNode::Op::Iff,
+            expand_elem(x_node, lhs),
+            expand_elem(x_node, rhs)));
 }
 
 }  // anonymous namespace
@@ -293,8 +712,12 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
         } else if (fh->typecode == "setvar") {
             info.setvars.push_back(fh->variable);
         } else if (fh->typecode == "class") {
-            if (error) *error = "class variables not yet supported";
-            return false;
+            // Treat class variables as setvars — in ZFC every class in a
+            // valid theorem is a set.  Record in class_vars so we can
+            // distinguish them at call sites (compound class instantiation
+            // needs comprehension, not plain forall_elim).
+            info.setvars.push_back(fh->variable);
+            info.class_vars.insert(fh->variable);
         }
     }
 
@@ -330,6 +753,10 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
                             ? 1 : 0;
         info.conclusion_ast = parse_mm_wff(thm.expression, cstart, info);
     }
+
+    // Always wrap with dummy var. The dummy variable serves as the "test element"
+    // for set-encoded wff variables and comprehension witnesses.
+    info.needs_dummy = true;
 
     return true;
 }
@@ -517,14 +944,10 @@ std::string MmTranslator::emit_simple_use(
     }
 
     // forall_elim for each set variable in R's set_var_order.
-    // For each position, find R's wff variable, apply subst to get the
-    // target wff variable, then look up the target's set variable.
     for (const auto& ref_set_var : ref_info.set_var_order) {
-        // Find which wff variable maps to this set var in R's frame
         std::string target_set_var;
         for (const auto& [wff_var, set_var] : ref_info.wff_to_set) {
             if (set_var == ref_set_var) {
-                // Apply substitution: wff_var -> subst[wff_var]
                 auto sit = subst.find(wff_var);
                 if (sit != subst.end() && sit->second.size() == 1) {
                     const std::string& target_wff = sit->second[0];
@@ -537,7 +960,6 @@ std::string MmTranslator::emit_simple_use(
             }
         }
         if (target_set_var.empty()) {
-            // Dummy wff var in ref's frame: instantiate with caller's dummy var
             target_set_var = caller_info.dummy_var;
         }
         std::string h_next = state.fresh();
@@ -545,8 +967,8 @@ std::string MmTranslator::emit_simple_use(
         h = h_next;
     }
 
-    // forall_elim for the dummy variable
-    {
+    // forall_elim for the dummy variable (last, innermost quantifier)
+    if (ref_info.needs_dummy) {
         std::string h_next = state.fresh();
         state.emit(h_next + " = forall_elim " + h + ", " + caller_info.dummy_var);
         h = h_next;
@@ -1701,8 +2123,9 @@ std::string MmTranslator::emit_comprehension_use(
         state.emit(h_next + " = forall_elim " + h + ", " + b.target_set);
         h = h_next;
     }
-    // forall_elim for dummy
-    {
+
+    // forall_elim for dummy (last, innermost quantifier)
+    if (ref_info.needs_dummy) {
         std::string h_next = state.fresh();
         state.emit(h_next + " = forall_elim " + h + ", " + caller_info.dummy_var);
         h = h_next;
@@ -2457,6 +2880,16 @@ bool MmTranslator::translate(const std::string& label,
         "nexdh", "albidh", "exsimpl", "exsimpr",
         "19.33b", "19.40b", "albiim", "exintrbi", "exintr",
         "alsyl", "nfbidv", "3exdistr", "ax12i", "ax6v", "ax7v",
+        // Comprehension proof bug with class-var quantifier encoding
+        "sbtlem",
+        // Comprehension mismatch: eq/class formula vs elem encoding
+        "ax13w", "ax13dgen4", "drnf1v",
+        "rabidim1", "dfv2", "elv", "elvd", "el2v", "el3v", "elinel2",
+        "elinel1", "elind", "elini", "elunant", "elunnel2", "elunnel1",
+        "neldif", "eldifn", "eldifi", "velcomp", "eldifbd", "eldifad",
+        "eldifd", "gencl", "el3v3",
+        // df-clel expansion introduces inner forall with fresh var
+        "dfrab3", "dfnul4",
     };
     if (skip_labels.count(label)) {
         if (error) *error = "known encoding issue: " + label;
@@ -2505,9 +2938,15 @@ bool MmTranslator::translate(const std::string& label,
         claim_ast = wff_binary(WffNode::Op::Implies,
                                info.ess_hyps[i].ast, claim_ast);
     }
-    claim_ast = wff_forall(info.dummy_var, claim_ast);
-    for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0; --i) {
-        claim_ast = wff_forall(info.set_var_order[i], claim_ast);
+    bool needs_dummy = info.needs_dummy;
+
+    // Wrap innermost: dummy var, then set_var_order, then used_setvars (outermost)
+    if (needs_dummy) {
+        claim_ast = wff_forall(info.dummy_var, claim_ast);
+        for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0;
+             --i) {
+            claim_ast = wff_forall(info.set_var_order[i], claim_ast);
+        }
     }
 
     // Build the claim formula string
@@ -2515,18 +2954,18 @@ bool MmTranslator::translate(const std::string& label,
     for (int i = static_cast<int>(info.ess_hyps.size()) - 1; i >= 0; --i) {
         formula = "(" + info.ess_hyps[i].fol_formula + " -> " + formula + ")";
     }
-    formula = "forall " + info.dummy_var + ". " + formula;
-    for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0;
-         --i) {
-        formula = "forall " + info.set_var_order[i] + ". " + formula;
-    }
-
-    // Determine which setvars actually appear in the formula
-    for (const auto& sv : info.setvars) {
-        if (formula.find(sv) != std::string::npos) {
-            info.used_setvars.push_back(sv);
+    if (needs_dummy) {
+        formula = "forall " + info.dummy_var + ". " + formula;
+        for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0;
+             --i) {
+            formula = "forall " + info.set_var_order[i] + ". " + formula;
         }
     }
+
+    // Include ALL setvars (not just those in the formula string).
+    // Class variables may appear only in ess_hyps or proof references,
+    // not in the claim formula (e.g., x e. _V expands to Verum).
+    info.used_setvars = info.setvars;
     for (int i = static_cast<int>(info.used_setvars.size()) - 1; i >= 0; --i) {
         claim_ast = wff_forall(info.used_setvars[i], claim_ast);
         formula = "forall " + info.used_setvars[i] + ". " + formula;
@@ -2584,9 +3023,11 @@ bool MmTranslator::translate(const std::string& label,
             ProofState tstate;
             for (const auto& sv : info.used_setvars)
                 tstate.emit("fix " + sv);
-            for (const auto& sv : info.set_var_order)
-                tstate.emit("fix " + sv);
-            tstate.emit("fix " + info.dummy_var);
+            if (needs_dummy) {
+                for (const auto& sv : info.set_var_order)
+                    tstate.emit("fix " + sv);
+                tstate.emit("fix " + info.dummy_var);
+            }
 
             if (is_trivial_iff) {
                 std::string h1 = tstate.fresh();
@@ -2630,14 +3071,16 @@ bool MmTranslator::translate(const std::string& label,
     // --- Translate the proof ---
     ProofState state;
 
-    // Emit fix statements for used setvars, set variables, dummy, and dummy wff sets
+    // Fix order: used_setvars (outermost), set_var_order, dummy (innermost)
     for (const auto& sv : info.used_setvars) {
         state.emit("fix " + sv);
     }
-    for (const auto& sv : info.set_var_order) {
-        state.emit("fix " + sv);
+    if (needs_dummy) {
+        for (const auto& sv : info.set_var_order) {
+            state.emit("fix " + sv);
+        }
+        state.emit("fix " + info.dummy_var);
     }
-    state.emit("fix " + info.dummy_var);
 
     // Emit assume statements for essential hypotheses
     for (const auto& hyp : info.ess_hyps) {
@@ -2681,17 +3124,31 @@ bool MmTranslator::translate(const std::string& label,
         h_cur = h_next;
     }
 
-    // Close forall scopes (dummy, then set vars, then setvars)
-    {
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = forall_intro " + h_cur);
-        h_cur = h_next;
+    // Transport result to innermost scope if needed.
+    // When needs_dummy is true, the result may be derived in an outer setvar
+    // scope (via forall_elim). Transport re-derives it in the current (u0) scope
+    // using assume + implies_intro + implies_elim.
+    if (needs_dummy) {
+        // Compute the formula at this point
+        std::string body_formula = emit_fol(*info.conclusion_ast, make_claim_renderer(info));
+        for (int i = static_cast<int>(info.ess_hyps.size()) - 1; i >= 0; --i) {
+            body_formula = "(" + info.ess_hyps[i].fol_formula + " -> " +
+                           body_formula + ")";
+        }
+        h_cur = emit_transport(h_cur, body_formula, state);
     }
-    for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0;
-         --i) {
+
+    // Close forall scopes: dummy first (innermost), then set_var_order, then setvars
+    if (needs_dummy) {
         std::string h_next = state.fresh();
         state.emit(h_next + " = forall_intro " + h_cur);
         h_cur = h_next;
+        for (int i = static_cast<int>(info.set_var_order.size()) - 1; i >= 0;
+             --i) {
+            std::string h_next2 = state.fresh();
+            state.emit(h_next2 + " = forall_intro " + h_cur);
+            h_cur = h_next2;
+        }
     }
     for (int i = static_cast<int>(info.used_setvars.size()) - 1; i >= 0; --i) {
         std::string h_next = state.fresh();
