@@ -1,0 +1,11 @@
+# Comprehension axioms for wff-as-set encoding
+# These assert that the set universe is closed under propositional ops
+
+axiom wff_impl: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) -> elem(u, B)))
+axiom wff_neg: forall A. exists B. forall u. (elem(u, B) <-> ~elem(u, A))
+axiom wff_and: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) & elem(u, B)))
+axiom wff_or: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) | elem(u, B)))
+axiom wff_bic: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) <-> elem(u, B)))
+axiom wff_true: forall A. exists B. forall u. (elem(u, B) <-> (elem(u, A) -> elem(u, A)))
+axiom wff_false: forall A. exists B. forall u. (elem(u, B) <-> ~(elem(u, A) -> elem(u, A)))
+

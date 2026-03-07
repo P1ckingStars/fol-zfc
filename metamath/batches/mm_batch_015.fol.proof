@@ -235,10 +235,13 @@ proof mm_xorneg2:
     h238 = exists_intro h237
     h239 = exists_intro h238
     h240 = exists_intro h239
-    h241 = forall_intro h240
-    h242 = forall_intro h241
-    h243 = forall_intro h242
-    qed h243
+    h241 = assume (~(elem(u0, S_ph) <-> ~elem(u0, S_ps)) <-> ~~(elem(u0, S_ph) <-> elem(u0, S_ps)))
+    h242 = implies_intro h241
+    h243 = implies_elim h242, h240
+    h244 = forall_intro h243
+    h245 = forall_intro h244
+    h246 = forall_intro h245
+    qed h246
 
 # xorneg1
 proof mm_xorneg1:
@@ -675,10 +678,13 @@ proof mm_xorneg1:
     h445 = exists_intro h444
     h446 = exists_intro h445
     h447 = exists_intro h446
-    h448 = forall_intro h447
-    h449 = forall_intro h448
-    h450 = forall_intro h449
-    qed h450
+    h448 = assume (~(~elem(u0, S_ph) <-> elem(u0, S_ps)) <-> ~~(elem(u0, S_ph) <-> elem(u0, S_ps)))
+    h449 = implies_intro h448
+    h450 = implies_elim h449, h447
+    h451 = forall_intro h450
+    h452 = forall_intro h451
+    h453 = forall_intro h452
+    qed h453
 
 # xorneg
 proof mm_xorneg:
@@ -1087,10 +1093,13 @@ proof mm_xorneg:
     h416 = exists_intro h415
     h417 = exists_intro h416
     h418 = exists_intro h417
-    h419 = forall_intro h418
-    h420 = forall_intro h419
-    h421 = forall_intro h420
-    qed h421
+    h419 = assume (~(~elem(u0, S_ph) <-> ~elem(u0, S_ps)) <-> ~(elem(u0, S_ph) <-> elem(u0, S_ps)))
+    h420 = implies_intro h419
+    h421 = implies_elim h420, h418
+    h422 = forall_intro h421
+    h423 = forall_intro h422
+    h424 = forall_intro h423
+    qed h424
 
 # xorbi12i
 proof mm_xorbi12i:
@@ -1333,12 +1342,15 @@ proof mm_xorbi12i:
     h240 = and_intro hyp_mm_xorbi12_1, h239
     h241 = and_elim_r h240
     h242 = implies_intro h241
-    h243 = forall_intro h242
-    h244 = forall_intro h243
-    h245 = forall_intro h244
+    h243 = assume ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> ((elem(u0, S_ch) <-> elem(u0, S_th)) -> (~(elem(u0, S_ph) <-> elem(u0, S_ch)) <-> ~(elem(u0, S_ps) <-> elem(u0, S_th)))))
+    h244 = implies_intro h243
+    h245 = implies_elim h244, h242
     h246 = forall_intro h245
     h247 = forall_intro h246
-    qed h247
+    h248 = forall_intro h247
+    h249 = forall_intro h248
+    h250 = forall_intro h249
+    qed h250
 
 # xorbi12d
 proof mm_xorbi12d:
@@ -1597,13 +1609,16 @@ proof mm_xorbi12d:
     h255 = and_intro hyp_mm_xor12d_1, h254
     h256 = and_elim_r h255
     h257 = implies_intro h256
-    h258 = forall_intro h257
-    h259 = forall_intro h258
-    h260 = forall_intro h259
+    h258 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> (elem(u0, S_th) <-> elem(u0, S_ta))) -> (elem(u0, S_ph) -> (~(elem(u0, S_ps) <-> elem(u0, S_th)) <-> ~(elem(u0, S_ch) <-> elem(u0, S_ta))))))
+    h259 = implies_intro h258
+    h260 = implies_elim h259, h257
     h261 = forall_intro h260
     h262 = forall_intro h261
     h263 = forall_intro h262
-    qed h263
+    h264 = forall_intro h263
+    h265 = forall_intro h264
+    h266 = forall_intro h265
+    qed h266
 
 # anxordi
 proof mm_anxordi:
@@ -1999,11 +2014,14 @@ proof mm_anxordi:
     h404 = exists_intro h403
     h405 = exists_intro h404
     h406 = exists_intro h405
-    h407 = forall_intro h406
-    h408 = forall_intro h407
-    h409 = forall_intro h408
+    h407 = assume ((elem(u0, S_ph) & ~(elem(u0, S_ps) <-> elem(u0, S_ch))) <-> ~((elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ch))))
+    h408 = implies_intro h407
+    h409 = implies_elim h408, h406
     h410 = forall_intro h409
-    qed h410
+    h411 = forall_intro h410
+    h412 = forall_intro h411
+    h413 = forall_intro h412
+    qed h413
 
 # xorexmid
 proof mm_xorexmid:
@@ -2148,9 +2166,12 @@ proof mm_xorexmid:
     h143 = exists_intro h142
     h144 = exists_intro h143
     h145 = exists_intro h144
-    h146 = forall_intro h145
-    h147 = forall_intro h146
-    qed h147
+    h146 = assume ~(elem(u0, S_ph) <-> ~elem(u0, S_ph))
+    h147 = implies_intro h146
+    h148 = implies_elim h147, h145
+    h149 = forall_intro h148
+    h150 = forall_intro h149
+    qed h150
 
 # norcom
 proof mm_norcom:
@@ -2379,10 +2400,13 @@ proof mm_norcom:
     h230 = exists_intro h229
     h231 = exists_intro h230
     h232 = exists_intro h231
-    h233 = forall_intro h232
-    h234 = forall_intro h233
-    h235 = forall_intro h234
-    qed h235
+    h233 = assume (~(elem(u0, S_ph) | elem(u0, S_ps)) <-> ~(elem(u0, S_ps) | elem(u0, S_ph)))
+    h234 = implies_intro h233
+    h235 = implies_elim h234, h232
+    h236 = forall_intro h235
+    h237 = forall_intro h236
+    h238 = forall_intro h237
+    qed h238
 
 # nornot
 proof mm_nornot:
@@ -2528,9 +2552,12 @@ proof mm_nornot:
     h144 = exists_intro h143
     h145 = exists_intro h144
     h146 = exists_intro h145
-    h147 = forall_intro h146
-    h148 = forall_intro h147
-    qed h148
+    h147 = assume (~elem(u0, S_ph) <-> ~(elem(u0, S_ph) | elem(u0, S_ph)))
+    h148 = implies_intro h147
+    h149 = implies_elim h148, h146
+    h150 = forall_intro h149
+    h151 = forall_intro h150
+    qed h151
 
 # noran
 proof mm_noran:
@@ -3145,10 +3172,13 @@ proof mm_noran:
     h634 = exists_intro h633
     h635 = exists_intro h634
     h636 = exists_intro h635
-    h637 = forall_intro h636
-    h638 = forall_intro h637
-    h639 = forall_intro h638
-    qed h639
+    h637 = assume ((elem(u0, S_ph) & elem(u0, S_ps)) <-> ~(~(elem(u0, S_ph) | elem(u0, S_ph)) | ~(elem(u0, S_ps) | elem(u0, S_ps))))
+    h638 = implies_intro h637
+    h639 = implies_elim h638, h636
+    h640 = forall_intro h639
+    h641 = forall_intro h640
+    h642 = forall_intro h641
+    qed h642
 
 # noror
 proof mm_noror:
@@ -3502,10 +3532,13 @@ proof mm_noror:
     h360 = exists_intro h359
     h361 = exists_intro h360
     h362 = exists_intro h361
-    h363 = forall_intro h362
-    h364 = forall_intro h363
-    h365 = forall_intro h364
-    qed h365
+    h363 = assume ((elem(u0, S_ph) | elem(u0, S_ps)) <-> ~(~(elem(u0, S_ph) | elem(u0, S_ps)) | ~(elem(u0, S_ph) | elem(u0, S_ps))))
+    h364 = implies_intro h363
+    h365 = implies_elim h364, h362
+    h366 = forall_intro h365
+    h367 = forall_intro h366
+    h368 = forall_intro h367
+    qed h368
 
 # norasslem1
 proof mm_norasslem1:
@@ -3870,11 +3903,14 @@ proof mm_norasslem1:
     h368 = exists_intro h367
     h369 = exists_intro h368
     h370 = exists_intro h369
-    h371 = forall_intro h370
-    h372 = forall_intro h371
-    h373 = forall_intro h372
+    h371 = assume (((elem(u0, S_ph) | elem(u0, S_ps)) -> elem(u0, S_ch)) <-> (~(elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)))
+    h372 = implies_intro h371
+    h373 = implies_elim h372, h370
     h374 = forall_intro h373
-    qed h374
+    h375 = forall_intro h374
+    h376 = forall_intro h375
+    h377 = forall_intro h376
+    qed h377
 
 # norasslem2
 proof mm_norasslem2:
@@ -3983,11 +4019,14 @@ proof mm_norasslem2:
     h103 = exists_intro h102
     h104 = exists_intro h103
     h105 = exists_intro h104
-    h106 = forall_intro h105
-    h107 = forall_intro h106
-    h108 = forall_intro h107
+    h106 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> ((elem(u0, S_ph) | elem(u0, S_ch)) -> elem(u0, S_ps))))
+    h107 = implies_intro h106
+    h108 = implies_elim h107, h105
     h109 = forall_intro h108
-    qed h109
+    h110 = forall_intro h109
+    h111 = forall_intro h110
+    h112 = forall_intro h111
+    qed h112
 
 # norasslem3
 proof mm_norasslem3:
@@ -4049,11 +4088,14 @@ proof mm_norasslem3:
     h54 = implies_intro h53
     h55 = exists_intro h54
     h56 = exists_intro h55
-    h57 = forall_intro h56
-    h58 = forall_intro h57
-    h59 = forall_intro h58
+    h57 = assume (~elem(u0, S_ph) -> ((elem(u0, S_ps) -> elem(u0, S_ch)) <-> ((elem(u0, S_ph) | elem(u0, S_ps)) -> elem(u0, S_ch))))
+    h58 = implies_intro h57
+    h59 = implies_elim h58, h56
     h60 = forall_intro h59
-    qed h60
+    h61 = forall_intro h60
+    h62 = forall_intro h61
+    h63 = forall_intro h62
+    qed h63
 
 # norass
 proof mm_norass:
@@ -7295,11 +7337,14 @@ proof mm_norass:
     h3363 = exists_intro h3362
     h3364 = exists_intro h3363
     h3365 = exists_intro h3364
-    h3366 = forall_intro h3365
-    h3367 = forall_intro h3366
-    h3368 = forall_intro h3367
+    h3366 = assume ((elem(u0, S_ph) <-> elem(u0, S_ch)) <-> (~(~(elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) <-> ~(elem(u0, S_ph) | ~(elem(u0, S_ps) | elem(u0, S_ch)))))
+    h3367 = implies_intro h3366
+    h3368 = implies_elim h3367, h3365
     h3369 = forall_intro h3368
-    qed h3369
+    h3370 = forall_intro h3369
+    h3371 = forall_intro h3370
+    h3372 = forall_intro h3371
+    qed h3372
 
 # tru
 proof mm_tru:
@@ -7391,8 +7436,11 @@ proof mm_fal:
     h81 = exists_intro h80
     h82 = exists_intro h81
     h83 = exists_intro h82
-    h84 = forall_intro h83
-    qed h84
+    h84 = assume ~~(elem(u0, u0) -> elem(u0, u0))
+    h85 = implies_intro h84
+    h86 = implies_elim h85, h83
+    h87 = forall_intro h86
+    qed h87
 
 # pm2.21fal
 proof mm_pm2_21fal:
@@ -7423,10 +7471,13 @@ proof mm_pm2_21fal:
     h21 = and_intro hyp_mm_pm2_21fal_1, h20
     h22 = and_elim_r h21
     h23 = implies_intro h22
-    h24 = forall_intro h23
-    h25 = forall_intro h24
-    h26 = forall_intro h25
-    qed h26
+    h24 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> ~elem(u0, S_ps)) -> (elem(u0, S_ph) -> ~(elem(u0, S_ph) -> elem(u0, S_ph)))))
+    h25 = implies_intro h24
+    h26 = implies_elim h25, h23
+    h27 = forall_intro h26
+    h28 = forall_intro h27
+    h29 = forall_intro h28
+    qed h29
 
 # nottru
 proof mm_nottru:
@@ -7469,8 +7520,11 @@ proof mm_truantru:
     h26 = implies_intro h25
     h27 = iff_intro h17, h26
     h28 = exists_intro h27
-    h29 = forall_intro h28
-    qed h29
+    h29 = assume (((elem(u0, u0) -> elem(u0, u0)) & (elem(u0, u0) -> elem(u0, u0))) <-> (elem(u0, u0) -> elem(u0, u0)))
+    h30 = implies_intro h29
+    h31 = implies_elim h30, h28
+    h32 = forall_intro h31
+    qed h32
 
 # falanfal
 proof mm_falanfal:
@@ -7502,8 +7556,11 @@ proof mm_falanfal:
     h26 = implies_intro h25
     h27 = iff_intro h17, h26
     h28 = exists_intro h27
-    h29 = forall_intro h28
-    qed h29
+    h29 = assume ((~(elem(u0, u0) -> elem(u0, u0)) & ~(elem(u0, u0) -> elem(u0, u0))) <-> ~(elem(u0, u0) -> elem(u0, u0)))
+    h30 = implies_intro h29
+    h31 = implies_elim h30, h28
+    h32 = forall_intro h31
+    qed h32
 
 # truortru
 proof mm_truortru:
@@ -7547,8 +7604,11 @@ proof mm_truortru:
     h38 = implies_intro h37
     h39 = iff_intro h23, h38
     h40 = exists_intro h39
-    h41 = forall_intro h40
-    qed h41
+    h41 = assume (((elem(u0, u0) -> elem(u0, u0)) | (elem(u0, u0) -> elem(u0, u0))) <-> (elem(u0, u0) -> elem(u0, u0)))
+    h42 = implies_intro h41
+    h43 = implies_elim h42, h40
+    h44 = forall_intro h43
+    qed h44
 
 # falorfal
 proof mm_falorfal:
@@ -7592,8 +7652,11 @@ proof mm_falorfal:
     h38 = implies_intro h37
     h39 = iff_intro h23, h38
     h40 = exists_intro h39
-    h41 = forall_intro h40
-    qed h41
+    h41 = assume ((~(elem(u0, u0) -> elem(u0, u0)) | ~(elem(u0, u0) -> elem(u0, u0))) <-> ~(elem(u0, u0) -> elem(u0, u0)))
+    h42 = implies_intro h41
+    h43 = implies_elim h42, h40
+    h44 = forall_intro h43
+    qed h44
 
 # trunantru
 proof mm_trunantru:
@@ -7762,8 +7825,11 @@ proof mm_trunantru:
     h170 = exists_intro h169
     h171 = exists_intro h170
     h172 = exists_intro h171
-    h173 = forall_intro h172
-    qed h173
+    h173 = assume (~((elem(u0, u0) -> elem(u0, u0)) & (elem(u0, u0) -> elem(u0, u0))) <-> ~(elem(u0, u0) -> elem(u0, u0)))
+    h174 = implies_intro h173
+    h175 = implies_elim h174, h172
+    h176 = forall_intro h175
+    qed h176
 
 # trunortru
 proof mm_trunortru:
@@ -8082,8 +8148,11 @@ proof mm_trunortru:
     h327 = exists_intro h326
     h328 = exists_intro h327
     h329 = exists_intro h328
-    h330 = forall_intro h329
-    qed h330
+    h330 = assume (~((elem(u0, u0) -> elem(u0, u0)) | (elem(u0, u0) -> elem(u0, u0))) <-> ~(elem(u0, u0) -> elem(u0, u0)))
+    h331 = implies_intro h330
+    h332 = implies_elim h331, h329
+    h333 = forall_intro h332
+    qed h333
 
 # hadbi123d
 proof mm_hadbi123d:
@@ -8627,15 +8696,18 @@ proof mm_hadbi123d:
     h547 = and_intro hyp_mm_hadbid_1, h546
     h548 = and_elim_r h547
     h549 = implies_intro h548
-    h550 = forall_intro h549
-    h551 = forall_intro h550
-    h552 = forall_intro h551
+    h550 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> (elem(u0, S_th) <-> elem(u0, S_ta))) -> ((elem(u0, S_ph) -> (elem(u0, S_et) <-> elem(u0, S_ze))) -> (elem(u0, S_ph) -> (~(~(elem(u0, S_ps) <-> elem(u0, S_th)) <-> elem(u0, S_et)) <-> ~(~(elem(u0, S_ch) <-> elem(u0, S_ta)) <-> elem(u0, S_ze)))))))
+    h551 = implies_intro h550
+    h552 = implies_elim h551, h549
     h553 = forall_intro h552
     h554 = forall_intro h553
     h555 = forall_intro h554
     h556 = forall_intro h555
     h557 = forall_intro h556
-    qed h557
+    h558 = forall_intro h557
+    h559 = forall_intro h558
+    h560 = forall_intro h559
+    qed h560
 
 # hadass
 proof mm_hadass:
@@ -8924,11 +8996,14 @@ proof mm_hadass:
     h291 = exists_intro h290
     h292 = exists_intro h291
     h293 = exists_intro h292
-    h294 = forall_intro h293
-    h295 = forall_intro h294
-    h296 = forall_intro h295
+    h294 = assume (~(~(elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)) <-> ~(elem(u0, S_ph) <-> ~(elem(u0, S_ps) <-> elem(u0, S_ch))))
+    h295 = implies_intro h294
+    h296 = implies_elim h295, h293
     h297 = forall_intro h296
-    qed h297
+    h298 = forall_intro h297
+    h299 = forall_intro h298
+    h300 = forall_intro h299
+    qed h300
 
 # hadbi
 proof mm_hadbi:
@@ -9705,11 +9780,14 @@ proof mm_hadbi:
     h797 = exists_intro h796
     h798 = exists_intro h797
     h799 = exists_intro h798
-    h800 = forall_intro h799
-    h801 = forall_intro h800
-    h802 = forall_intro h801
+    h800 = assume (~(~(elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)) <-> ((elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)))
+    h801 = implies_intro h800
+    h802 = implies_elim h801, h799
     h803 = forall_intro h802
-    qed h803
+    h804 = forall_intro h803
+    h805 = forall_intro h804
+    h806 = forall_intro h805
+    qed h806
 
 # hadcoma
 proof mm_hadcoma:
@@ -10084,11 +10162,14 @@ proof mm_hadcoma:
     h379 = exists_intro h378
     h380 = exists_intro h379
     h381 = exists_intro h380
-    h382 = forall_intro h381
-    h383 = forall_intro h382
-    h384 = forall_intro h383
+    h382 = assume (~(~(elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)) <-> ~(~(elem(u0, S_ps) <-> elem(u0, S_ph)) <-> elem(u0, S_ch)))
+    h383 = implies_intro h382
+    h384 = implies_elim h383, h381
     h385 = forall_intro h384
-    qed h385
+    h386 = forall_intro h385
+    h387 = forall_intro h386
+    h388 = forall_intro h387
+    qed h388
 
 # hadcomb
 proof mm_hadcomb:
@@ -10600,11 +10681,14 @@ proof mm_hadcomb:
     h522 = exists_intro h521
     h523 = exists_intro h522
     h524 = exists_intro h523
-    h525 = forall_intro h524
-    h526 = forall_intro h525
-    h527 = forall_intro h526
+    h525 = assume (~(~(elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)) <-> ~(~(elem(u0, S_ph) <-> elem(u0, S_ch)) <-> elem(u0, S_ps)))
+    h526 = implies_intro h525
+    h527 = implies_elim h526, h524
     h528 = forall_intro h527
-    qed h528
+    h529 = forall_intro h528
+    h530 = forall_intro h529
+    h531 = forall_intro h530
+    qed h531
 
 # hadrot
 proof mm_hadrot:
@@ -10893,11 +10977,14 @@ proof mm_hadrot:
     h291 = exists_intro h290
     h292 = exists_intro h291
     h293 = exists_intro h292
-    h294 = forall_intro h293
-    h295 = forall_intro h294
-    h296 = forall_intro h295
+    h294 = assume (~(~(elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)) <-> ~(~(elem(u0, S_ps) <-> elem(u0, S_ch)) <-> elem(u0, S_ph)))
+    h295 = implies_intro h294
+    h296 = implies_elim h295, h293
     h297 = forall_intro h296
-    qed h297
+    h298 = forall_intro h297
+    h299 = forall_intro h298
+    h300 = forall_intro h299
+    qed h300
 
 # had1
 proof mm_had1:
@@ -11806,11 +11893,14 @@ proof mm_had1:
     h934 = exists_intro h933
     h935 = exists_intro h934
     h936 = exists_intro h935
-    h937 = forall_intro h936
-    h938 = forall_intro h937
-    h939 = forall_intro h938
+    h937 = assume (elem(u0, S_ph) -> (~(~(elem(u0, S_ph) <-> elem(u0, S_ps)) <-> elem(u0, S_ch)) <-> (elem(u0, S_ps) <-> elem(u0, S_ch))))
+    h938 = implies_intro h937
+    h939 = implies_elim h938, h936
     h940 = forall_intro h939
-    qed h940
+    h941 = forall_intro h940
+    h942 = forall_intro h941
+    h943 = forall_intro h942
+    qed h943
 
 # cador
 proof mm_cador:
@@ -13508,11 +13598,14 @@ proof mm_cador:
     h1766 = exists_intro h1765
     h1767 = exists_intro h1766
     h1768 = exists_intro h1767
-    h1769 = forall_intro h1768
-    h1770 = forall_intro h1769
-    h1771 = forall_intro h1770
+    h1769 = assume (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ph) & elem(u0, S_ch))) | (elem(u0, S_ps) & elem(u0, S_ch))))
+    h1770 = implies_intro h1769
+    h1771 = implies_elim h1770, h1768
     h1772 = forall_intro h1771
-    qed h1772
+    h1773 = forall_intro h1772
+    h1774 = forall_intro h1773
+    h1775 = forall_intro h1774
+    qed h1775
 
 # cadan
 proof mm_cadan:
@@ -15449,11 +15542,14 @@ proof mm_cadan:
     h2017 = exists_intro h2016
     h2018 = exists_intro h2017
     h2019 = exists_intro h2018
-    h2020 = forall_intro h2019
-    h2021 = forall_intro h2020
-    h2022 = forall_intro h2021
+    h2020 = assume (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> (((elem(u0, S_ph) | elem(u0, S_ps)) & (elem(u0, S_ph) | elem(u0, S_ch))) & (elem(u0, S_ps) | elem(u0, S_ch))))
+    h2021 = implies_intro h2020
+    h2022 = implies_elim h2021, h2019
     h2023 = forall_intro h2022
-    qed h2023
+    h2024 = forall_intro h2023
+    h2025 = forall_intro h2024
+    h2026 = forall_intro h2025
+    qed h2026
 
 # cadbi123d
 proof mm_cadbi123d:
@@ -16215,15 +16311,18 @@ proof mm_cadbi123d:
     h777 = and_intro hyp_mm_cadbid_1, h776
     h778 = and_elim_r h777
     h779 = implies_intro h778
-    h780 = forall_intro h779
-    h781 = forall_intro h780
-    h782 = forall_intro h781
+    h780 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> (elem(u0, S_th) <-> elem(u0, S_ta))) -> ((elem(u0, S_ph) -> (elem(u0, S_et) <-> elem(u0, S_ze))) -> (elem(u0, S_ph) -> (((elem(u0, S_ps) & elem(u0, S_th)) | (elem(u0, S_et) & ~(elem(u0, S_ps) <-> elem(u0, S_th)))) <-> ((elem(u0, S_ch) & elem(u0, S_ta)) | (elem(u0, S_ze) & ~(elem(u0, S_ch) <-> elem(u0, S_ta)))))))))
+    h781 = implies_intro h780
+    h782 = implies_elim h781, h779
     h783 = forall_intro h782
     h784 = forall_intro h783
     h785 = forall_intro h784
     h786 = forall_intro h785
     h787 = forall_intro h786
-    qed h787
+    h788 = forall_intro h787
+    h789 = forall_intro h788
+    h790 = forall_intro h789
+    qed h790
 
 # cadcoma
 proof mm_cadcoma:
@@ -16933,11 +17032,14 @@ proof mm_cadcoma:
     h732 = exists_intro h731
     h733 = exists_intro h732
     h734 = exists_intro h733
-    h735 = forall_intro h734
-    h736 = forall_intro h735
-    h737 = forall_intro h736
+    h735 = assume (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> ((elem(u0, S_ps) & elem(u0, S_ph)) | (elem(u0, S_ch) & ~(elem(u0, S_ps) <-> elem(u0, S_ph)))))
+    h736 = implies_intro h735
+    h737 = implies_elim h736, h734
     h738 = forall_intro h737
-    qed h738
+    h739 = forall_intro h738
+    h740 = forall_intro h739
+    h741 = forall_intro h740
+    qed h741
 
 # cadcomb
 proof mm_cadcomb:
@@ -17723,11 +17825,14 @@ proof mm_cadcomb:
     h818 = exists_intro h817
     h819 = exists_intro h818
     h820 = exists_intro h819
-    h821 = forall_intro h820
-    h822 = forall_intro h821
-    h823 = forall_intro h822
+    h821 = assume (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> ((elem(u0, S_ph) & elem(u0, S_ch)) | (elem(u0, S_ps) & ~(elem(u0, S_ph) <-> elem(u0, S_ch)))))
+    h822 = implies_intro h821
+    h823 = implies_elim h822, h820
     h824 = forall_intro h823
-    qed h824
+    h825 = forall_intro h824
+    h826 = forall_intro h825
+    h827 = forall_intro h826
+    qed h827
 
 # cadrot
 proof mm_cadrot:
@@ -18049,11 +18154,14 @@ proof mm_cadrot:
     h327 = exists_intro h326
     h328 = exists_intro h327
     h329 = exists_intro h328
-    h330 = forall_intro h329
-    h331 = forall_intro h330
-    h332 = forall_intro h331
+    h330 = assume (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> ((elem(u0, S_ps) & elem(u0, S_ch)) | (elem(u0, S_ph) & ~(elem(u0, S_ps) <-> elem(u0, S_ch)))))
+    h331 = implies_intro h330
+    h332 = implies_elim h331, h329
     h333 = forall_intro h332
-    qed h333
+    h334 = forall_intro h333
+    h335 = forall_intro h334
+    h336 = forall_intro h335
+    qed h336
 
 # cad11
 proof mm_cad11:
@@ -18348,11 +18456,14 @@ proof mm_cad11:
     h300 = exists_intro h299
     h301 = exists_intro h300
     h302 = exists_intro h301
-    h303 = forall_intro h302
-    h304 = forall_intro h303
-    h305 = forall_intro h304
+    h303 = assume ((elem(u0, S_ph) & elem(u0, S_ps)) -> ((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))))
+    h304 = implies_intro h303
+    h305 = implies_elim h304, h302
     h306 = forall_intro h305
-    qed h306
+    h307 = forall_intro h306
+    h308 = forall_intro h307
+    h309 = forall_intro h308
+    qed h309
 
 # cad1
 proof mm_cad1:
@@ -19008,11 +19119,14 @@ proof mm_cad1:
     h681 = exists_intro h680
     h682 = exists_intro h681
     h683 = exists_intro h682
-    h684 = forall_intro h683
-    h685 = forall_intro h684
-    h686 = forall_intro h685
+    h684 = assume (elem(u0, S_ch) -> (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+    h685 = implies_intro h684
+    h686 = implies_elim h685, h683
     h687 = forall_intro h686
-    qed h687
+    h688 = forall_intro h687
+    h689 = forall_intro h688
+    h690 = forall_intro h689
+    qed h690
 
 # cad0
 proof mm_cad0:
@@ -19603,11 +19717,14 @@ proof mm_cad0:
     h613 = exists_intro h612
     h614 = exists_intro h613
     h615 = exists_intro h614
-    h616 = forall_intro h615
-    h617 = forall_intro h616
-    h618 = forall_intro h617
+    h616 = assume (~elem(u0, S_ch) -> (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> (elem(u0, S_ph) & elem(u0, S_ps))))
+    h617 = implies_intro h616
+    h618 = implies_elim h617, h615
     h619 = forall_intro h618
-    qed h619
+    h620 = forall_intro h619
+    h621 = forall_intro h620
+    h622 = forall_intro h621
+    qed h622
 
 # cadifp
 proof mm_cadifp:
@@ -19804,11 +19921,14 @@ proof mm_cadifp:
     h194 = exists_intro h193
     h195 = exists_intro h194
     h196 = exists_intro h195
-    h197 = forall_intro h196
-    h198 = forall_intro h197
-    h199 = forall_intro h198
+    h197 = assume (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & ~(elem(u0, S_ph) <-> elem(u0, S_ps)))) <-> ((elem(u0, S_ch) & (elem(u0, S_ph) | elem(u0, S_ps))) | (~elem(u0, S_ch) & (elem(u0, S_ph) & elem(u0, S_ps)))))
+    h198 = implies_intro h197
+    h199 = implies_elim h198, h196
     h200 = forall_intro h199
-    qed h200
+    h201 = forall_intro h200
+    h202 = forall_intro h201
+    h203 = forall_intro h202
+    qed h203
 
 # minimp
 proof mm_minimp:
@@ -20064,13 +20184,16 @@ proof mm_minimp:
     h260 = exists_intro h259
     h261 = exists_intro h260
     h262 = exists_intro h261
-    h263 = forall_intro h262
-    h264 = forall_intro h263
-    h265 = forall_intro h264
+    h263 = assume (elem(u0, S_ph) -> ((elem(u0, S_ps) -> elem(u0, S_ch)) -> (((elem(u0, S_th) -> elem(u0, S_ps)) -> (elem(u0, S_ch) -> elem(u0, S_ta))) -> (elem(u0, S_ps) -> elem(u0, S_ta)))))
+    h264 = implies_intro h263
+    h265 = implies_elim h264, h262
     h266 = forall_intro h265
     h267 = forall_intro h266
     h268 = forall_intro h267
-    qed h268
+    h269 = forall_intro h268
+    h270 = forall_intro h269
+    h271 = forall_intro h270
+    qed h271
 
 # minimp-syllsimp
 proof mm_minimp_syllsimp:
@@ -54471,11 +54594,14 @@ proof mm_minimp_syllsimp:
     h36644 = exists_intro h36643
     h36645 = exists_intro h36644
     h36646 = exists_intro h36645
-    h36647 = forall_intro h36646
-    h36648 = forall_intro h36647
-    h36649 = forall_intro h36648
+    h36647 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ch)) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h36648 = implies_intro h36647
+    h36649 = implies_elim h36648, h36646
     h36650 = forall_intro h36649
-    qed h36650
+    h36651 = forall_intro h36650
+    h36652 = forall_intro h36651
+    h36653 = forall_intro h36652
+    qed h36653
 
 # minimp-ax1
 proof mm_minimp_ax1:
@@ -54520,10 +54646,13 @@ proof mm_minimp_ax1:
     h38 = exists_intro h37
     h39 = exists_intro h38
     h40 = implies_elim h39, h5
-    h41 = forall_intro h40
-    h42 = forall_intro h41
-    h43 = forall_intro h42
-    qed h43
+    h41 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ph)))
+    h42 = implies_intro h41
+    h43 = implies_elim h42, h40
+    h44 = forall_intro h43
+    h45 = forall_intro h44
+    h46 = forall_intro h45
+    qed h46
 
 # minimp-ax2c
 proof mm_minimp_ax2c:
@@ -82067,11 +82196,14 @@ proof mm_minimp_ax2c:
     h29353 = exists_intro h29352
     h29354 = exists_intro h29353
     h29355 = exists_intro h29354
-    h29356 = forall_intro h29355
-    h29357 = forall_intro h29356
-    h29358 = forall_intro h29357
+    h29356 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h29357 = implies_intro h29356
+    h29358 = implies_elim h29357, h29355
     h29359 = forall_intro h29358
-    qed h29359
+    h29360 = forall_intro h29359
+    h29361 = forall_intro h29360
+    h29362 = forall_intro h29361
+    qed h29362
 
 # minimp-ax2
 proof mm_minimp_ax2:
@@ -83348,11 +83480,14 @@ proof mm_minimp_ax2:
     h1348 = exists_intro h1347
     h1349 = exists_intro h1348
     h1350 = exists_intro h1349
-    h1351 = forall_intro h1350
-    h1352 = forall_intro h1351
-    h1353 = forall_intro h1352
+    h1351 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h1352 = implies_intro h1351
+    h1353 = implies_elim h1352, h1350
     h1354 = forall_intro h1353
-    qed h1354
+    h1355 = forall_intro h1354
+    h1356 = forall_intro h1355
+    h1357 = forall_intro h1356
+    qed h1357
 
 # minimp-pm2.43
 proof mm_minimp_pm2_43:
@@ -83696,10 +83831,13 @@ proof mm_minimp_pm2_43:
     h355 = exists_intro h354
     h356 = exists_intro h355
     h357 = exists_intro h356
-    h358 = forall_intro h357
-    h359 = forall_intro h358
-    h360 = forall_intro h359
-    qed h360
+    h358 = assume ((elem(u0, S_ph) -> (elem(u0, S_ph) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
+    h359 = implies_intro h358
+    h360 = implies_elim h359, h357
+    h361 = forall_intro h360
+    h362 = forall_intro h361
+    h363 = forall_intro h362
+    qed h363
 
 # impsingle
 proof mm_impsingle:
@@ -83875,12 +84013,15 @@ proof mm_impsingle:
     h174 = exists_intro h173
     h175 = exists_intro h174
     h176 = exists_intro h175
-    h177 = forall_intro h176
-    h178 = forall_intro h177
-    h179 = forall_intro h178
+    h177 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ch)) -> ((elem(u0, S_ch) -> elem(u0, S_ph)) -> (elem(u0, S_th) -> elem(u0, S_ph))))
+    h178 = implies_intro h177
+    h179 = implies_elim h178, h176
     h180 = forall_intro h179
     h181 = forall_intro h180
-    qed h181
+    h182 = forall_intro h181
+    h183 = forall_intro h182
+    h184 = forall_intro h183
+    qed h184
 
 # impsingle-step4
 proof mm_impsingle_step4:
@@ -84273,16 +84414,19 @@ proof mm_impsingle_step4:
     h401 = implies_elim h400, h173
     h402 = implies_elim h401, h33
     h403 = implies_elim h402, h6
-    h404 = forall_intro h403
-    h405 = forall_intro h404
-    h406 = forall_intro h405
+    h404 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ph)) -> (elem(u0, S_ch) -> elem(u0, S_ph)))
+    h405 = implies_intro h404
+    h406 = implies_elim h405, h403
     h407 = forall_intro h406
     h408 = forall_intro h407
     h409 = forall_intro h408
     h410 = forall_intro h409
     h411 = forall_intro h410
     h412 = forall_intro h411
-    qed h412
+    h413 = forall_intro h412
+    h414 = forall_intro h413
+    h415 = forall_intro h414
+    qed h415
 
 # impsingle-step8
 proof mm_impsingle_step8:
@@ -85093,16 +85237,19 @@ proof mm_impsingle_step8:
     h845 = implies_elim h844, h617
     h846 = implies_elim h845, h33
     h847 = implies_elim h846, h6
-    h848 = forall_intro h847
-    h849 = forall_intro h848
-    h850 = forall_intro h849
+    h848 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ch)) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h849 = implies_intro h848
+    h850 = implies_elim h849, h847
     h851 = forall_intro h850
     h852 = forall_intro h851
     h853 = forall_intro h852
     h854 = forall_intro h853
     h855 = forall_intro h854
     h856 = forall_intro h855
-    qed h856
+    h857 = forall_intro h856
+    h858 = forall_intro h857
+    h859 = forall_intro h858
+    qed h859
 
 # impsingle-ax1
 proof mm_impsingle_ax1:
@@ -85158,11 +85305,14 @@ proof mm_impsingle_ax1:
     h48 = exists_intro h47
     h49 = exists_intro h48
     h50 = implies_elim h49, h10
-    h51 = forall_intro h50
-    h52 = forall_intro h51
-    h53 = forall_intro h52
+    h51 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ph)))
+    h52 = implies_intro h51
+    h53 = implies_elim h52, h50
     h54 = forall_intro h53
-    qed h54
+    h55 = forall_intro h54
+    h56 = forall_intro h55
+    h57 = forall_intro h56
+    qed h57
 
 # impsingle-step15
 proof mm_impsingle_step15:
@@ -86742,9 +86892,9 @@ proof mm_impsingle_step15:
     h1662 = implies_elim h1661, h147
     h1663 = implies_elim h1662, h12
     h1664 = implies_elim h1663, h6
-    h1665 = forall_intro h1664
-    h1666 = forall_intro h1665
-    h1667 = forall_intro h1666
+    h1665 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ch) -> elem(u0, S_th))) -> ((elem(u0, S_ph) -> elem(u0, S_th)) -> (elem(u0, S_ch) -> elem(u0, S_th))))
+    h1666 = implies_intro h1665
+    h1667 = implies_elim h1666, h1664
     h1668 = forall_intro h1667
     h1669 = forall_intro h1668
     h1670 = forall_intro h1669
@@ -86754,7 +86904,10 @@ proof mm_impsingle_step15:
     h1674 = forall_intro h1673
     h1675 = forall_intro h1674
     h1676 = forall_intro h1675
-    qed h1676
+    h1677 = forall_intro h1676
+    h1678 = forall_intro h1677
+    h1679 = forall_intro h1678
+    qed h1679
 
 # impsingle-step18
 proof mm_impsingle_step18:
@@ -87402,15 +87555,18 @@ proof mm_impsingle_step18:
     h670 = exists_intro h669
     h671 = exists_intro h670
     h672 = implies_elim h671, h545
-    h673 = forall_intro h672
-    h674 = forall_intro h673
-    h675 = forall_intro h674
+    h673 = assume ((((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ch) -> elem(u0, S_ps))) -> (((elem(u0, S_ps) -> elem(u0, S_th)) -> elem(u0, S_ph)) -> elem(u0, S_ta))) -> (elem(u0, S_et) -> (((elem(u0, S_ps) -> elem(u0, S_th)) -> elem(u0, S_ph)) -> elem(u0, S_ta))))
+    h674 = implies_intro h673
+    h675 = implies_elim h674, h672
     h676 = forall_intro h675
     h677 = forall_intro h676
     h678 = forall_intro h677
     h679 = forall_intro h678
     h680 = forall_intro h679
-    qed h680
+    h681 = forall_intro h680
+    h682 = forall_intro h681
+    h683 = forall_intro h682
+    qed h683
 
 # impsingle-step19
 proof mm_impsingle_step19:
@@ -87874,9 +88030,9 @@ proof mm_impsingle_step19:
     h472 = exists_intro h471
     h473 = implies_elim h472, h103
     h474 = implies_elim h473, h9
-    h475 = forall_intro h474
-    h476 = forall_intro h475
-    h477 = forall_intro h476
+    h475 = assume ((((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ch)) -> (elem(u0, S_th) -> elem(u0, S_ps))) -> (((elem(u0, S_ps) -> elem(u0, S_ch)) -> elem(u0, S_th)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h476 = implies_intro h475
+    h477 = implies_elim h476, h474
     h478 = forall_intro h477
     h479 = forall_intro h478
     h480 = forall_intro h479
@@ -87885,7 +88041,10 @@ proof mm_impsingle_step19:
     h483 = forall_intro h482
     h484 = forall_intro h483
     h485 = forall_intro h484
-    qed h485
+    h486 = forall_intro h485
+    h487 = forall_intro h486
+    h488 = forall_intro h487
+    qed h488
 
 # impsingle-step20
 proof mm_impsingle_step20:
@@ -90203,9 +90362,9 @@ proof mm_impsingle_step20:
     h2443 = implies_elim h2442, h228
     h2444 = implies_elim h2443, h18
     h2445 = implies_elim h2444, h12
-    h2446 = forall_intro h2445
-    h2447 = forall_intro h2446
-    h2448 = forall_intro h2447
+    h2446 = assume ((((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ps)) -> (elem(u0, S_ch) -> elem(u0, S_ps))) -> (((elem(u0, S_ps) -> elem(u0, S_th)) -> elem(u0, S_ph)) -> (elem(u0, S_ch) -> elem(u0, S_ps))))
+    h2447 = implies_intro h2446
+    h2448 = implies_elim h2447, h2445
     h2449 = forall_intro h2448
     h2450 = forall_intro h2449
     h2451 = forall_intro h2450
@@ -90213,7 +90372,10 @@ proof mm_impsingle_step20:
     h2453 = forall_intro h2452
     h2454 = forall_intro h2453
     h2455 = forall_intro h2454
-    qed h2455
+    h2456 = forall_intro h2455
+    h2457 = forall_intro h2456
+    h2458 = forall_intro h2457
+    qed h2458
 
 # impsingle-step21
 proof mm_impsingle_step21:
@@ -90308,11 +90470,14 @@ proof mm_impsingle_step21:
     h88 = exists_intro h87
     h89 = exists_intro h88
     h90 = implies_elim h89, h30
-    h91 = forall_intro h90
-    h92 = forall_intro h91
-    h93 = forall_intro h92
+    h91 = assume ((((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ch)) -> elem(u0, S_ch)) -> ((elem(u0, S_ch) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h92 = implies_intro h91
+    h93 = implies_elim h92, h90
     h94 = forall_intro h93
-    qed h94
+    h95 = forall_intro h94
+    h96 = forall_intro h95
+    h97 = forall_intro h96
+    qed h97
 
 # impsingle-step22
 proof mm_impsingle_step22:
@@ -90618,12 +90783,15 @@ proof mm_impsingle_step25:
     h290 = exists_intro h289
     h291 = exists_intro h290
     h292 = implies_elim h291, h232
-    h293 = forall_intro h292
-    h294 = forall_intro h293
-    h295 = forall_intro h294
+    h293 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) -> elem(u0, S_ch)) -> elem(u0, S_ps)) -> elem(u0, S_ps)))
+    h294 = implies_intro h293
+    h295 = implies_elim h294, h292
     h296 = forall_intro h295
     h297 = forall_intro h296
-    qed h297
+    h298 = forall_intro h297
+    h299 = forall_intro h298
+    h300 = forall_intro h299
+    qed h300
 
 # impsingle-imim1
 proof mm_impsingle_imim1:
@@ -90884,11 +91052,14 @@ proof mm_impsingle_imim1:
     h265 = exists_intro h264
     h266 = implies_elim h265, h135
     h267 = implies_elim h266, h5
-    h268 = forall_intro h267
-    h269 = forall_intro h268
-    h270 = forall_intro h269
+    h268 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ps) -> elem(u0, S_ch)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h269 = implies_intro h268
+    h270 = implies_elim h269, h267
     h271 = forall_intro h270
-    qed h271
+    h272 = forall_intro h271
+    h273 = forall_intro h272
+    h274 = forall_intro h273
+    qed h274
 
 # impsingle-peirce
 proof mm_impsingle_peirce:
@@ -90909,10 +91080,13 @@ proof mm_impsingle_peirce:
     h12 = forall_elim h11, u0
     h13 = forall_elim h12, u0
     h14 = implies_elim h13, h7
-    h15 = forall_intro h14
-    h16 = forall_intro h15
-    h17 = forall_intro h16
-    qed h17
+    h15 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ph)) -> elem(u0, S_ph))
+    h16 = implies_intro h15
+    h17 = implies_elim h16, h14
+    h18 = forall_intro h17
+    h19 = forall_intro h18
+    h20 = forall_intro h19
+    qed h20
 
 # tarski-bernays-ax2
 proof mm_tarski_bernays_ax2:
@@ -105349,11 +105523,14 @@ proof mm_tarski_bernays_ax2:
     h15360 = implies_elim h15359, h14530
     h15361 = implies_elim h15360, h14068
     h15362 = implies_elim h15361, h12442
-    h15363 = forall_intro h15362
-    h15364 = forall_intro h15363
-    h15365 = forall_intro h15364
+    h15363 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h15364 = implies_intro h15363
+    h15365 = implies_elim h15364, h15362
     h15366 = forall_intro h15365
-    qed h15366
+    h15367 = forall_intro h15366
+    h15368 = forall_intro h15367
+    h15369 = forall_intro h15368
+    qed h15369
 
 # meredith
 proof mm_meredith:
@@ -106064,13 +106241,16 @@ proof mm_meredith:
     h742 = exists_intro h741
     h743 = exists_intro h742
     h744 = exists_intro h743
-    h745 = forall_intro h744
-    h746 = forall_intro h745
-    h747 = forall_intro h746
+    h745 = assume (((((elem(u0, S_ph) -> elem(u0, S_ps)) -> (~elem(u0, S_ch) -> ~elem(u0, S_th))) -> elem(u0, S_ch)) -> elem(u0, S_ta)) -> ((elem(u0, S_ta) -> elem(u0, S_ph)) -> (elem(u0, S_th) -> elem(u0, S_ph))))
+    h746 = implies_intro h745
+    h747 = implies_elim h746, h744
     h748 = forall_intro h747
     h749 = forall_intro h748
     h750 = forall_intro h749
-    qed h750
+    h751 = forall_intro h750
+    h752 = forall_intro h751
+    h753 = forall_intro h752
+    qed h753
 
 # merlem1
 proof mm_merlem1:
@@ -106657,12 +106837,15 @@ proof mm_merlem1:
     h608 = exists_intro h607
     h609 = exists_intro h608
     h610 = implies_elim h609, h486
-    h611 = forall_intro h610
-    h612 = forall_intro h611
-    h613 = forall_intro h612
+    h611 = assume (((elem(u0, S_ch) -> (~elem(u0, S_ph) -> elem(u0, S_ps))) -> elem(u0, S_ta)) -> (elem(u0, S_ph) -> elem(u0, S_ta)))
+    h612 = implies_intro h611
+    h613 = implies_elim h612, h610
     h614 = forall_intro h613
     h615 = forall_intro h614
-    qed h615
+    h616 = forall_intro h615
+    h617 = forall_intro h616
+    h618 = forall_intro h617
+    qed h618
 
 # merlem2
 proof mm_merlem2:
@@ -106729,11 +106912,14 @@ proof mm_merlem2:
     h60 = implies_intro h59
     h61 = exists_intro h60
     h62 = implies_elim h61, h33
-    h63 = forall_intro h62
-    h64 = forall_intro h63
-    h65 = forall_intro h64
+    h63 = assume (((elem(u0, S_ph) -> elem(u0, S_ph)) -> elem(u0, S_ch)) -> (elem(u0, S_th) -> elem(u0, S_ch)))
+    h64 = implies_intro h63
+    h65 = implies_elim h64, h62
     h66 = forall_intro h65
-    qed h66
+    h67 = forall_intro h66
+    h68 = forall_intro h67
+    h69 = forall_intro h68
+    qed h69
 
 # merlem3
 proof mm_merlem3:
@@ -107120,11 +107306,14 @@ proof mm_merlem3:
     h402 = implies_intro h401
     h403 = exists_intro h402
     h404 = implies_elim h403, h375
-    h405 = forall_intro h404
-    h406 = forall_intro h405
-    h407 = forall_intro h406
+    h405 = assume (((elem(u0, S_ps) -> elem(u0, S_ch)) -> elem(u0, S_ph)) -> (elem(u0, S_ch) -> elem(u0, S_ph)))
+    h406 = implies_intro h405
+    h407 = implies_elim h406, h404
     h408 = forall_intro h407
-    qed h408
+    h409 = forall_intro h408
+    h410 = forall_intro h409
+    h411 = forall_intro h410
+    qed h411
 
 # merlem4
 proof mm_merlem4:
@@ -107278,11 +107467,14 @@ proof mm_merlem4:
     h153 = exists_intro h152
     h154 = exists_intro h153
     h155 = implies_elim h154, h7
-    h156 = forall_intro h155
-    h157 = forall_intro h156
-    h158 = forall_intro h157
+    h156 = assume (elem(u0, S_ta) -> ((elem(u0, S_ta) -> elem(u0, S_ph)) -> (elem(u0, S_th) -> elem(u0, S_ph))))
+    h157 = implies_intro h156
+    h158 = implies_elim h157, h155
     h159 = forall_intro h158
-    qed h159
+    h160 = forall_intro h159
+    h161 = forall_intro h160
+    h162 = forall_intro h161
+    qed h162
 
 # merlem5
 proof mm_merlem5:
@@ -108844,10 +109036,13 @@ proof mm_merlem5:
     h1647 = implies_elim h1646, h1001
     h1648 = implies_elim h1647, h67
     h1649 = implies_elim h1648, h7
-    h1650 = forall_intro h1649
-    h1651 = forall_intro h1650
-    h1652 = forall_intro h1651
-    qed h1652
+    h1650 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (~~elem(u0, S_ph) -> elem(u0, S_ps)))
+    h1651 = implies_intro h1650
+    h1652 = implies_elim h1651, h1649
+    h1653 = forall_intro h1652
+    h1654 = forall_intro h1653
+    h1655 = forall_intro h1654
+    qed h1655
 
 # merlem6
 proof mm_merlem6:
@@ -108951,12 +109146,15 @@ proof mm_merlem6:
     h98 = exists_intro h97
     h99 = exists_intro h98
     h100 = implies_elim h99, h23
-    h101 = forall_intro h100
-    h102 = forall_intro h101
-    h103 = forall_intro h102
+    h101 = assume (elem(u0, S_ch) -> (((elem(u0, S_ps) -> elem(u0, S_ch)) -> elem(u0, S_ph)) -> (elem(u0, S_th) -> elem(u0, S_ph))))
+    h102 = implies_intro h101
+    h103 = implies_elim h102, h100
     h104 = forall_intro h103
     h105 = forall_intro h104
-    qed h105
+    h106 = forall_intro h105
+    h107 = forall_intro h106
+    h108 = forall_intro h107
+    qed h108
 
 # merlem7
 proof mm_merlem7:
@@ -109623,13 +109821,16 @@ proof mm_merlem7:
     h697 = exists_intro h696
     h698 = implies_elim h697, h505
     h699 = implies_elim h698, h94
-    h700 = forall_intro h699
-    h701 = forall_intro h700
-    h702 = forall_intro h701
+    h700 = assume (elem(u0, S_ph) -> (((elem(u0, S_ps) -> elem(u0, S_ch)) -> elem(u0, S_th)) -> (((elem(u0, S_ch) -> elem(u0, S_ta)) -> (~elem(u0, S_th) -> ~elem(u0, S_ps))) -> elem(u0, S_th))))
+    h701 = implies_intro h700
+    h702 = implies_elim h701, h699
     h703 = forall_intro h702
     h704 = forall_intro h703
     h705 = forall_intro h704
-    qed h705
+    h706 = forall_intro h705
+    h707 = forall_intro h706
+    h708 = forall_intro h707
+    qed h708
 
 # merlem8
 proof mm_merlem8:
@@ -109820,13 +110021,16 @@ proof mm_merlem8:
     h190 = exists_intro h189
     h191 = exists_intro h190
     h192 = implies_elim h191, h7
-    h193 = forall_intro h192
-    h194 = forall_intro h193
-    h195 = forall_intro h194
+    h193 = assume (((elem(u0, S_ps) -> elem(u0, S_ch)) -> elem(u0, S_th)) -> (((elem(u0, S_ch) -> elem(u0, S_ta)) -> (~elem(u0, S_th) -> ~elem(u0, S_ps))) -> elem(u0, S_th)))
+    h194 = implies_intro h193
+    h195 = implies_elim h194, h192
     h196 = forall_intro h195
     h197 = forall_intro h196
     h198 = forall_intro h197
-    qed h198
+    h199 = forall_intro h198
+    h200 = forall_intro h199
+    h201 = forall_intro h200
+    qed h201
 
 # merlem9
 proof mm_merlem9:
@@ -110749,14 +110953,17 @@ proof mm_merlem9:
     h965 = exists_intro h964
     h966 = exists_intro h965
     h967 = implies_elim h966, h865
-    h968 = forall_intro h967
-    h969 = forall_intro h968
-    h970 = forall_intro h969
+    h968 = assume (((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ch) -> (elem(u0, S_th) -> (elem(u0, S_ps) -> elem(u0, S_ta))))) -> (elem(u0, S_et) -> (elem(u0, S_ch) -> (elem(u0, S_th) -> (elem(u0, S_ps) -> elem(u0, S_ta))))))
+    h969 = implies_intro h968
+    h970 = implies_elim h969, h967
     h971 = forall_intro h970
     h972 = forall_intro h971
     h973 = forall_intro h972
     h974 = forall_intro h973
-    qed h974
+    h975 = forall_intro h974
+    h976 = forall_intro h975
+    h977 = forall_intro h976
+    qed h977
 
 # merlem10
 proof mm_merlem10:
@@ -111136,11 +111343,14 @@ proof mm_merlem10:
     h391 = exists_intro h390
     h392 = implies_elim h391, h48
     h393 = implies_elim h392, h7
-    h394 = forall_intro h393
-    h395 = forall_intro h394
-    h396 = forall_intro h395
+    h394 = assume ((elem(u0, S_ph) -> (elem(u0, S_ph) -> elem(u0, S_ps))) -> (elem(u0, S_th) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h395 = implies_intro h394
+    h396 = implies_elim h395, h393
     h397 = forall_intro h396
-    qed h397
+    h398 = forall_intro h397
+    h399 = forall_intro h398
+    h400 = forall_intro h399
+    qed h400
 
 # merlem11
 proof mm_merlem11:
@@ -111416,10 +111626,13 @@ proof mm_merlem11:
     h283 = exists_intro h282
     h284 = implies_elim h283, h48
     h285 = implies_elim h284, h7
-    h286 = forall_intro h285
-    h287 = forall_intro h286
-    h288 = forall_intro h287
-    qed h288
+    h286 = assume ((elem(u0, S_ph) -> (elem(u0, S_ph) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
+    h287 = implies_intro h286
+    h288 = implies_elim h287, h285
+    h289 = forall_intro h288
+    h290 = forall_intro h289
+    h291 = forall_intro h290
+    qed h291
 
 # merlem12
 proof mm_merlem12:
@@ -111778,11 +111991,14 @@ proof mm_merlem12:
     h366 = exists_intro h365
     h367 = exists_intro h366
     h368 = implies_elim h367, h255
-    h369 = forall_intro h368
-    h370 = forall_intro h369
-    h371 = forall_intro h370
+    h369 = assume (((elem(u0, S_th) -> (~~elem(u0, S_ch) -> elem(u0, S_ch))) -> elem(u0, S_ph)) -> elem(u0, S_ph))
+    h370 = implies_intro h369
+    h371 = implies_elim h370, h368
     h372 = forall_intro h371
-    qed h372
+    h373 = forall_intro h372
+    h374 = forall_intro h373
+    h375 = forall_intro h374
+    qed h375
 
 # merlem13
 proof mm_merlem13:
@@ -114071,12 +114287,15 @@ proof mm_merlem13:
     h2404 = exists_intro h2403
     h2405 = exists_intro h2404
     h2406 = implies_elim h2405, h2250
-    h2407 = forall_intro h2406
-    h2408 = forall_intro h2407
-    h2409 = forall_intro h2408
+    h2407 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (((elem(u0, S_th) -> (~~elem(u0, S_ch) -> elem(u0, S_ch))) -> ~~elem(u0, S_ph)) -> elem(u0, S_ps)))
+    h2408 = implies_intro h2407
+    h2409 = implies_elim h2408, h2406
     h2410 = forall_intro h2409
     h2411 = forall_intro h2410
-    qed h2411
+    h2412 = forall_intro h2411
+    h2413 = forall_intro h2412
+    h2414 = forall_intro h2413
+    qed h2414
 
 # luk-1
 proof mm_luk_1:
@@ -114789,11 +115008,14 @@ proof mm_luk_1:
     h743 = exists_intro h742
     h744 = implies_elim h743, h418
     h745 = implies_elim h744, h54
-    h746 = forall_intro h745
-    h747 = forall_intro h746
-    h748 = forall_intro h747
+    h746 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ps) -> elem(u0, S_ch)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h747 = implies_intro h746
+    h748 = implies_elim h747, h745
     h749 = forall_intro h748
-    qed h749
+    h750 = forall_intro h749
+    h751 = forall_intro h750
+    h752 = forall_intro h751
+    qed h752
 
 # luk-2
 proof mm_luk_2:
@@ -115699,9 +115921,12 @@ proof mm_luk_2:
     h949 = exists_intro h948
     h950 = exists_intro h949
     h951 = implies_elim h950, h903
-    h952 = forall_intro h951
-    h953 = forall_intro h952
-    qed h953
+    h952 = assume ((~elem(u0, S_ph) -> elem(u0, S_ph)) -> elem(u0, S_ph))
+    h953 = implies_intro h952
+    h954 = implies_elim h953, h951
+    h955 = forall_intro h954
+    h956 = forall_intro h955
+    qed h956
 
 # luk-3
 proof mm_luk_3:
@@ -115785,10 +116010,13 @@ proof mm_luk_3:
     h79 = exists_intro h78
     h80 = exists_intro h79
     h81 = implies_elim h80, h25
-    h82 = forall_intro h81
-    h83 = forall_intro h82
-    h84 = forall_intro h83
-    qed h84
+    h82 = assume (elem(u0, S_ph) -> (~elem(u0, S_ph) -> elem(u0, S_ps)))
+    h83 = implies_intro h82
+    h84 = implies_elim h83, h81
+    h85 = forall_intro h84
+    h86 = forall_intro h85
+    h87 = forall_intro h86
+    qed h87
 
 # luklem1
 proof mm_luklem1:
@@ -115811,11 +116039,14 @@ proof mm_luklem1:
     h11 = and_intro hyp_mm_luklem1_1, h10
     h12 = and_elim_r h11
     h13 = implies_intro h12
-    h14 = forall_intro h13
-    h15 = forall_intro h14
-    h16 = forall_intro h15
+    h14 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ps) -> elem(u0, S_ch)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h15 = implies_intro h14
+    h16 = implies_elim h15, h13
     h17 = forall_intro h16
-    qed h17
+    h18 = forall_intro h17
+    h19 = forall_intro h18
+    h20 = forall_intro h19
+    qed h20
 
 # luklem2
 proof mm_luklem2:
@@ -116195,12 +116426,15 @@ proof mm_luklem2:
     h390 = exists_intro h389
     h391 = exists_intro h390
     h392 = exists_intro h391
-    h393 = forall_intro h392
-    h394 = forall_intro h393
-    h395 = forall_intro h394
+    h393 = assume ((elem(u0, S_ph) -> ~elem(u0, S_ps)) -> (((elem(u0, S_ph) -> elem(u0, S_ch)) -> elem(u0, S_th)) -> (elem(u0, S_ps) -> elem(u0, S_th))))
+    h394 = implies_intro h393
+    h395 = implies_elim h394, h392
     h396 = forall_intro h395
     h397 = forall_intro h396
-    qed h397
+    h398 = forall_intro h397
+    h399 = forall_intro h398
+    h400 = forall_intro h399
+    qed h400
 
 # luklem3
 proof mm_luklem3:
@@ -116382,12 +116616,15 @@ proof mm_luklem3:
     h181 = exists_intro h180
     h182 = exists_intro h181
     h183 = exists_intro h182
-    h184 = forall_intro h183
-    h185 = forall_intro h184
-    h186 = forall_intro h185
+    h184 = assume (elem(u0, S_ph) -> (((~elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ch)) -> (elem(u0, S_th) -> elem(u0, S_ch))))
+    h185 = implies_intro h184
+    h186 = implies_elim h185, h183
     h187 = forall_intro h186
     h188 = forall_intro h187
-    qed h188
+    h189 = forall_intro h188
+    h190 = forall_intro h189
+    h191 = forall_intro h190
+    qed h191
 
 # luklem4
 proof mm_luklem4:
@@ -116831,10 +117068,13 @@ proof mm_luklem4:
     h458 = exists_intro h457
     h459 = exists_intro h458
     h460 = exists_intro h459
-    h461 = forall_intro h460
-    h462 = forall_intro h461
-    h463 = forall_intro h462
-    qed h463
+    h461 = assume ((((~elem(u0, S_ph) -> elem(u0, S_ph)) -> elem(u0, S_ph)) -> elem(u0, S_ps)) -> elem(u0, S_ps))
+    h462 = implies_intro h461
+    h463 = implies_elim h462, h460
+    h464 = forall_intro h463
+    h465 = forall_intro h464
+    h466 = forall_intro h465
+    qed h466
 
 # luklem5
 proof mm_luklem5:
@@ -116967,10 +117207,13 @@ proof mm_luklem5:
     h131 = exists_intro h130
     h132 = exists_intro h131
     h133 = exists_intro h132
-    h134 = forall_intro h133
-    h135 = forall_intro h134
-    h136 = forall_intro h135
-    qed h136
+    h134 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ph)))
+    h135 = implies_intro h134
+    h136 = implies_elim h135, h133
+    h137 = forall_intro h136
+    h138 = forall_intro h137
+    h139 = forall_intro h138
+    qed h139
 
 # luklem6
 proof mm_luklem6:
@@ -117913,10 +118156,13 @@ proof mm_luklem6:
     h990 = exists_intro h989
     h991 = exists_intro h990
     h992 = exists_intro h991
-    h993 = forall_intro h992
-    h994 = forall_intro h993
-    h995 = forall_intro h994
-    qed h995
+    h993 = assume ((elem(u0, S_ph) -> (elem(u0, S_ph) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
+    h994 = implies_intro h993
+    h995 = implies_elim h994, h992
+    h996 = forall_intro h995
+    h997 = forall_intro h996
+    h998 = forall_intro h997
+    qed h998
 
 # luklem7
 proof mm_luklem7:
@@ -118412,11 +118658,14 @@ proof mm_luklem7:
     h513 = exists_intro h512
     h514 = exists_intro h513
     h515 = exists_intro h514
-    h516 = forall_intro h515
-    h517 = forall_intro h516
-    h518 = forall_intro h517
+    h516 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ps) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h517 = implies_intro h516
+    h518 = implies_elim h517, h515
     h519 = forall_intro h518
-    qed h519
+    h520 = forall_intro h519
+    h521 = forall_intro h520
+    h522 = forall_intro h521
+    qed h522
 
 # luklem8
 proof mm_luklem8:
@@ -118474,11 +118723,14 @@ proof mm_luklem8:
     h51 = exists_intro h50
     h52 = exists_intro h51
     h53 = implies_elim h52, h5
-    h54 = forall_intro h53
-    h55 = forall_intro h54
-    h56 = forall_intro h55
+    h54 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ch) -> elem(u0, S_ph)) -> (elem(u0, S_ch) -> elem(u0, S_ps))))
+    h55 = implies_intro h54
+    h56 = implies_elim h55, h53
     h57 = forall_intro h56
-    qed h57
+    h58 = forall_intro h57
+    h59 = forall_intro h58
+    h60 = forall_intro h59
+    qed h60
 
 # ax1
 proof mm_ax1:
@@ -118489,10 +118741,13 @@ proof mm_ax1:
     h2 = forall_elim h1, S_ph
     h3 = forall_elim h2, S_ps
     h4 = forall_elim h3, u0
-    h5 = forall_intro h4
-    h6 = forall_intro h5
-    h7 = forall_intro h6
-    qed h7
+    h5 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ph)))
+    h6 = implies_intro h5
+    h7 = implies_elim h6, h4
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    qed h10
 
 # ax2
 proof mm_ax2:
@@ -118851,11 +119106,14 @@ proof mm_ax2:
     h370 = exists_intro h369
     h371 = exists_intro h370
     h372 = exists_intro h371
-    h373 = forall_intro h372
-    h374 = forall_intro h373
-    h375 = forall_intro h374
+    h373 = assume ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))
+    h374 = implies_intro h373
+    h375 = implies_elim h374, h372
     h376 = forall_intro h375
-    qed h376
+    h377 = forall_intro h376
+    h378 = forall_intro h377
+    h379 = forall_intro h378
+    qed h379
 
 # ax3
 proof mm_ax3:
@@ -119045,10 +119303,13 @@ proof mm_ax3:
     h192 = exists_intro h191
     h193 = exists_intro h192
     h194 = exists_intro h193
-    h195 = forall_intro h194
-    h196 = forall_intro h195
-    h197 = forall_intro h196
-    qed h197
+    h195 = assume ((~elem(u0, S_ph) -> ~elem(u0, S_ps)) -> (elem(u0, S_ps) -> elem(u0, S_ph)))
+    h196 = implies_intro h195
+    h197 = implies_elim h196, h194
+    h198 = forall_intro h197
+    h199 = forall_intro h198
+    h200 = forall_intro h199
+    qed h200
 
 # nic-dfim
 proof mm_nic_dfim:
@@ -119898,10 +120159,13 @@ proof mm_nic_dfim:
     h882 = exists_intro h881
     h883 = exists_intro h882
     h884 = exists_intro h883
-    h885 = forall_intro h884
-    h886 = forall_intro h885
-    h887 = forall_intro h886
-    qed h887
+    h885 = assume ~(~(~(elem(u0, S_ph) & ~(elem(u0, S_ps) & elem(u0, S_ps))) & (elem(u0, S_ph) -> elem(u0, S_ps))) & ~(~(~(elem(u0, S_ph) & ~(elem(u0, S_ps) & elem(u0, S_ps))) & ~(elem(u0, S_ph) & ~(elem(u0, S_ps) & elem(u0, S_ps)))) & ~((elem(u0, S_ph) -> elem(u0, S_ps)) & (elem(u0, S_ph) -> elem(u0, S_ps)))))
+    h886 = implies_intro h885
+    h887 = implies_elim h886, h884
+    h888 = forall_intro h887
+    h889 = forall_intro h888
+    h890 = forall_intro h889
+    qed h890
 
 # nic-dfneg
 proof mm_nic_dfneg:
@@ -120497,9 +120761,12 @@ proof mm_nic_dfneg:
     h617 = exists_intro h616
     h618 = exists_intro h617
     h619 = exists_intro h618
-    h620 = forall_intro h619
-    h621 = forall_intro h620
-    qed h621
+    h620 = assume ~(~(~(elem(u0, S_ph) & elem(u0, S_ph)) & ~elem(u0, S_ph)) & ~(~(~(elem(u0, S_ph) & elem(u0, S_ph)) & ~(elem(u0, S_ph) & elem(u0, S_ph))) & ~(~elem(u0, S_ph) & ~elem(u0, S_ph))))
+    h621 = implies_intro h620
+    h622 = implies_elim h621, h619
+    h623 = forall_intro h622
+    h624 = forall_intro h623
+    qed h624
 
 # nic-mp
 proof mm_nic_mp:
@@ -120640,11 +120907,14 @@ proof mm_nic_mp:
     h135 = and_intro hyp_mm_nic_jmin, h134
     h136 = and_elim_r h135
     h137 = implies_intro h136
-    h138 = forall_intro h137
-    h139 = forall_intro h138
-    h140 = forall_intro h139
+    h138 = assume (elem(u0, S_ph) -> (~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) -> elem(u0, S_ps)))
+    h139 = implies_intro h138
+    h140 = implies_elim h139, h137
     h141 = forall_intro h140
-    qed h141
+    h142 = forall_intro h141
+    h143 = forall_intro h142
+    h144 = forall_intro h143
+    qed h144
 
 # nic-mpALT
 proof mm_nic_mpALT:
@@ -121293,11 +121563,14 @@ proof mm_nic_mpALT:
     h666 = and_intro hyp_mm_nic_jmin, h665
     h667 = and_elim_r h666
     h668 = implies_intro h667
-    h669 = forall_intro h668
-    h670 = forall_intro h669
-    h671 = forall_intro h670
+    h669 = assume (elem(u0, S_ph) -> (~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) -> elem(u0, S_ps)))
+    h670 = implies_intro h669
+    h671 = implies_elim h670, h668
     h672 = forall_intro h671
-    qed h672
+    h673 = forall_intro h672
+    h674 = forall_intro h673
+    h675 = forall_intro h674
+    qed h675
 
 # nic-ax
 proof mm_nic_ax:
@@ -124283,13 +124556,16 @@ proof mm_nic_ax:
     h3134 = exists_intro h3133
     h3135 = exists_intro h3134
     h3136 = exists_intro h3135
-    h3137 = forall_intro h3136
-    h3138 = forall_intro h3137
-    h3139 = forall_intro h3138
+    h3137 = assume ~(~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) & ~(~(elem(u0, S_ta) & ~(elem(u0, S_ta) & elem(u0, S_ta))) & ~(~(elem(u0, S_th) & elem(u0, S_ch)) & ~(~(elem(u0, S_ph) & elem(u0, S_th)) & ~(elem(u0, S_ph) & elem(u0, S_th))))))
+    h3138 = implies_intro h3137
+    h3139 = implies_elim h3138, h3136
     h3140 = forall_intro h3139
     h3141 = forall_intro h3140
     h3142 = forall_intro h3141
-    qed h3142
+    h3143 = forall_intro h3142
+    h3144 = forall_intro h3143
+    h3145 = forall_intro h3144
+    qed h3145
 
 # nic-axALT
 proof mm_nic_axALT:
@@ -132418,13 +132694,16 @@ proof mm_nic_axALT:
     h8548 = exists_intro h8547
     h8549 = exists_intro h8548
     h8550 = exists_intro h8549
-    h8551 = forall_intro h8550
-    h8552 = forall_intro h8551
-    h8553 = forall_intro h8552
+    h8551 = assume ~(~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) & ~(~(elem(u0, S_ta) & ~(elem(u0, S_ta) & elem(u0, S_ta))) & ~(~(elem(u0, S_th) & elem(u0, S_ch)) & ~(~(elem(u0, S_ph) & elem(u0, S_th)) & ~(elem(u0, S_ph) & elem(u0, S_th))))))
+    h8552 = implies_intro h8551
+    h8553 = implies_elim h8552, h8550
     h8554 = forall_intro h8553
     h8555 = forall_intro h8554
     h8556 = forall_intro h8555
-    qed h8556
+    h8557 = forall_intro h8556
+    h8558 = forall_intro h8557
+    h8559 = forall_intro h8558
+    qed h8559
 
 # nic-imp
 proof mm_nic_imp:
@@ -132767,13 +133046,16 @@ proof mm_nic_imp:
     h348 = and_intro hyp_mm_nic_imp_1, h347
     h349 = and_elim_r h348
     h350 = implies_intro h349
-    h351 = forall_intro h350
-    h352 = forall_intro h351
-    h353 = forall_intro h352
+    h351 = assume (~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) -> ~(~(elem(u0, S_th) & elem(u0, S_ch)) & ~(~(elem(u0, S_ph) & elem(u0, S_th)) & ~(elem(u0, S_ph) & elem(u0, S_th)))))
+    h352 = implies_intro h351
+    h353 = implies_elim h352, h350
     h354 = forall_intro h353
     h355 = forall_intro h354
     h356 = forall_intro h355
-    qed h356
+    h357 = forall_intro h356
+    h358 = forall_intro h357
+    h359 = forall_intro h358
+    qed h359
 
 # nic-idlem1
 proof mm_nic_idlem1:
@@ -133144,13 +133426,16 @@ proof mm_nic_idlem1:
     h377 = exists_intro h376
     h378 = exists_intro h377
     h379 = exists_intro h378
-    h380 = forall_intro h379
-    h381 = forall_intro h380
-    h382 = forall_intro h381
+    h380 = assume ~(~(elem(u0, S_th) & ~(elem(u0, S_ta) & ~(elem(u0, S_ta) & elem(u0, S_ta)))) & ~(~(~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) & elem(u0, S_th)) & ~(~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) & elem(u0, S_th))))
+    h381 = implies_intro h380
+    h382 = implies_elim h381, h379
     h383 = forall_intro h382
     h384 = forall_intro h383
     h385 = forall_intro h384
-    qed h385
+    h386 = forall_intro h385
+    h387 = forall_intro h386
+    h388 = forall_intro h387
+    qed h388
 
 # nic-idlem2
 proof mm_nic_idlem2:
@@ -134377,14 +134662,17 @@ proof mm_nic_idlem2:
     h1273 = and_intro hyp_mm_nic_idlem2_1, h1272
     h1274 = and_elim_r h1273
     h1275 = implies_intro h1274
-    h1276 = forall_intro h1275
-    h1277 = forall_intro h1276
-    h1278 = forall_intro h1277
+    h1276 = assume (~(elem(u0, S_et) & ~(~(elem(u0, S_ph) & ~(elem(u0, S_ch) & elem(u0, S_ps))) & elem(u0, S_th))) -> ~(~(elem(u0, S_th) & ~(elem(u0, S_ta) & ~(elem(u0, S_ta) & elem(u0, S_ta)))) & elem(u0, S_et)))
+    h1277 = implies_intro h1276
+    h1278 = implies_elim h1277, h1275
     h1279 = forall_intro h1278
     h1280 = forall_intro h1279
     h1281 = forall_intro h1280
     h1282 = forall_intro h1281
-    qed h1282
+    h1283 = forall_intro h1282
+    h1284 = forall_intro h1283
+    h1285 = forall_intro h1284
+    qed h1285
 
 # nic-id
 proof mm_nic_id:
@@ -136118,11 +136406,14 @@ proof mm_nic_id:
     h1814 = exists_intro h1813
     h1815 = exists_intro h1814
     h1816 = exists_intro h1815
-    h1817 = forall_intro h1816
-    h1818 = forall_intro h1817
-    h1819 = forall_intro h1818
+    h1817 = assume ~(elem(u0, S_ta) & ~(elem(u0, S_ta) & elem(u0, S_ta)))
+    h1818 = implies_intro h1817
+    h1819 = implies_elim h1818, h1816
     h1820 = forall_intro h1819
     h1821 = forall_intro h1820
     h1822 = forall_intro h1821
-    qed h1822
+    h1823 = forall_intro h1822
+    h1824 = forall_intro h1823
+    h1825 = forall_intro h1824
+    qed h1825
 

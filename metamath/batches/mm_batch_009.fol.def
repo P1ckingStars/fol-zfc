@@ -1,0 +1,302 @@
+# Translated from Metamath set.mm
+
+# orbi2i
+claim mm_orbi2i: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> ((elem(u0, S_ch) | elem(u0, S_ph)) <-> (elem(u0, S_ch) | elem(u0, S_ps))))
+
+# orbi1i
+claim mm_orbi1i: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> ((elem(u0, S_ph) | elem(u0, S_ch)) <-> (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# orbi12i
+claim mm_orbi12i: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> ((elem(u0, S_ch) <-> elem(u0, S_th)) -> ((elem(u0, S_ph) | elem(u0, S_ch)) <-> (elem(u0, S_ps) | elem(u0, S_th)))))
+
+# orbi2d
+claim mm_orbi2d: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> (elem(u0, S_ph) -> ((elem(u0, S_th) | elem(u0, S_ps)) <-> (elem(u0, S_th) | elem(u0, S_ch)))))
+
+# orbi1d
+claim mm_orbi1d: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> (elem(u0, S_ph) -> ((elem(u0, S_ps) | elem(u0, S_th)) <-> (elem(u0, S_ch) | elem(u0, S_th)))))
+
+# orbi1
+claim mm_orbi1: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> ((elem(u0, S_ph) | elem(u0, S_ch)) <-> (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# orbi12d
+claim mm_orbi12d: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall S_ta. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> (elem(u0, S_th) <-> elem(u0, S_ta))) -> (elem(u0, S_ph) -> ((elem(u0, S_ps) | elem(u0, S_th)) <-> (elem(u0, S_ch) | elem(u0, S_ta))))))
+
+# pm1.5
+claim mm_pm1_5: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))) -> (elem(u0, S_ps) | (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# or12
+claim mm_or12: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))) <-> (elem(u0, S_ps) | (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# orass
+claim mm_orass: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) <-> (elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# pm2.31
+claim mm_pm2_31: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))) -> ((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)))
+
+# pm2.32
+claim mm_pm2_32: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) -> (elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# pm2.3
+claim mm_pm2_3: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))) -> (elem(u0, S_ph) | (elem(u0, S_ch) | elem(u0, S_ps))))
+
+# or32
+claim mm_or32: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) <-> ((elem(u0, S_ph) | elem(u0, S_ch)) | elem(u0, S_ps)))
+
+# or4
+claim mm_or4: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | (elem(u0, S_ch) | elem(u0, S_th))) <-> ((elem(u0, S_ph) | elem(u0, S_ch)) | (elem(u0, S_ps) | elem(u0, S_th))))
+
+# or42
+claim mm_or42: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | (elem(u0, S_ch) | elem(u0, S_th))) <-> ((elem(u0, S_ph) | elem(u0, S_ch)) | (elem(u0, S_th) | elem(u0, S_ps))))
+
+# orordi
+claim mm_orordi: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) | elem(u0, S_ch))) <-> ((elem(u0, S_ph) | elem(u0, S_ps)) | (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# orordir
+claim mm_orordir: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) <-> ((elem(u0, S_ph) | elem(u0, S_ch)) | (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# orimdi
+claim mm_orimdi: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) -> elem(u0, S_ch))) <-> ((elem(u0, S_ph) | elem(u0, S_ps)) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm2.76
+claim mm_pm2_76: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) | elem(u0, S_ps)) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm2.85
+claim mm_pm2_85: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) -> (elem(u0, S_ph) | elem(u0, S_ch))) -> (elem(u0, S_ph) | (elem(u0, S_ps) -> elem(u0, S_ch))))
+
+# pm2.75
+claim mm_pm2_75: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | elem(u0, S_ps)) -> ((elem(u0, S_ph) | (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm4.78
+claim mm_pm4_78: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) -> elem(u0, S_ps)) | (elem(u0, S_ph) -> elem(u0, S_ch))) <-> (elem(u0, S_ph) -> (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# biort
+claim mm_biort: forall S_ph. forall S_ps. forall u0. (elem(u0, S_ph) -> (elem(u0, S_ph) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+
+# biorf
+claim mm_biorf: forall S_ph. forall S_ps. forall u0. (~elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+
+# biortn
+claim mm_biortn: forall S_ph. forall S_ps. forall u0. (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (~elem(u0, S_ph) | elem(u0, S_ps))))
+
+# biorfi
+claim mm_biorfi: forall S_ph. forall S_ps. forall u0. (~elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+
+# biorfri
+claim mm_biorfri: forall S_ph. forall S_ps. forall u0. (~elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(u0, S_ps) | elem(u0, S_ph))))
+
+# biorfriOLD
+claim mm_biorfriOLD: forall S_ph. forall S_ps. forall u0. (~elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(u0, S_ps) | elem(u0, S_ph))))
+
+# pm2.26
+claim mm_pm2_26: forall S_ph. forall S_ps. forall u0. (~elem(u0, S_ph) | ((elem(u0, S_ph) -> elem(u0, S_ps)) -> elem(u0, S_ps)))
+
+# pm2.63
+claim mm_pm2_63: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) | elem(u0, S_ps)) -> ((~elem(u0, S_ph) | elem(u0, S_ps)) -> elem(u0, S_ps)))
+
+# pm2.64
+claim mm_pm2_64: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) | elem(u0, S_ps)) -> ((elem(u0, S_ph) | ~elem(u0, S_ps)) -> elem(u0, S_ph)))
+
+# pm2.42
+claim mm_pm2_42: forall S_ph. forall S_ps. forall u0. ((~elem(u0, S_ph) | (elem(u0, S_ph) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
+
+# pm5.11g
+claim mm_pm5_11g: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) | (~elem(u0, S_ph) -> elem(u0, S_ch)))
+
+# pm5.11
+claim mm_pm5_11: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) | (~elem(u0, S_ph) -> elem(u0, S_ps)))
+
+# pm5.12
+claim mm_pm5_12: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) | (elem(u0, S_ph) -> ~elem(u0, S_ps)))
+
+# pm5.14
+claim mm_pm5_14: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) | (elem(u0, S_ps) -> elem(u0, S_ch)))
+
+# pm5.13
+claim mm_pm5_13: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) | (elem(u0, S_ps) -> elem(u0, S_ph)))
+
+# pm5.55
+claim mm_pm5_55: forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) <-> elem(u0, S_ph)) | ((elem(u0, S_ph) | elem(u0, S_ps)) <-> elem(u0, S_ps)))
+
+# pm4.72
+claim mm_pm4_72: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ps) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+
+# imimorb
+claim mm_imimorb: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ps) -> elem(u0, S_ch)) -> (elem(u0, S_ph) -> elem(u0, S_ch))) <-> (elem(u0, S_ph) -> (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# oibabs
+claim mm_oibabs: forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) -> (elem(u0, S_ph) <-> elem(u0, S_ps))) <-> (elem(u0, S_ph) <-> elem(u0, S_ps)))
+
+# orbidi
+claim mm_orbidi: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) <-> elem(u0, S_ch))) <-> ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm5.7
+claim mm_pm5_7: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ch)) <-> (elem(u0, S_ps) | elem(u0, S_ch))) <-> (elem(u0, S_ch) | (elem(u0, S_ph) <-> elem(u0, S_ps))))
+
+# jaao
+claim mm_jaao: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall S_ta. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_th) -> (elem(u0, S_ta) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) & elem(u0, S_th)) -> ((elem(u0, S_ps) | elem(u0, S_ta)) -> elem(u0, S_ch)))))
+
+# jaoa
+claim mm_jaoa: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall S_ta. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_th) -> (elem(u0, S_ta) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) | elem(u0, S_th)) -> ((elem(u0, S_ps) & elem(u0, S_ta)) -> elem(u0, S_ch)))))
+
+# jaoian
+claim mm_jaoian: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) & elem(u0, S_ps)) -> elem(u0, S_ch)) -> (((elem(u0, S_th) & elem(u0, S_ps)) -> elem(u0, S_ch)) -> (((elem(u0, S_ph) | elem(u0, S_th)) & elem(u0, S_ps)) -> elem(u0, S_ch))))
+
+# jaodan
+claim mm_jaodan: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) & elem(u0, S_ps)) -> elem(u0, S_ch)) -> (((elem(u0, S_ph) & elem(u0, S_th)) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) & (elem(u0, S_ps) | elem(u0, S_th))) -> elem(u0, S_ch))))
+
+# mpjaodan
+claim mm_mpjaodan: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) & elem(u0, S_ps)) -> elem(u0, S_ch)) -> (((elem(u0, S_ph) & elem(u0, S_th)) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) | elem(u0, S_th))) -> (elem(u0, S_ph) -> elem(u0, S_ch)))))
+
+# pm3.44
+claim mm_pm3_44: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ps) -> elem(u0, S_ph)) & (elem(u0, S_ch) -> elem(u0, S_ph))) -> ((elem(u0, S_ps) | elem(u0, S_ch)) -> elem(u0, S_ph)))
+
+# jao
+claim mm_jao: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ch) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) | elem(u0, S_ch)) -> elem(u0, S_ps))))
+
+# jaob
+claim mm_jaob: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ch)) -> elem(u0, S_ps)) <-> ((elem(u0, S_ph) -> elem(u0, S_ps)) & (elem(u0, S_ch) -> elem(u0, S_ps))))
+
+# pm4.77
+claim mm_pm4_77: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ps) -> elem(u0, S_ph)) & (elem(u0, S_ch) -> elem(u0, S_ph))) <-> ((elem(u0, S_ps) | elem(u0, S_ch)) -> elem(u0, S_ph)))
+
+# pm3.48
+claim mm_pm3_48: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) -> elem(u0, S_ps)) & (elem(u0, S_ch) -> elem(u0, S_th))) -> ((elem(u0, S_ph) | elem(u0, S_ch)) -> (elem(u0, S_ps) | elem(u0, S_th))))
+
+# orim12d
+claim mm_orim12d: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall S_ta. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> ((elem(u0, S_ph) -> (elem(u0, S_th) -> elem(u0, S_ta))) -> (elem(u0, S_ph) -> ((elem(u0, S_ps) | elem(u0, S_th)) -> (elem(u0, S_ch) | elem(u0, S_ta))))))
+
+# orim1d
+claim mm_orim1d: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> ((elem(u0, S_ps) | elem(u0, S_th)) -> (elem(u0, S_ch) | elem(u0, S_th)))))
+
+# orim2d
+claim mm_orim2d: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> ((elem(u0, S_th) | elem(u0, S_ps)) -> (elem(u0, S_th) | elem(u0, S_ch)))))
+
+# orim2
+claim mm_orim2: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ps) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm2.38
+claim mm_pm2_38: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ps) -> elem(u0, S_ch)) -> ((elem(u0, S_ps) | elem(u0, S_ph)) -> (elem(u0, S_ch) | elem(u0, S_ph))))
+
+# pm2.36
+claim mm_pm2_36: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ps) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) -> (elem(u0, S_ch) | elem(u0, S_ph))))
+
+# pm2.37
+claim mm_pm2_37: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ps) -> elem(u0, S_ch)) -> ((elem(u0, S_ps) | elem(u0, S_ph)) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm2.81
+claim mm_pm2_81: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((elem(u0, S_ps) -> (elem(u0, S_ch) -> elem(u0, S_th))) -> ((elem(u0, S_ph) | elem(u0, S_ps)) -> ((elem(u0, S_ph) | elem(u0, S_ch)) -> (elem(u0, S_ph) | elem(u0, S_th)))))
+
+# pm2.8
+claim mm_pm2_8: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | elem(u0, S_ps)) -> ((~elem(u0, S_ps) | elem(u0, S_ch)) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm2.73
+claim mm_pm2_73: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) -> (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# pm2.74
+claim mm_pm2_74: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ps) -> elem(u0, S_ph)) -> (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) -> (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# pm2.82
+claim mm_pm2_82: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) -> (((elem(u0, S_ph) | ~elem(u0, S_ch)) | elem(u0, S_th)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_th))))
+
+# pm4.39
+claim mm_pm4_39: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) <-> elem(u0, S_ch)) & (elem(u0, S_ps) <-> elem(u0, S_th))) -> ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ch) | elem(u0, S_th))))
+
+# animorl
+claim mm_animorl: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) & elem(u0, S_ps)) -> (elem(u0, S_ph) | elem(u0, S_ch)))
+
+# animorr
+claim mm_animorr: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) & elem(u0, S_ps)) -> (elem(u0, S_ch) | elem(u0, S_ps)))
+
+# animorlr
+claim mm_animorlr: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) & elem(u0, S_ps)) -> (elem(u0, S_ch) | elem(u0, S_ph)))
+
+# animorrl
+claim mm_animorrl: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) & elem(u0, S_ps)) -> (elem(u0, S_ps) | elem(u0, S_ch)))
+
+# ianor
+claim mm_ianor: forall S_ph. forall S_ps. forall u0. (~(elem(u0, S_ph) & elem(u0, S_ps)) <-> (~elem(u0, S_ph) | ~elem(u0, S_ps)))
+
+# anor
+claim mm_anor: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) & elem(u0, S_ps)) <-> ~(~elem(u0, S_ph) | ~elem(u0, S_ps)))
+
+# ioran
+claim mm_ioran: forall S_ph. forall S_ps. forall u0. (~(elem(u0, S_ph) | elem(u0, S_ps)) <-> (~elem(u0, S_ph) & ~elem(u0, S_ps)))
+
+# pm4.52
+claim mm_pm4_52: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) & ~elem(u0, S_ps)) <-> ~(~elem(u0, S_ph) | elem(u0, S_ps)))
+
+# pm4.53
+claim mm_pm4_53: forall S_ph. forall S_ps. forall u0. (~(elem(u0, S_ph) & ~elem(u0, S_ps)) <-> (~elem(u0, S_ph) | elem(u0, S_ps)))
+
+# pm4.54
+claim mm_pm4_54: forall S_ph. forall S_ps. forall u0. ((~elem(u0, S_ph) & elem(u0, S_ps)) <-> ~(elem(u0, S_ph) | ~elem(u0, S_ps)))
+
+# pm4.55
+claim mm_pm4_55: forall S_ph. forall S_ps. forall u0. (~(~elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) | ~elem(u0, S_ps)))
+
+# pm4.56
+claim mm_pm4_56: forall S_ph. forall S_ps. forall u0. ((~elem(u0, S_ph) & ~elem(u0, S_ps)) <-> ~(elem(u0, S_ph) | elem(u0, S_ps)))
+
+# oran
+claim mm_oran: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) | elem(u0, S_ps)) <-> ~(~elem(u0, S_ph) & ~elem(u0, S_ps)))
+
+# pm4.57
+claim mm_pm4_57: forall S_ph. forall S_ps. forall u0. (~(~elem(u0, S_ph) & ~elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ps)))
+
+# pm3.1
+claim mm_pm3_1: forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) & elem(u0, S_ps)) -> ~(~elem(u0, S_ph) | ~elem(u0, S_ps)))
+
+# pm3.11
+claim mm_pm3_11: forall S_ph. forall S_ps. forall u0. (~(~elem(u0, S_ph) | ~elem(u0, S_ps)) -> (elem(u0, S_ph) & elem(u0, S_ps)))
+
+# pm3.12
+claim mm_pm3_12: forall S_ph. forall S_ps. forall u0. ((~elem(u0, S_ph) | ~elem(u0, S_ps)) | (elem(u0, S_ph) & elem(u0, S_ps)))
+
+# pm3.13
+claim mm_pm3_13: forall S_ph. forall S_ps. forall u0. (~(elem(u0, S_ph) & elem(u0, S_ps)) -> (~elem(u0, S_ph) | ~elem(u0, S_ps)))
+
+# pm3.14
+claim mm_pm3_14: forall S_ph. forall S_ps. forall u0. ((~elem(u0, S_ph) | ~elem(u0, S_ps)) -> ~(elem(u0, S_ph) & elem(u0, S_ps)))
+
+# pm4.44
+claim mm_pm4_44: forall S_ph. forall S_ps. forall u0. (elem(u0, S_ph) <-> (elem(u0, S_ph) | (elem(u0, S_ph) & elem(u0, S_ps))))
+
+# pm4.45
+claim mm_pm4_45: forall S_ph. forall S_ps. forall u0. (elem(u0, S_ph) <-> (elem(u0, S_ph) & (elem(u0, S_ph) | elem(u0, S_ps))))
+
+# orabs
+claim mm_orabs: forall S_ph. forall S_ps. forall u0. (elem(u0, S_ph) <-> ((elem(u0, S_ph) | elem(u0, S_ps)) & elem(u0, S_ph)))
+
+# oranabs
+claim mm_oranabs: forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) | ~elem(u0, S_ps)) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ps)))
+
+# pm5.61
+claim mm_pm5_61: forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) & ~elem(u0, S_ps)) <-> (elem(u0, S_ph) & ~elem(u0, S_ps)))
+
+# pm5.6
+claim mm_pm5_6: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) & ~elem(u0, S_ps)) -> elem(u0, S_ch)) <-> (elem(u0, S_ph) -> (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# orcanai
+claim mm_orcanai: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) | elem(u0, S_ch))) -> ((elem(u0, S_ph) & ~elem(u0, S_ps)) -> elem(u0, S_ch)))
+
+# pm4.79
+claim mm_pm4_79: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ps) -> elem(u0, S_ph)) | (elem(u0, S_ch) -> elem(u0, S_ph))) <-> ((elem(u0, S_ps) & elem(u0, S_ch)) -> elem(u0, S_ph)))
+
+# pm5.53
+claim mm_pm5_53: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((((elem(u0, S_ph) | elem(u0, S_ps)) | elem(u0, S_ch)) -> elem(u0, S_th)) <-> (((elem(u0, S_ph) -> elem(u0, S_th)) & (elem(u0, S_ps) -> elem(u0, S_th))) & (elem(u0, S_ch) -> elem(u0, S_th))))
+
+# ordi
+claim mm_ordi: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) | (elem(u0, S_ps) & elem(u0, S_ch))) <-> ((elem(u0, S_ph) | elem(u0, S_ps)) & (elem(u0, S_ph) | elem(u0, S_ch))))
+
+# ordir
+claim mm_ordir: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) & elem(u0, S_ps)) | elem(u0, S_ch)) <-> ((elem(u0, S_ph) | elem(u0, S_ch)) & (elem(u0, S_ps) | elem(u0, S_ch))))
+
+# andi
+claim mm_andi: forall S_ph. forall S_ps. forall S_ch. forall u0. ((elem(u0, S_ph) & (elem(u0, S_ps) | elem(u0, S_ch))) <-> ((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ph) & elem(u0, S_ch))))
+
+# andir
+claim mm_andir: forall S_ph. forall S_ps. forall S_ch. forall u0. (((elem(u0, S_ph) | elem(u0, S_ps)) & elem(u0, S_ch)) <-> ((elem(u0, S_ph) & elem(u0, S_ch)) | (elem(u0, S_ps) & elem(u0, S_ch))))
+
+# orddi
+claim mm_orddi: forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. (((elem(u0, S_ph) & elem(u0, S_ps)) | (elem(u0, S_ch) & elem(u0, S_th))) <-> (((elem(u0, S_ph) | elem(u0, S_ch)) & (elem(u0, S_ph) | elem(u0, S_th))) & ((elem(u0, S_ps) | elem(u0, S_ch)) & (elem(u0, S_ps) | elem(u0, S_th)))))
+

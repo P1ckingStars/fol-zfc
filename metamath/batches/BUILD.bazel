@@ -1,0 +1,141 @@
+load("//build:fol.bzl", "fol_library", "fol_proof")
+
+fol_library(
+    name = "mm_comprehension",
+    header = "mm_comprehension.fol.def",
+    deps = ["//metamath/bridge:predicate"],
+)
+
+fol_proof(
+    name = "mm_batch_000",
+    header = "mm_batch_000.fol.def",
+    proof = "mm_batch_000.fol.proof",
+    deps = [":mm_comprehension"],
+)
+
+fol_proof(
+    name = "mm_batch_001",
+    header = "mm_batch_001.fol.def",
+    proof = "mm_batch_001.fol.proof",
+    deps = [":mm_batch_000"],
+)
+
+fol_proof(
+    name = "mm_batch_002",
+    header = "mm_batch_002.fol.def",
+    proof = "mm_batch_002.fol.proof",
+    deps = [":mm_batch_001"],
+)
+
+fol_proof(
+    name = "mm_batch_003",
+    header = "mm_batch_003.fol.def",
+    proof = "mm_batch_003.fol.proof",
+    deps = [":mm_batch_002"],
+)
+
+fol_proof(
+    name = "mm_batch_004",
+    header = "mm_batch_004.fol.def",
+    proof = "mm_batch_004.fol.proof",
+    deps = [":mm_batch_003"],
+)
+
+fol_proof(
+    name = "mm_batch_005",
+    header = "mm_batch_005.fol.def",
+    proof = "mm_batch_005.fol.proof",
+    deps = [":mm_batch_004"],
+)
+
+fol_proof(
+    name = "mm_batch_006",
+    header = "mm_batch_006.fol.def",
+    proof = "mm_batch_006.fol.proof",
+    deps = [":mm_batch_005"],
+)
+
+fol_proof(
+    name = "mm_batch_007",
+    header = "mm_batch_007.fol.def",
+    proof = "mm_batch_007.fol.proof",
+    deps = [":mm_batch_006"],
+)
+
+fol_proof(
+    name = "mm_batch_008",
+    header = "mm_batch_008.fol.def",
+    proof = "mm_batch_008.fol.proof",
+    deps = [":mm_batch_007"],
+)
+
+fol_proof(
+    name = "mm_batch_009",
+    header = "mm_batch_009.fol.def",
+    proof = "mm_batch_009.fol.proof",
+    deps = [":mm_batch_008"],
+)
+
+fol_proof(
+    name = "mm_batch_010",
+    header = "mm_batch_010.fol.def",
+    proof = "mm_batch_010.fol.proof",
+    deps = [":mm_batch_009"],
+)
+
+fol_proof(
+    name = "mm_batch_011",
+    header = "mm_batch_011.fol.def",
+    proof = "mm_batch_011.fol.proof",
+    deps = [":mm_batch_010"],
+)
+
+fol_proof(
+    name = "mm_batch_012",
+    header = "mm_batch_012.fol.def",
+    proof = "mm_batch_012.fol.proof",
+    deps = [":mm_batch_011"],
+)
+
+fol_proof(
+    name = "mm_batch_013",
+    header = "mm_batch_013.fol.def",
+    proof = "mm_batch_013.fol.proof",
+    deps = [":mm_batch_012"],
+)
+
+fol_proof(
+    name = "mm_batch_014",
+    header = "mm_batch_014.fol.def",
+    proof = "mm_batch_014.fol.proof",
+    deps = [":mm_batch_013"],
+)
+
+fol_proof(
+    name = "mm_batch_015",
+    header = "mm_batch_015.fol.def",
+    proof = "mm_batch_015.fol.proof",
+    deps = [":mm_batch_014"],
+)
+
+fol_proof(
+    name = "mm_batch_016",
+    header = "mm_batch_016.fol.def",
+    proof = "mm_batch_016.fol.proof",
+    deps = [":mm_batch_015"],
+)
+
+fol_proof(
+    name = "mm_batch_017",
+    header = "mm_batch_017.fol.def",
+    proof = "mm_batch_017.fol.proof",
+    deps = [":mm_batch_016"],
+)
+
+fol_proof(
+    name = "mm_batch_018",
+    header = "mm_batch_018.fol.def",
+    proof = "mm_batch_018.fol.proof",
+    deps = [":mm_batch_017"],
+)
+

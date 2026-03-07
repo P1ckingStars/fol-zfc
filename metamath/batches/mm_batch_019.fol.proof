@@ -1,0 +1,18 @@
+# Translated from Metamath set.mm
+
+# eltpi
+proof mm_eltpi:
+    fix A
+    fix B
+    fix C
+    fix D
+    fix u0
+    h1 = assume ((eq(A, B) | eq(A, C)) | eq(A, D))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
+
