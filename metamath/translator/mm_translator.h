@@ -180,22 +180,6 @@ private:
         const Expression& mm_tokens, size_t start,
         const FrameInfo& caller_info, ProofState& state);
 
-    // Structural formula conversion: given a handle for a formula
-    // containing source atoms, produce a handle for the same formula
-    // with target atoms, using iff handles for each replacement.
-    // direction: true = forward (source→target), false = backward (target→source)
-    // mm_expr: Metamath expression tokens describing the formula structure
-    // The expr is walked to determine the connective structure.
-    std::string structural_convert(
-        const std::string& source_handle,
-        const Expression& mm_expr,
-        size_t start,
-        const std::unordered_map<std::string, std::string>& iff_handles,
-        const FrameInfo& source_info,
-        const FrameInfo& target_info,
-        bool forward,
-        ProofState& state);
-
     // Unused lemma storage (kept for interface compatibility)
     std::vector<TranslatedTheorem> lemmas_;
 

@@ -324,6 +324,13 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
         info.ess_hyps.push_back({frame.hyp_labels[i], fol, ast});
     }
 
+    // Parse conclusion AST
+    {
+        size_t cstart = (!thm.expression.empty() && thm.expression[0] == "|-")
+                            ? 1 : 0;
+        info.conclusion_ast = parse_mm_wff(thm.expression, cstart, info);
+    }
+
     return true;
 }
 
@@ -695,47 +702,7 @@ std::string MmTranslator::emit_comprehension_axioms() {
 }
 
 // --- Helper: skip over one wff subexpression in MM tokens ---
-static size_t skip_wff_tokens(const Expression& tok, size_t pos) {
-    if (pos >= tok.size()) return pos;
-    if (tok[pos] == "(") {
-        int depth = 1;
-        pos++;
-        while (pos < tok.size() && depth > 0) {
-            if (tok[pos] == "(") depth++;
-            else if (tok[pos] == ")") depth--;
-            pos++;
-        }
-        return pos;
-    }
-    if (tok[pos] == "-." || tok[pos] == "A." || tok[pos] == "E." ||
-        tok[pos] == "F/") {
-        pos++;
-        if (tok[pos - 1] == "A." || tok[pos - 1] == "E." ||
-            tok[pos - 1] == "F/") pos++; // skip var
-        return skip_wff_tokens(tok, pos);
-    }
-    // Function-style 3-ary: if- ( ... , ... , ... )
-    if (tok[pos] == "if-" || tok[pos] == "cadd" || tok[pos] == "hadd") {
-        pos++;  // skip keyword
-        if (pos < tok.size() && tok[pos] == "(") {
-            // Use paren-depth to skip the whole ( ... ) block
-            int depth = 1;
-            pos++;
-            while (pos < tok.size() && depth > 0) {
-                if (tok[pos] == "(") depth++;
-                else if (tok[pos] == ")") depth--;
-                pos++;
-            }
-        }
-        return pos;
-    }
-    return pos + 1; // atom
-}
-
-// --- Structural conversion context ---
-// Walks the ORIGINAL (pre-substitution) Metamath expression.
-// At wff variable atoms: applies iff conversion.
-// At connectives: structural proof transformation.
+// --- Structural conversion ---
 namespace {
 
 struct WffAtom {
@@ -748,1073 +715,228 @@ struct WffAtom {
 using FrameInfo = MmTranslator::FrameInfo;
 using ProofState = MmTranslator::ProofState;
 
-struct ConvCtx {
-    const Expression& orig;
-    const std::map<std::string, Expression>& subst;
-    const std::unordered_map<std::string, WffAtom>& atoms;
-    const FrameInfo& caller_info;
-    const MmDatabase& db;
-    ProofState& state;
-
-    // Compute compound-form FOL string for subexpr starting at pos.
-    // (Translates substituted expression with caller's info.)
-    std::string compound_str_at(size_t pos);
-
-    // Compute elem-form FOL string for subexpr starting at pos.
-    // (Same structure but atoms use witness sets.)
-    std::string elem_str_at(size_t pos);
-
-    // Forward conversion: handle for elem-form → handle for compound-form
-    // Returns (result_handle, new_pos)
-    std::pair<std::string, size_t> fwd(const std::string& h, size_t pos);
-
-    // Backward conversion: handle for compound-form → handle for elem-form
-    std::pair<std::string, size_t> bwd(const std::string& h, size_t pos);
-
-    // Check if subexpr at pos needs any conversion at all
-    bool needs_conv(size_t pos);
-};
-
-bool ConvCtx::needs_conv(size_t pos) {
-    if (pos >= orig.size()) return false;
-    const auto& tok = orig[pos];
-    if (tok == "(") {
-        pos++;
-        if (needs_conv(pos)) return true;
-        pos = skip_wff_tokens(orig, pos); // skip LHS
-        std::string op = orig[pos];
-        pos++; // skip op
-        if (needs_conv(pos)) return true;
-        // For 3-way, check third operand
-        if ((op == "/\\" || op == "\\/")) {
-            size_t rhs_end = skip_wff_tokens(orig, pos);
-            if (rhs_end < orig.size() && orig[rhs_end] == op) {
-                return needs_conv(rhs_end + 1);
-            }
+// Leaf renderer using WffAtom compound_str for Var nodes.
+// IMPORTANT: captures `atoms` by reference; caller must ensure it outlives the lambda.
+LeafRenderer make_compound_renderer(
+    const std::unordered_map<std::string, WffAtom>& atoms) {
+    return [&atoms](const WffNode& node) -> std::string {
+        if (node.kind == WffNode::Kind::Var) {
+            auto it = atoms.find(node.name);
+            if (it != atoms.end()) return it->second.compound_str;
         }
-        return false;
-    }
-    if (tok == "-." ) return needs_conv(pos + 1);
-    if (tok == "if-" || tok == "cadd" || tok == "hadd") {
-        // Skip keyword + ( and check each arg
-        pos++;
-        if (pos < orig.size() && orig[pos] == "(") pos++;
-        for (int a = 0; a < 3; ++a) {
-            if (needs_conv(pos)) return true;
-            pos = skip_wff_tokens(orig, pos);
-            if (pos < orig.size() && (orig[pos] == "," || orig[pos] == ")")) pos++;
+        if (node.kind == WffNode::Kind::Verum) {
+            auto it = atoms.find("T.");
+            if (it != atoms.end()) return it->second.compound_str;
         }
-        return false;
-    }
-    // Atom: check if it's a wff var with a compound substitution
-    auto it = atoms.find(tok);
-    return it != atoms.end() && !it->second.iff_handle.empty();
+        if (node.kind == WffNode::Kind::Falsum) {
+            auto it = atoms.find("F.");
+            if (it != atoms.end()) return it->second.compound_str;
+        }
+        if (node.kind == WffNode::Kind::Literal) return node.name;
+        return "??";
+    };
 }
 
-std::string ConvCtx::compound_str_at(size_t pos) {
-    if (pos >= orig.size()) return "??";
-    const auto& tok = orig[pos];
-
-    // Atom: wff variable
-    auto ait = atoms.find(tok);
-    if (ait != atoms.end()) return ait->second.compound_str;
-
-    // Function-style 3-ary
-    if (tok == "if-" || tok == "cadd" || tok == "hadd") {
-        pos++;
-        if (pos < orig.size() && orig[pos] == "(") pos++;
-        std::string a = compound_str_at(pos);
-        pos = skip_wff_tokens(orig, pos);
-        if (pos < orig.size() && orig[pos] == ",") pos++;
-        std::string b = compound_str_at(pos);
-        pos = skip_wff_tokens(orig, pos);
-        if (pos < orig.size() && orig[pos] == ",") pos++;
-        std::string c = compound_str_at(pos);
-        if (tok == "if-") return "((" + a + " & " + b + ") | (~" + a + " & " + c + "))";
-        if (tok == "cadd") return "((" + a + " & " + b + ") | (" + c + " & ~(" + a + " <-> " + b + ")))";
-        return "~(~(" + a + " <-> " + b + ") <-> " + c + ")"; // hadd
-    }
-
-    // Connective
-    if (tok == "(") {
-        pos++;
-        std::string lhs = compound_str_at(pos);
-        size_t lhs_end = skip_wff_tokens(orig, pos);
-        std::string op = orig[lhs_end];
-        size_t rhs_pos = lhs_end + 1;
-        std::string rhs = compound_str_at(rhs_pos);
-        // Check for 3-way
-        if (op == "/\\" || op == "\\/") {
-            size_t rhs_end = skip_wff_tokens(orig, rhs_pos);
-            if (rhs_end < orig.size() && orig[rhs_end] == op) {
-                std::string third = compound_str_at(rhs_end + 1);
-                std::string fol_op = (op == "/\\") ? " & " : " | ";
-                return "((" + lhs + fol_op + rhs + ")" + fol_op + third + ")";
-            }
+// Leaf renderer using WffAtom elem_str for Var nodes.
+// IMPORTANT: captures `atoms` by reference; caller must ensure it outlives the lambda.
+LeafRenderer make_elem_renderer(
+    const std::unordered_map<std::string, WffAtom>& atoms) {
+    return [&atoms](const WffNode& node) -> std::string {
+        if (node.kind == WffNode::Kind::Var) {
+            auto it = atoms.find(node.name);
+            if (it != atoms.end()) return it->second.elem_str;
         }
-        std::string fol_op;
-        if (op == "->") fol_op = " -> ";
-        else if (op == "/\\") fol_op = " & ";
-        else if (op == "\\/") fol_op = " | ";
-        else if (op == "<->") fol_op = " <-> ";
-        else if (op == "\\/_") return "~(" + lhs + " <-> " + rhs + ")";
-        else if (op == "-/\\") return "~(" + lhs + " & " + rhs + ")";
-        else if (op == "-\\/") return "~(" + lhs + " | " + rhs + ")";
-        else fol_op = " ?? ";
-        return "(" + lhs + fol_op + rhs + ")";
-    }
-    if (tok == "-.") {
-        return "~" + compound_str_at(pos + 1);
-    }
-    if (tok == "A.") {
-        std::string var = orig[pos + 1];
-        return "(forall " + var + ". " + compound_str_at(pos + 2) + ")";
-    }
-    if (tok == "E.") {
-        std::string var = orig[pos + 1];
-        return "(exists " + var + ". " + compound_str_at(pos + 2) + ")";
-    }
-    // T. (verum) and F. (falsum) — tautology/contradiction using first available set
-    if (tok == "T." || tok == "F.") {
-        std::string s = caller_info.set_var_order.empty()
-            ? caller_info.dummy_var : caller_info.set_var_order[0];
-        std::string taut = "(elem(" + caller_info.dummy_var + ", " + s +
-                           ") -> elem(" + caller_info.dummy_var + ", " + s + "))";
-        return (tok == "T.") ? taut : "~" + taut;
-    }
-    // Fallback
-    return "??" + tok + "??";
+        if (node.kind == WffNode::Kind::Verum) {
+            auto it = atoms.find("T.");
+            if (it != atoms.end()) return it->second.elem_str;
+        }
+        if (node.kind == WffNode::Kind::Falsum) {
+            auto it = atoms.find("F.");
+            if (it != atoms.end()) return it->second.elem_str;
+        }
+        if (node.kind == WffNode::Kind::Literal) return node.name;
+        return "??";
+    };
 }
 
-std::string ConvCtx::elem_str_at(size_t pos) {
-    if (pos >= orig.size()) return "??";
-    const auto& tok = orig[pos];
-
-    // Atom: wff variable
-    auto ait = atoms.find(tok);
-    if (ait != atoms.end()) return ait->second.elem_str;
-
-    // Function-style 3-ary
-    if (tok == "if-" || tok == "cadd" || tok == "hadd") {
-        pos++;
-        if (pos < orig.size() && orig[pos] == "(") pos++;
-        std::string a = elem_str_at(pos);
-        pos = skip_wff_tokens(orig, pos);
-        if (pos < orig.size() && orig[pos] == ",") pos++;
-        std::string b = elem_str_at(pos);
-        pos = skip_wff_tokens(orig, pos);
-        if (pos < orig.size() && orig[pos] == ",") pos++;
-        std::string c = elem_str_at(pos);
-        if (tok == "if-") return "((" + a + " & " + b + ") | (~" + a + " & " + c + "))";
-        if (tok == "cadd") return "((" + a + " & " + b + ") | (" + c + " & ~(" + a + " <-> " + b + ")))";
-        return "~(~(" + a + " <-> " + b + ") <-> " + c + ")"; // hadd
-    }
-
-    // Connective (same structure, different atoms)
-    if (tok == "(") {
-        pos++;
-        std::string lhs = elem_str_at(pos);
-        size_t lhs_end = skip_wff_tokens(orig, pos);
-        std::string op = orig[lhs_end];
-        size_t rhs_pos = lhs_end + 1;
-        std::string rhs = elem_str_at(rhs_pos);
-        // Check for 3-way
-        if (op == "/\\" || op == "\\/") {
-            size_t rhs_end = skip_wff_tokens(orig, rhs_pos);
-            if (rhs_end < orig.size() && orig[rhs_end] == op) {
-                std::string third = elem_str_at(rhs_end + 1);
-                std::string fol_op = (op == "/\\") ? " & " : " | ";
-                return "((" + lhs + fol_op + rhs + ")" + fol_op + third + ")";
-            }
-        }
-        std::string fol_op;
-        if (op == "->") fol_op = " -> ";
-        else if (op == "/\\") fol_op = " & ";
-        else if (op == "\\/") fol_op = " | ";
-        else if (op == "<->") fol_op = " <-> ";
-        else if (op == "\\/_") return "~(" + lhs + " <-> " + rhs + ")";
-        else if (op == "-/\\") return "~(" + lhs + " & " + rhs + ")";
-        else if (op == "-\\/") return "~(" + lhs + " | " + rhs + ")";
-        else fol_op = " ?? ";
-        return "(" + lhs + fol_op + rhs + ")";
-    }
-    if (tok == "-.") {
-        return "~" + elem_str_at(pos + 1);
-    }
-    if (tok == "A.") {
-        std::string var = orig[pos + 1];
-        return "(forall " + var + ". " + elem_str_at(pos + 2) + ")";
-    }
-    if (tok == "E.") {
-        std::string var = orig[pos + 1];
-        return "(exists " + var + ". " + elem_str_at(pos + 2) + ")";
-    }
-    return "??" + tok + "??";
+// Check if any leaf in the subtree needs iff conversion.
+bool needs_conv(const WffNode& node,
+                const std::unordered_map<std::string, WffAtom>& atoms) {
+    return any_leaf(node, [&](const WffNode& leaf) {
+        if (leaf.kind != WffNode::Kind::Var) return false;
+        auto it = atoms.find(leaf.name);
+        return it != atoms.end() && !it->second.iff_handle.empty();
+    });
 }
 
-std::pair<std::string, size_t> ConvCtx::fwd(const std::string& h, size_t pos) {
-    if (pos >= orig.size()) return {h, pos};
-    const auto& tok = orig[pos];
+// Convert a proof handle between elem-form and compound-form by walking
+// the WffNode tree and emitting natural deduction proof steps.
+//
+// forward=true:  elem-form → compound-form (uses iff_elim_l at atoms)
+// forward=false: compound-form → elem-form (uses iff_elim_r at atoms)
+std::string convert_proof(
+    const WffNode& node,
+    const std::string& h,
+    const std::unordered_map<std::string, WffAtom>& atoms,
+    bool forward,
+    ProofState& state)
+{
+    // Early exit: no atoms in this subtree need conversion
+    if (!needs_conv(node, atoms)) return h;
 
-    // Atom: wff variable
-    auto ait = atoms.find(tok);
-    if (ait != atoms.end()) {
-        if (ait->second.iff_handle.empty()) {
-            return {h, pos + 1};  // identity
-        }
-        // iff_elim_l: elem(u0, witness) → compound
+    auto src = forward ? make_elem_renderer(atoms) : make_compound_renderer(atoms);
+    auto tgt = forward ? make_compound_renderer(atoms) : make_elem_renderer(atoms);
+
+    switch (node.kind) {
+
+    case WffNode::Kind::Var: {
+        auto it = atoms.find(node.name);
+        if (it == atoms.end() || it->second.iff_handle.empty()) return h;
         std::string r = state.fresh();
-        state.emit(r + " = iff_elim_l " + ait->second.iff_handle + ", " + h);
-        return {r, pos + 1};
+        if (forward)
+            state.emit(r + " = iff_elim_l " + it->second.iff_handle + ", " + h);
+        else
+            state.emit(r + " = iff_elim_r " + it->second.iff_handle + ", " + h);
+        return r;
     }
 
-    // ( A OP B )
-    if (tok == "(") {
-        pos++;
-        size_t lhs_start = pos;
-        size_t lhs_end = skip_wff_tokens(orig, pos);
-        std::string op = orig[lhs_end];
-        size_t rhs_start = lhs_end + 1;
-        size_t rhs_end = skip_wff_tokens(orig, rhs_start);
-        // rhs_end should be at ")"
+    case WffNode::Kind::Literal:
+    case WffNode::Kind::Verum:
+    case WffNode::Kind::Falsum:
+        return h;
 
-        if (op == "->") {
-            if (!needs_conv(lhs_start) && !needs_conv(rhs_start)) {
-                return {h, rhs_end + 1};
-            }
-            // h : A_e -> B_e.  Want: A_c -> B_c
-            std::string a_c = compound_str_at(lhs_start);
+    case WffNode::Kind::Neg: {
+        // h : ~A_src, want ~A_tgt
+        std::string a_tgt = emit_fol(*node.left, tgt);
+        std::string h_assume = state.fresh();
+        state.emit(h_assume + " = assume " + a_tgt);
+        std::string h_src = convert_proof(*node.left, h_assume, atoms, !forward, state);
+        std::string h_bot = state.fresh();
+        state.emit(h_bot + " = not_elim " + h + ", " + h_src);
+        std::string r = state.fresh();
+        state.emit(r + " = not_intro " + h_bot);
+        return r;
+    }
+
+    case WffNode::Kind::Binary: {
+        switch (node.op) {
+
+        case WffNode::Op::Implies: {
+            // h : A_src -> B_src, want A_tgt -> B_tgt
+            std::string a_tgt = emit_fol(*node.left, tgt);
             std::string h_assume = state.fresh();
-            state.emit(h_assume + " = assume " + a_c);
-            // backward: A_c → A_e
-            auto [h_a_e, _] = bwd(h_assume, lhs_start);
-            // implies_elim: h, A_e → B_e
-            std::string h_b_e = state.fresh();
-            state.emit(h_b_e + " = implies_elim " + h + ", " + h_a_e);
-            // forward: B_e → B_c
-            auto [h_b_c, __] = fwd(h_b_e, rhs_start);
-            // implies_intro
+            state.emit(h_assume + " = assume " + a_tgt);
+            std::string h_a_src = convert_proof(*node.left, h_assume, atoms, !forward, state);
+            std::string h_b_src = state.fresh();
+            state.emit(h_b_src + " = implies_elim " + h + ", " + h_a_src);
+            std::string h_b_tgt = convert_proof(*node.right, h_b_src, atoms, forward, state);
             std::string r = state.fresh();
-            state.emit(r + " = implies_intro " + h_b_c);
-            return {r, rhs_end + 1};
+            state.emit(r + " = implies_intro " + h_b_tgt);
+            return r;
         }
 
-        if (op == "/\\") {
-            // Check for 3-way: A /\ B /\ C → ((A & B) & C)
-            bool is_3way = (rhs_end < orig.size() && orig[rhs_end] == "/\\");
-            size_t third_start = is_3way ? rhs_end + 1 : 0;
-            size_t third_end = is_3way ? skip_wff_tokens(orig, third_start) : 0;
-            size_t end_pos = is_3way ? third_end + 1 : rhs_end + 1;
-
-            bool any_conv = needs_conv(lhs_start) || needs_conv(rhs_start) ||
-                            (is_3way && needs_conv(third_start));
-            if (!any_conv) return {h, end_pos};
-
-            if (is_3way) {
-                // h : ((A_e & B_e) & C_e). Want: ((A_c & B_c) & C_c)
-                std::string h_ab = state.fresh();
-                state.emit(h_ab + " = and_elim_l " + h);
-                std::string h_a_e = state.fresh();
-                state.emit(h_a_e + " = and_elim_l " + h_ab);
-                auto [h_a_c, _1] = fwd(h_a_e, lhs_start);
-                std::string h_b_e = state.fresh();
-                state.emit(h_b_e + " = and_elim_r " + h_ab);
-                auto [h_b_c, _2] = fwd(h_b_e, rhs_start);
-                std::string h_ab_c = state.fresh();
-                state.emit(h_ab_c + " = and_intro " + h_a_c + ", " + h_b_c);
-                std::string h_c_e = state.fresh();
-                state.emit(h_c_e + " = and_elim_r " + h);
-                auto [h_c_c, _3] = fwd(h_c_e, third_start);
-                std::string r = state.fresh();
-                state.emit(r + " = and_intro " + h_ab_c + ", " + h_c_c);
-                return {r, end_pos};
-            }
-            // Binary case
-            std::string h_a_e = state.fresh();
-            state.emit(h_a_e + " = and_elim_l " + h);
-            auto [h_a_c, _] = fwd(h_a_e, lhs_start);
-            std::string h_b_e = state.fresh();
-            state.emit(h_b_e + " = and_elim_r " + h);
-            auto [h_b_c, __] = fwd(h_b_e, rhs_start);
+        case WffNode::Op::And: {
+            // h : A_src & B_src, want A_tgt & B_tgt
+            std::string h_a = state.fresh();
+            state.emit(h_a + " = and_elim_l " + h);
+            std::string h_a_tgt = convert_proof(*node.left, h_a, atoms, forward, state);
+            std::string h_b = state.fresh();
+            state.emit(h_b + " = and_elim_r " + h);
+            std::string h_b_tgt = convert_proof(*node.right, h_b, atoms, forward, state);
             std::string r = state.fresh();
-            state.emit(r + " = and_intro " + h_a_c + ", " + h_b_c);
-            return {r, end_pos};
+            state.emit(r + " = and_intro " + h_a_tgt + ", " + h_b_tgt);
+            return r;
         }
 
-        if (op == "\\/") {
-            // Check for 3-way
-            bool is_3way = (rhs_end < orig.size() && orig[rhs_end] == "\\/");
-            size_t third_start = is_3way ? rhs_end + 1 : 0;
-            size_t third_end = is_3way ? skip_wff_tokens(orig, third_start) : 0;
-            size_t end_pos = is_3way ? third_end + 1 : rhs_end + 1;
-
-            bool any_conv = needs_conv(lhs_start) || needs_conv(rhs_start) ||
-                            (is_3way && needs_conv(third_start));
-            if (!any_conv) return {h, end_pos};
-
-            if (is_3way) {
-                // h : ((A_e | B_e) | C_e). Want: ((A_c | B_c) | C_c)
-                // 3 cases via nested or_elim
-                std::string ab_e = "(" + elem_str_at(lhs_start) + " | " + elem_str_at(rhs_start) + ")";
-                std::string c_e = elem_str_at(third_start);
-                std::string full_c = "((" + compound_str_at(lhs_start) + " | " + compound_str_at(rhs_start) + ") | " + compound_str_at(third_start) + ")";
-                // Case AB_e: decompose further
-                std::string h_ab = state.fresh();
-                state.emit(h_ab + " = assume " + ab_e);
-                std::string a_e = elem_str_at(lhs_start);
-                std::string b_e = elem_str_at(rhs_start);
-                // Case A
-                std::string h_a = state.fresh();
-                state.emit(h_a + " = assume " + a_e);
-                auto [h_a_c, _1] = fwd(h_a, lhs_start);
-                std::string h_bc_let = state.fresh();
-                state.emit(h_bc_let + " = let " + compound_str_at(rhs_start));
-                std::string h_a_or1 = state.fresh();
-                state.emit(h_a_or1 + " = or_intro_l " + h_a_c + ", " + h_bc_let);
-                std::string h_c_let1 = state.fresh();
-                state.emit(h_c_let1 + " = let " + compound_str_at(third_start));
-                std::string h_a_or2 = state.fresh();
-                state.emit(h_a_or2 + " = or_intro_l " + h_a_or1 + ", " + h_c_let1);
-                std::string h_a_imp = state.fresh();
-                state.emit(h_a_imp + " = implies_intro " + h_a_or2);
-                // Case B
-                std::string h_b = state.fresh();
-                state.emit(h_b + " = assume " + b_e);
-                auto [h_b_c, _2] = fwd(h_b, rhs_start);
-                std::string h_ac_let = state.fresh();
-                state.emit(h_ac_let + " = let " + compound_str_at(lhs_start));
-                std::string h_b_or1 = state.fresh();
-                state.emit(h_b_or1 + " = or_intro_r " + h_ac_let + ", " + h_b_c);
-                std::string h_c_let2 = state.fresh();
-                state.emit(h_c_let2 + " = let " + compound_str_at(third_start));
-                std::string h_b_or2 = state.fresh();
-                state.emit(h_b_or2 + " = or_intro_l " + h_b_or1 + ", " + h_c_let2);
-                std::string h_b_imp = state.fresh();
-                state.emit(h_b_imp + " = implies_intro " + h_b_or2);
-                // or_elim for AB
-                std::string h_ab_res = state.fresh();
-                state.emit(h_ab_res + " = or_elim " + h_ab + ", " + h_a_imp + ", " + h_b_imp);
-                std::string h_ab_imp = state.fresh();
-                state.emit(h_ab_imp + " = implies_intro " + h_ab_res);
-                // Case C
-                std::string h_c = state.fresh();
-                state.emit(h_c + " = assume " + c_e);
-                auto [h_c_c, _3] = fwd(h_c, third_start);
-                std::string h_ab_c_let = state.fresh();
-                state.emit(h_ab_c_let + " = let (" + compound_str_at(lhs_start) + " | " + compound_str_at(rhs_start) + ")");
-                std::string h_c_or = state.fresh();
-                state.emit(h_c_or + " = or_intro_r " + h_ab_c_let + ", " + h_c_c);
-                std::string h_c_imp = state.fresh();
-                state.emit(h_c_imp + " = implies_intro " + h_c_or);
-                // or_elim for (AB | C)
-                std::string r = state.fresh();
-                state.emit(r + " = or_elim " + h + ", " + h_ab_imp + ", " + h_c_imp);
-                return {r, end_pos};
-            }
-            // Binary case
-            std::string a_e = elem_str_at(lhs_start);
-            std::string b_c = compound_str_at(rhs_start);
-            std::string a_c = compound_str_at(lhs_start);
-            std::string b_e = elem_str_at(rhs_start);
-            // Case A_e: convert to A_c, or_intro_l
-            std::string h_ca = state.fresh();
-            state.emit(h_ca + " = assume " + a_e);
-            auto [h_ca_c, _1] = fwd(h_ca, lhs_start);
-            std::string h_bc_let = state.fresh();
-            state.emit(h_bc_let + " = let " + b_c);
-            std::string h_ca_or = state.fresh();
-            state.emit(h_ca_or + " = or_intro_l " + h_ca_c + ", " + h_bc_let);
-            std::string h_ca_impl = state.fresh();
-            state.emit(h_ca_impl + " = implies_intro " + h_ca_or);
-            // Case B_e: convert to B_c, or_intro_r
-            std::string h_cb = state.fresh();
-            state.emit(h_cb + " = assume " + b_e);
-            auto [h_cb_c, _2] = fwd(h_cb, rhs_start);
-            std::string h_ac_let = state.fresh();
-            state.emit(h_ac_let + " = let " + a_c);
-            std::string h_cb_or = state.fresh();
-            state.emit(h_cb_or + " = or_intro_r " + h_ac_let + ", " + h_cb_c);
-            std::string h_cb_impl = state.fresh();
-            state.emit(h_cb_impl + " = implies_intro " + h_cb_or);
+        case WffNode::Op::Or: {
+            // h : A_src | B_src, want A_tgt | B_tgt
+            std::string a_src = emit_fol(*node.left, src);
+            std::string b_tgt = emit_fol(*node.right, tgt);
+            std::string a_tgt = emit_fol(*node.left, tgt);
+            // Case A: assume A_src, convert to A_tgt, or_intro_l
+            std::string h_a = state.fresh();
+            state.emit(h_a + " = assume " + a_src);
+            std::string h_a_tgt = convert_proof(*node.left, h_a, atoms, forward, state);
+            std::string h_b_let = state.fresh();
+            state.emit(h_b_let + " = let " + b_tgt);
+            std::string h_a_or = state.fresh();
+            state.emit(h_a_or + " = or_intro_l " + h_a_tgt + ", " + h_b_let);
+            std::string h_a_imp = state.fresh();
+            state.emit(h_a_imp + " = implies_intro " + h_a_or);
+            // Case B: assume B_src, convert to B_tgt, or_intro_r
+            std::string b_src = emit_fol(*node.right, src);
+            std::string h_b = state.fresh();
+            state.emit(h_b + " = assume " + b_src);
+            std::string h_b_tgt = convert_proof(*node.right, h_b, atoms, forward, state);
+            std::string h_a_let = state.fresh();
+            state.emit(h_a_let + " = let " + a_tgt);
+            std::string h_b_or = state.fresh();
+            state.emit(h_b_or + " = or_intro_r " + h_a_let + ", " + h_b_tgt);
+            std::string h_b_imp = state.fresh();
+            state.emit(h_b_imp + " = implies_intro " + h_b_or);
             // or_elim
             std::string r = state.fresh();
-            state.emit(r + " = or_elim " + h + ", " + h_ca_impl + ", " + h_cb_impl);
-            return {r, end_pos};
+            state.emit(r + " = or_elim " + h + ", " + h_a_imp + ", " + h_b_imp);
+            return r;
         }
 
-        if (op == "<->") {
-            bool lnc = needs_conv(lhs_start), rnc = needs_conv(rhs_start);
-            if (!lnc && !rnc) {
-                return {h, rhs_end + 1};
-            }
-
-            // h : A_e <-> B_e.  Want: A_c <-> B_c
-            std::string a_c = compound_str_at(lhs_start);
-            std::string b_c = compound_str_at(rhs_start);
-            // Forward dir: A_c → B_c
+        case WffNode::Op::Iff: {
+            // h : A_src <-> B_src, want A_tgt <-> B_tgt
+            std::string a_tgt = emit_fol(*node.left, tgt);
+            std::string b_tgt = emit_fol(*node.right, tgt);
+            // Forward dir: A_tgt -> B_tgt
             std::string h_fa = state.fresh();
-            state.emit(h_fa + " = assume " + a_c);
-            auto [h_fa_e, _1] = bwd(h_fa, lhs_start);
-            std::string h_fb_e = state.fresh();
-            state.emit(h_fb_e + " = iff_elim_l " + h + ", " + h_fa_e);
-            auto [h_fb_c, _2] = fwd(h_fb_e, rhs_start);
+            state.emit(h_fa + " = assume " + a_tgt);
+            std::string h_fa_src = convert_proof(*node.left, h_fa, atoms, !forward, state);
+            std::string h_fb_src = state.fresh();
+            state.emit(h_fb_src + " = iff_elim_l " + h + ", " + h_fa_src);
+            std::string h_fb_tgt = convert_proof(*node.right, h_fb_src, atoms, forward, state);
             std::string h_fwd = state.fresh();
-            state.emit(h_fwd + " = implies_intro " + h_fb_c);
-            // Backward dir: B_c → A_c
+            state.emit(h_fwd + " = implies_intro " + h_fb_tgt);
+            // Backward dir: B_tgt -> A_tgt
             std::string h_ba = state.fresh();
-            state.emit(h_ba + " = assume " + b_c);
-            auto [h_ba_e, _3] = bwd(h_ba, rhs_start);
-            std::string h_bb_e = state.fresh();
-            state.emit(h_bb_e + " = iff_elim_r " + h + ", " + h_ba_e);
-            auto [h_bb_c, _4] = fwd(h_bb_e, lhs_start);
-            std::string r_bwd = state.fresh();
-            state.emit(r_bwd + " = implies_intro " + h_bb_c);
+            state.emit(h_ba + " = assume " + b_tgt);
+            std::string h_ba_src = convert_proof(*node.right, h_ba, atoms, !forward, state);
+            std::string h_bb_src = state.fresh();
+            state.emit(h_bb_src + " = iff_elim_r " + h + ", " + h_ba_src);
+            std::string h_bb_tgt = convert_proof(*node.left, h_bb_src, atoms, forward, state);
+            std::string h_bwd = state.fresh();
+            state.emit(h_bwd + " = implies_intro " + h_bb_tgt);
             // Combine
             std::string r = state.fresh();
-            state.emit(r + " = iff_intro " + h_fwd + ", " + r_bwd);
-            return {r, rhs_end + 1};
+            state.emit(r + " = iff_intro " + h_fwd + ", " + h_bwd);
+            return r;
         }
 
-        // Negated binary operators: -/\ (nand), \/_ (xor), -\/ (nor)
-        // Desugar: -/\ = ~(A & B), \/_ = ~(A <-> B), -\/ = ~(A | B)
-        if (op == "-/\\" || op == "\\/_" || op == "-\\/") {
-            if (!needs_conv(lhs_start) && !needs_conv(rhs_start)) {
-                return {h, rhs_end + 1};
-            }
-            // h : ~(inner_e). Want: ~(inner_c)
-            // inner_c = compound form of the desugared inner
-            std::string inner_c = compound_str_at(lhs_start);
-            std::string fol_inner_op;
-            if (op == "-/\\") fol_inner_op = " & ";
-            else if (op == "\\/_") fol_inner_op = " <-> ";
-            else fol_inner_op = " | ";
-            // Actually, compound_str_at already handles the full expression including op
-            // We just need the full compound form at the outer ( position
-            // For -/\, compound_str_at(pos-1) where pos-1 = outer ( would give ~(A_c & B_c)
-            // But we're inside the ( handler, so we need the inner compound.
-            // compound_str_at at the ( position gives the full ~(A_c op B_c) form.
-            // We need to decompose: assume inner_compound, bwd to inner_elem, not_elim h.
-            std::string a_c = compound_str_at(lhs_start);
-            std::string b_c = compound_str_at(rhs_start);
-            std::string inner_compound;
-            if (op == "-/\\") inner_compound = "(" + a_c + " & " + b_c + ")";
-            else if (op == "\\/_") inner_compound = "(" + a_c + " <-> " + b_c + ")";
-            else inner_compound = "(" + a_c + " | " + b_c + ")";
-
-            std::string h_assume_inner = state.fresh();
-            state.emit(h_assume_inner + " = assume " + inner_compound);
-
-            std::string h_inner_e;
-            if (op == "-/\\") {
-                // Decompose conjunction: and_elim + bwd each + and_intro
-                std::string h_a_c = state.fresh();
-                state.emit(h_a_c + " = and_elim_l " + h_assume_inner);
-                auto [h_a_e, _1] = bwd(h_a_c, lhs_start);
-                std::string h_b_c = state.fresh();
-                state.emit(h_b_c + " = and_elim_r " + h_assume_inner);
-                auto [h_b_e, _2] = bwd(h_b_c, rhs_start);
-                h_inner_e = state.fresh();
-                state.emit(h_inner_e + " = and_intro " + h_a_e + ", " + h_b_e);
-            } else if (op == "\\/_") {
-                // Biconditional: need full <-> conversion
-                // Assume a_e, fwd to a_c, iff_elim_l, bwd to b_e → implies_intro (fwd dir)
-                // Similarly for bwd dir. Then iff_intro.
-                std::string a_e = elem_str_at(lhs_start);
-                std::string b_e = elem_str_at(rhs_start);
-                std::string hf1 = state.fresh();
-                state.emit(hf1 + " = assume " + a_e);
-                auto [hf1c, __1] = fwd(hf1, lhs_start);
-                std::string hf2 = state.fresh();
-                state.emit(hf2 + " = iff_elim_l " + h_assume_inner + ", " + hf1c);
-                auto [hf2e, __2] = bwd(hf2, rhs_start);
-                std::string hf3 = state.fresh();
-                state.emit(hf3 + " = implies_intro " + hf2e);
-                std::string hb1 = state.fresh();
-                state.emit(hb1 + " = assume " + b_e);
-                auto [hb1c, __3] = fwd(hb1, rhs_start);
-                std::string hb2 = state.fresh();
-                state.emit(hb2 + " = iff_elim_r " + h_assume_inner + ", " + hb1c);
-                auto [hb2e, __4] = bwd(hb2, lhs_start);
-                std::string hb3 = state.fresh();
-                state.emit(hb3 + " = implies_intro " + hb2e);
-                h_inner_e = state.fresh();
-                state.emit(h_inner_e + " = iff_intro " + hf3 + ", " + hb3);
-            } else {
-                // Disjunction: or_elim
-                std::string a_e = elem_str_at(lhs_start);
-                std::string b_e = elem_str_at(rhs_start);
-                std::string a_c_s = compound_str_at(lhs_start);
-                std::string b_c_s = compound_str_at(rhs_start);
-                std::string ha = state.fresh();
-                state.emit(ha + " = assume " + a_c_s);
-                auto [hae, __1] = bwd(ha, lhs_start);
-                std::string hbe_let = state.fresh();
-                state.emit(hbe_let + " = let " + b_e);
-                std::string ha_or = state.fresh();
-                state.emit(ha_or + " = or_intro_l " + hae + ", " + hbe_let);
-                std::string ha_imp = state.fresh();
-                state.emit(ha_imp + " = implies_intro " + ha_or);
-                std::string hb = state.fresh();
-                state.emit(hb + " = assume " + b_c_s);
-                auto [hbe2, __2] = bwd(hb, rhs_start);
-                std::string hae_let = state.fresh();
-                state.emit(hae_let + " = let " + a_e);
-                std::string hb_or = state.fresh();
-                state.emit(hb_or + " = or_intro_r " + hae_let + ", " + hbe2);
-                std::string hb_imp = state.fresh();
-                state.emit(hb_imp + " = implies_intro " + hb_or);
-                h_inner_e = state.fresh();
-                state.emit(h_inner_e + " = or_elim " + h_assume_inner + ", " + ha_imp + ", " + hb_imp);
-            }
-
-            std::string h_bot = state.fresh();
-            state.emit(h_bot + " = not_elim " + h + ", " + h_inner_e);
-            std::string r = state.fresh();
-            state.emit(r + " = not_intro " + h_bot);
-            return {r, rhs_end + 1};
-        }
-
-        // Unknown op: pass through
-        return {h, rhs_end + 1};
+        } // switch op
+        break;
     }
 
-    if (tok == "-.") {
-        if (!needs_conv(pos + 1)) return {h, skip_wff_tokens(orig, pos)};
-        // h : ~A_e.  Want: ~A_c
-        std::string a_c = compound_str_at(pos + 1);
-        std::string h_assume = state.fresh();
-        state.emit(h_assume + " = assume " + a_c);
-        auto [h_a_e, _] = bwd(h_assume, pos + 1);
-        std::string h_bot = state.fresh();
-        state.emit(h_bot + " = not_elim " + h + ", " + h_a_e);
-        std::string r = state.fresh();
-        state.emit(r + " = not_intro " + h_bot);
-        return {r, skip_wff_tokens(orig, pos)};
-    }
-
-    // Function-style 3-ary: if-, cadd, hadd
-    if (tok == "if-" || tok == "cadd" || tok == "hadd") {
-        size_t end = skip_wff_tokens(orig, pos);
-        if (!needs_conv(pos)) return {h, end};
-
-        // hadd = ~(~(A<->B)<->C), too complex for structural conversion
-        // cadd = ((A&B)|(C&~(A<->B))), also complex — use same or pattern as if- for now
-        if (tok == "hadd") return {h, end}; // skip conversion (may produce wrong proofs)
-
-        // Parse 3 arg positions
-        size_t p = pos + 1;
-        if (p < orig.size() && orig[p] == "(") p++;
-        size_t a_start = p;
-        p = skip_wff_tokens(orig, p);
-        if (p < orig.size() && orig[p] == ",") p++;
-        size_t b_start = p;
-        p = skip_wff_tokens(orig, p);
-        if (p < orig.size() && orig[p] == ",") p++;
-        size_t c_start = p;
-
-        // if-: (A & B) | (~A & C)
-        // cadd: ((A & B) | (C & ~(A <-> B))) — handle like if- for now (may be approximate)
-        std::string lhs_e = "(" + elem_str_at(a_start) + " & " + elem_str_at(b_start) + ")";
-        std::string rhs_e, lhs_c, rhs_c;
-        if (tok == "if-") {
-            rhs_e = "(~" + elem_str_at(a_start) + " & " + elem_str_at(c_start) + ")";
-            lhs_c = "(" + compound_str_at(a_start) + " & " + compound_str_at(b_start) + ")";
-            rhs_c = "(~" + compound_str_at(a_start) + " & " + compound_str_at(c_start) + ")";
-        } else { // cadd
-            rhs_e = "(" + elem_str_at(c_start) + " & ~(" + elem_str_at(a_start) + " <-> " + elem_str_at(b_start) + "))";
-            lhs_c = "(" + compound_str_at(a_start) + " & " + compound_str_at(b_start) + ")";
-            rhs_c = "(" + compound_str_at(c_start) + " & ~(" + compound_str_at(a_start) + " <-> " + compound_str_at(b_start) + "))";
-        }
-        // Case 1: assume LHS_e, convert parts, or_intro_l
-        std::string h_l = state.fresh();
-        state.emit(h_l + " = assume " + lhs_e);
-        std::string h_la = state.fresh();
-        state.emit(h_la + " = and_elim_l " + h_l);
-        auto [h_la_c, _1] = fwd(h_la, a_start);
-        std::string h_lb = state.fresh();
-        state.emit(h_lb + " = and_elim_r " + h_l);
-        auto [h_lb_c, _2] = fwd(h_lb, b_start);
-        std::string h_lc = state.fresh();
-        state.emit(h_lc + " = and_intro " + h_la_c + ", " + h_lb_c);
-        std::string h_rc_let = state.fresh();
-        state.emit(h_rc_let + " = let " + rhs_c);
-        std::string h_lor = state.fresh();
-        state.emit(h_lor + " = or_intro_l " + h_lc + ", " + h_rc_let);
-        std::string h_limp = state.fresh();
-        state.emit(h_limp + " = implies_intro " + h_lor);
-        // Case 2: assume RHS_e, convert parts, or_intro_r
-        std::string h_r = state.fresh();
-        state.emit(h_r + " = assume " + rhs_e);
-        std::string h_ra_neg = state.fresh();
-        state.emit(h_ra_neg + " = and_elim_l " + h_r); // ~A_e
-        std::string h_rc2 = state.fresh();
-        state.emit(h_rc2 + " = and_elim_r " + h_r); // C_e
-        auto [h_rc2_c, _3] = fwd(h_rc2, c_start);
-        // Convert ~A_e → ~A_c
-        std::string h_ra_c2;
-        if (needs_conv(a_start)) {
-            std::string a_c_str = compound_str_at(a_start);
-            std::string h_aa = state.fresh();
-            state.emit(h_aa + " = assume " + a_c_str);
-            auto [h_aa_e, _4] = bwd(h_aa, a_start);
-            std::string h_abot = state.fresh();
-            state.emit(h_abot + " = not_elim " + h_ra_neg + ", " + h_aa_e);
-            h_ra_c2 = state.fresh();
-            state.emit(h_ra_c2 + " = not_intro " + h_abot);
-        } else {
-            h_ra_c2 = h_ra_neg;
-        }
-        std::string h_rc_and = state.fresh();
-        state.emit(h_rc_and + " = and_intro " + h_ra_c2 + ", " + h_rc2_c);
-        std::string h_lc_let = state.fresh();
-        state.emit(h_lc_let + " = let " + lhs_c);
-        std::string h_ror = state.fresh();
-        state.emit(h_ror + " = or_intro_r " + h_lc_let + ", " + h_rc_and);
-        std::string h_rimp = state.fresh();
-        state.emit(h_rimp + " = implies_intro " + h_ror);
-        // or_elim
-        std::string r = state.fresh();
-        state.emit(r + " = or_elim " + h + ", " + h_limp + ", " + h_rimp);
-        return {r, end};
-    }
-
-    if (tok == "A.") {
-        size_t end = skip_wff_tokens(orig, pos);
-        if (!needs_conv(pos)) return {h, end};
-        std::string fresh = "_qfwd" + std::to_string(state.lines.size());
+    case WffNode::Kind::Forall: {
+        std::string fresh = state.fresh() + "_v";
         state.emit("fix " + fresh);
         std::string h_inner = state.fresh();
         state.emit(h_inner + " = forall_elim " + h + ", " + fresh);
-        auto [h_conv, inner_end] = fwd(h_inner, pos + 2);
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = forall_intro " + h_conv);
-        return {h_result, end};
+        std::string h_conv = convert_proof(*node.left, h_inner, atoms, forward, state);
+        std::string r = state.fresh();
+        state.emit(r + " = forall_intro " + h_conv);
+        return r;
     }
-    if (tok == "E.") {
-        size_t end = skip_wff_tokens(orig, pos);
-        if (!needs_conv(pos)) return {h, end};
+
+    case WffNode::Kind::Exists: {
         std::string h_witness = state.fresh();
         state.emit(h_witness + " = exists_elim " + h);
-        auto [h_conv, inner_end] = fwd(h_witness, pos + 2);
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = exists_intro " + h_conv);
-        return {h_result, end};
+        std::string h_conv = convert_proof(*node.left, h_witness, atoms, forward, state);
+        std::string r = state.fresh();
+        state.emit(r + " = exists_intro " + h_conv);
+        return r;
     }
 
-    return {h, pos + 1};
+    } // switch kind
+
+    return h; // unreachable
 }
 
-std::pair<std::string, size_t> ConvCtx::bwd(const std::string& h, size_t pos) {
-    if (pos >= orig.size()) return {h, pos};
-    const auto& tok = orig[pos];
-
-    // Atom: wff variable
-    auto ait = atoms.find(tok);
-    if (ait != atoms.end()) {
-        if (ait->second.iff_handle.empty()) {
-            return {h, pos + 1};  // identity
-        }
-        // iff_elim_r: compound → elem(u0, witness)
-        std::string r = state.fresh();
-        state.emit(r + " = iff_elim_r " + ait->second.iff_handle + ", " + h);
-        return {r, pos + 1};
-    }
-
-    // ( A OP B )
-    if (tok == "(") {
-        pos++;
-        size_t lhs_start = pos;
-        size_t lhs_end = skip_wff_tokens(orig, pos);
-        std::string op = orig[lhs_end];
-        size_t rhs_start = lhs_end + 1;
-        size_t rhs_end = skip_wff_tokens(orig, rhs_start);
-
-        if (op == "->") {
-            if (!needs_conv(lhs_start) && !needs_conv(rhs_start)) {
-                return {h, rhs_end + 1};
-            }
-            // h : A_c -> B_c.  Want: A_e -> B_e
-            std::string a_e = elem_str_at(lhs_start);
-            std::string h_assume = state.fresh();
-            state.emit(h_assume + " = assume " + a_e);
-            auto [h_a_c, _] = fwd(h_assume, lhs_start);
-            std::string h_b_c = state.fresh();
-            state.emit(h_b_c + " = implies_elim " + h + ", " + h_a_c);
-            auto [h_b_e, __] = bwd(h_b_c, rhs_start);
-            std::string r = state.fresh();
-            state.emit(r + " = implies_intro " + h_b_e);
-            return {r, rhs_end + 1};
-        }
-
-        if (op == "/\\") {
-            bool is_3way = (rhs_end < orig.size() && orig[rhs_end] == "/\\");
-            size_t third_start = is_3way ? rhs_end + 1 : 0;
-            size_t third_end = is_3way ? skip_wff_tokens(orig, third_start) : 0;
-            size_t end_pos = is_3way ? third_end + 1 : rhs_end + 1;
-
-            bool any_conv = needs_conv(lhs_start) || needs_conv(rhs_start) ||
-                            (is_3way && needs_conv(third_start));
-            if (!any_conv) return {h, end_pos};
-
-            if (is_3way) {
-                // h : ((A_c & B_c) & C_c). Want: ((A_e & B_e) & C_e)
-                std::string h_ab = state.fresh();
-                state.emit(h_ab + " = and_elim_l " + h);
-                std::string h_a_c = state.fresh();
-                state.emit(h_a_c + " = and_elim_l " + h_ab);
-                auto [h_a_e, _1] = bwd(h_a_c, lhs_start);
-                std::string h_b_c = state.fresh();
-                state.emit(h_b_c + " = and_elim_r " + h_ab);
-                auto [h_b_e, _2] = bwd(h_b_c, rhs_start);
-                std::string h_ab_e = state.fresh();
-                state.emit(h_ab_e + " = and_intro " + h_a_e + ", " + h_b_e);
-                std::string h_c_c = state.fresh();
-                state.emit(h_c_c + " = and_elim_r " + h);
-                auto [h_c_e, _3] = bwd(h_c_c, third_start);
-                std::string r = state.fresh();
-                state.emit(r + " = and_intro " + h_ab_e + ", " + h_c_e);
-                return {r, end_pos};
-            }
-            // Binary case
-            std::string h_a_c = state.fresh();
-            state.emit(h_a_c + " = and_elim_l " + h);
-            auto [h_a_e, _] = bwd(h_a_c, lhs_start);
-            std::string h_b_c = state.fresh();
-            state.emit(h_b_c + " = and_elim_r " + h);
-            auto [h_b_e, __] = bwd(h_b_c, rhs_start);
-            std::string r = state.fresh();
-            state.emit(r + " = and_intro " + h_a_e + ", " + h_b_e);
-            return {r, end_pos};
-        }
-
-        if (op == "\\/") {
-            bool is_3way = (rhs_end < orig.size() && orig[rhs_end] == "\\/");
-            size_t third_start = is_3way ? rhs_end + 1 : 0;
-            size_t third_end = is_3way ? skip_wff_tokens(orig, third_start) : 0;
-            size_t end_pos = is_3way ? third_end + 1 : rhs_end + 1;
-
-            bool any_conv = needs_conv(lhs_start) || needs_conv(rhs_start) ||
-                            (is_3way && needs_conv(third_start));
-            if (!any_conv) return {h, end_pos};
-
-            if (is_3way) {
-                // h : ((A_c | B_c) | C_c). Want: ((A_e | B_e) | C_e)
-                std::string ab_c = "(" + compound_str_at(lhs_start) + " | " + compound_str_at(rhs_start) + ")";
-                std::string c_c = compound_str_at(third_start);
-                // Case AB_c
-                std::string h_ab = state.fresh();
-                state.emit(h_ab + " = assume " + ab_c);
-                std::string a_c = compound_str_at(lhs_start);
-                std::string b_c = compound_str_at(rhs_start);
-                // Case A
-                std::string h_a = state.fresh();
-                state.emit(h_a + " = assume " + a_c);
-                auto [h_a_e, _1] = bwd(h_a, lhs_start);
-                std::string h_be_let = state.fresh();
-                state.emit(h_be_let + " = let " + elem_str_at(rhs_start));
-                std::string h_a_or1 = state.fresh();
-                state.emit(h_a_or1 + " = or_intro_l " + h_a_e + ", " + h_be_let);
-                std::string h_ce_let1 = state.fresh();
-                state.emit(h_ce_let1 + " = let " + elem_str_at(third_start));
-                std::string h_a_or2 = state.fresh();
-                state.emit(h_a_or2 + " = or_intro_l " + h_a_or1 + ", " + h_ce_let1);
-                std::string h_a_imp = state.fresh();
-                state.emit(h_a_imp + " = implies_intro " + h_a_or2);
-                // Case B
-                std::string h_b = state.fresh();
-                state.emit(h_b + " = assume " + b_c);
-                auto [h_b_e, _2] = bwd(h_b, rhs_start);
-                std::string h_ae_let = state.fresh();
-                state.emit(h_ae_let + " = let " + elem_str_at(lhs_start));
-                std::string h_b_or1 = state.fresh();
-                state.emit(h_b_or1 + " = or_intro_r " + h_ae_let + ", " + h_b_e);
-                std::string h_ce_let2 = state.fresh();
-                state.emit(h_ce_let2 + " = let " + elem_str_at(third_start));
-                std::string h_b_or2 = state.fresh();
-                state.emit(h_b_or2 + " = or_intro_l " + h_b_or1 + ", " + h_ce_let2);
-                std::string h_b_imp = state.fresh();
-                state.emit(h_b_imp + " = implies_intro " + h_b_or2);
-                // or_elim for AB
-                std::string h_ab_res = state.fresh();
-                state.emit(h_ab_res + " = or_elim " + h_ab + ", " + h_a_imp + ", " + h_b_imp);
-                std::string h_ab_imp = state.fresh();
-                state.emit(h_ab_imp + " = implies_intro " + h_ab_res);
-                // Case C
-                std::string h_c = state.fresh();
-                state.emit(h_c + " = assume " + c_c);
-                auto [h_c_e, _3] = bwd(h_c, third_start);
-                std::string h_ab_e_let = state.fresh();
-                state.emit(h_ab_e_let + " = let (" + elem_str_at(lhs_start) + " | " + elem_str_at(rhs_start) + ")");
-                std::string h_c_or = state.fresh();
-                state.emit(h_c_or + " = or_intro_r " + h_ab_e_let + ", " + h_c_e);
-                std::string h_c_imp = state.fresh();
-                state.emit(h_c_imp + " = implies_intro " + h_c_or);
-                // or_elim for (AB | C)
-                std::string r = state.fresh();
-                state.emit(r + " = or_elim " + h + ", " + h_ab_imp + ", " + h_c_imp);
-                return {r, end_pos};
-            }
-            // Binary case
-            std::string a_c = compound_str_at(lhs_start);
-            std::string b_e = elem_str_at(rhs_start);
-            std::string a_e = elem_str_at(lhs_start);
-            std::string b_c = compound_str_at(rhs_start);
-            std::string h_ca = state.fresh();
-            state.emit(h_ca + " = assume " + a_c);
-            auto [h_ca_e, _1] = bwd(h_ca, lhs_start);
-            std::string h_be_let = state.fresh();
-            state.emit(h_be_let + " = let " + b_e);
-            std::string h_ca_or = state.fresh();
-            state.emit(h_ca_or + " = or_intro_l " + h_ca_e + ", " + h_be_let);
-            std::string h_ca_impl = state.fresh();
-            state.emit(h_ca_impl + " = implies_intro " + h_ca_or);
-            std::string h_cb = state.fresh();
-            state.emit(h_cb + " = assume " + b_c);
-            auto [h_cb_e, _2] = bwd(h_cb, rhs_start);
-            std::string h_ae_let = state.fresh();
-            state.emit(h_ae_let + " = let " + a_e);
-            std::string h_cb_or = state.fresh();
-            state.emit(h_cb_or + " = or_intro_r " + h_ae_let + ", " + h_cb_e);
-            std::string h_cb_impl = state.fresh();
-            state.emit(h_cb_impl + " = implies_intro " + h_cb_or);
-            std::string r = state.fresh();
-            state.emit(r + " = or_elim " + h + ", " + h_ca_impl + ", " + h_cb_impl);
-            return {r, end_pos};
-        }
-
-        if (op == "<->") {
-            if (!needs_conv(lhs_start) && !needs_conv(rhs_start)) {
-                return {h, rhs_end + 1};
-            }
-            std::string a_e = elem_str_at(lhs_start);
-            std::string b_e = elem_str_at(rhs_start);
-            std::string h_fa = state.fresh();
-            state.emit(h_fa + " = assume " + a_e);
-            auto [h_fa_c, _1] = fwd(h_fa, lhs_start);
-            std::string h_fb_c = state.fresh();
-            state.emit(h_fb_c + " = iff_elim_l " + h + ", " + h_fa_c);
-            auto [h_fb_e, _2] = bwd(h_fb_c, rhs_start);
-            std::string h_fwd = state.fresh();
-            state.emit(h_fwd + " = implies_intro " + h_fb_e);
-            std::string h_ba = state.fresh();
-            state.emit(h_ba + " = assume " + b_e);
-            auto [h_ba_c, _3] = fwd(h_ba, rhs_start);
-            std::string h_bb_c = state.fresh();
-            state.emit(h_bb_c + " = iff_elim_r " + h + ", " + h_ba_c);
-            auto [h_bb_e, _4] = bwd(h_bb_c, lhs_start);
-            std::string r_bwd = state.fresh();
-            state.emit(r_bwd + " = implies_intro " + h_bb_e);
-            std::string r = state.fresh();
-            state.emit(r + " = iff_intro " + h_fwd + ", " + r_bwd);
-            return {r, rhs_end + 1};
-        }
-
-        // Negated binary: -/\, \/_, -\/
-        if (op == "-/\\" || op == "\\/_" || op == "-\\/") {
-            if (!needs_conv(lhs_start) && !needs_conv(rhs_start)) {
-                return {h, rhs_end + 1};
-            }
-            // h : ~(inner_c). Want: ~(inner_e)
-            std::string a_e = elem_str_at(lhs_start);
-            std::string b_e = elem_str_at(rhs_start);
-            std::string inner_elem;
-            if (op == "-/\\") inner_elem = "(" + a_e + " & " + b_e + ")";
-            else if (op == "\\/_") inner_elem = "(" + a_e + " <-> " + b_e + ")";
-            else inner_elem = "(" + a_e + " | " + b_e + ")";
-
-            std::string h_assume_inner = state.fresh();
-            state.emit(h_assume_inner + " = assume " + inner_elem);
-
-            std::string h_inner_c;
-            if (op == "-/\\") {
-                std::string h_a_e = state.fresh();
-                state.emit(h_a_e + " = and_elim_l " + h_assume_inner);
-                auto [h_a_c, _1] = fwd(h_a_e, lhs_start);
-                std::string h_b_e = state.fresh();
-                state.emit(h_b_e + " = and_elim_r " + h_assume_inner);
-                auto [h_b_c, _2] = fwd(h_b_e, rhs_start);
-                h_inner_c = state.fresh();
-                state.emit(h_inner_c + " = and_intro " + h_a_c + ", " + h_b_c);
-            } else if (op == "\\/_") {
-                std::string a_c = compound_str_at(lhs_start);
-                std::string b_c = compound_str_at(rhs_start);
-                std::string hf1 = state.fresh();
-                state.emit(hf1 + " = assume " + a_c);
-                auto [hf1e, __1] = bwd(hf1, lhs_start);
-                std::string hf2 = state.fresh();
-                state.emit(hf2 + " = iff_elim_l " + h_assume_inner + ", " + hf1e);
-                auto [hf2c, __2] = fwd(hf2, rhs_start);
-                std::string hf3 = state.fresh();
-                state.emit(hf3 + " = implies_intro " + hf2c);
-                std::string hb1 = state.fresh();
-                state.emit(hb1 + " = assume " + b_c);
-                auto [hb1e, __3] = bwd(hb1, rhs_start);
-                std::string hb2 = state.fresh();
-                state.emit(hb2 + " = iff_elim_r " + h_assume_inner + ", " + hb1e);
-                auto [hb2c, __4] = fwd(hb2, lhs_start);
-                std::string hb3 = state.fresh();
-                state.emit(hb3 + " = implies_intro " + hb2c);
-                h_inner_c = state.fresh();
-                state.emit(h_inner_c + " = iff_intro " + hf3 + ", " + hb3);
-            } else {
-                std::string a_e_s = elem_str_at(lhs_start);
-                std::string b_e_s = elem_str_at(rhs_start);
-                std::string a_c = compound_str_at(lhs_start);
-                std::string b_c = compound_str_at(rhs_start);
-                std::string ha = state.fresh();
-                state.emit(ha + " = assume " + a_e_s);
-                auto [hac, __1] = fwd(ha, lhs_start);
-                std::string hbc_let = state.fresh();
-                state.emit(hbc_let + " = let " + b_c);
-                std::string ha_or = state.fresh();
-                state.emit(ha_or + " = or_intro_l " + hac + ", " + hbc_let);
-                std::string ha_imp = state.fresh();
-                state.emit(ha_imp + " = implies_intro " + ha_or);
-                std::string hb = state.fresh();
-                state.emit(hb + " = assume " + b_e_s);
-                auto [hbc2, __2] = fwd(hb, rhs_start);
-                std::string hac_let = state.fresh();
-                state.emit(hac_let + " = let " + a_c);
-                std::string hb_or = state.fresh();
-                state.emit(hb_or + " = or_intro_r " + hac_let + ", " + hbc2);
-                std::string hb_imp = state.fresh();
-                state.emit(hb_imp + " = implies_intro " + hb_or);
-                h_inner_c = state.fresh();
-                state.emit(h_inner_c + " = or_elim " + h_assume_inner + ", " + ha_imp + ", " + hb_imp);
-            }
-
-            std::string h_bot = state.fresh();
-            state.emit(h_bot + " = not_elim " + h + ", " + h_inner_c);
-            std::string r = state.fresh();
-            state.emit(r + " = not_intro " + h_bot);
-            return {r, rhs_end + 1};
-        }
-
-        return {h, rhs_end + 1};
-    }
-
-    if (tok == "-.") {
-        if (!needs_conv(pos + 1)) return {h, skip_wff_tokens(orig, pos)};
-        std::string a_e = elem_str_at(pos + 1);
-        std::string h_assume = state.fresh();
-        state.emit(h_assume + " = assume " + a_e);
-        auto [h_a_c, _] = fwd(h_assume, pos + 1);
-        std::string h_bot = state.fresh();
-        state.emit(h_bot + " = not_elim " + h + ", " + h_a_c);
-        std::string r = state.fresh();
-        state.emit(r + " = not_intro " + h_bot);
-        return {r, skip_wff_tokens(orig, pos)};
-    }
-
-    // Function-style 3-ary: if-, cadd, hadd
-    if (tok == "if-" || tok == "cadd" || tok == "hadd") {
-        size_t end = skip_wff_tokens(orig, pos);
-        if (!needs_conv(pos)) return {h, end};
-        // Parse 3 arg positions
-        size_t p = pos + 1;
-        if (p < orig.size() && orig[p] == "(") p++;
-        size_t a_start = p;
-        p = skip_wff_tokens(orig, p);
-        if (p < orig.size() && orig[p] == ",") p++;
-        size_t b_start = p;
-        p = skip_wff_tokens(orig, p);
-        if (p < orig.size() && orig[p] == ",") p++;
-        size_t c_start = p;
-
-        if (tok == "hadd") return {h, end}; // skip conversion for hadd
-
-        // h is desugared compound-form. For if-: (A_c & B_c) | (~A_c & C_c)
-        // Want elem-form: (A_e & B_e) | (~A_e & C_e)
-        std::string lhs_c, rhs_c, lhs_e, rhs_e;
-        if (tok == "if-") {
-            lhs_c = "(" + compound_str_at(a_start) + " & " + compound_str_at(b_start) + ")";
-            rhs_c = "(~" + compound_str_at(a_start) + " & " + compound_str_at(c_start) + ")";
-            lhs_e = "(" + elem_str_at(a_start) + " & " + elem_str_at(b_start) + ")";
-            rhs_e = "(~" + elem_str_at(a_start) + " & " + elem_str_at(c_start) + ")";
-        } else { // cadd
-            lhs_c = "(" + compound_str_at(a_start) + " & " + compound_str_at(b_start) + ")";
-            rhs_c = "(" + compound_str_at(c_start) + " & ~(" + compound_str_at(a_start) + " <-> " + compound_str_at(b_start) + "))";
-            lhs_e = "(" + elem_str_at(a_start) + " & " + elem_str_at(b_start) + ")";
-            rhs_e = "(" + elem_str_at(c_start) + " & ~(" + elem_str_at(a_start) + " <-> " + elem_str_at(b_start) + "))";
-        }
-        // Case 1: assume LHS_c, convert parts, or_intro_l
-        std::string h_l = state.fresh();
-        state.emit(h_l + " = assume " + lhs_c);
-        std::string h_la = state.fresh();
-        state.emit(h_la + " = and_elim_l " + h_l);
-        auto [h_la_e, _1] = bwd(h_la, a_start);
-        std::string h_lb = state.fresh();
-        state.emit(h_lb + " = and_elim_r " + h_l);
-        auto [h_lb_e, _2] = bwd(h_lb, b_start);
-        std::string h_le = state.fresh();
-        state.emit(h_le + " = and_intro " + h_la_e + ", " + h_lb_e);
-        std::string h_re_let = state.fresh();
-        state.emit(h_re_let + " = let " + rhs_e);
-        std::string h_lor = state.fresh();
-        state.emit(h_lor + " = or_intro_l " + h_le + ", " + h_re_let);
-        std::string h_limp = state.fresh();
-        state.emit(h_limp + " = implies_intro " + h_lor);
-        // Case 2: assume RHS_c, convert parts, or_intro_r
-        std::string h_r = state.fresh();
-        state.emit(h_r + " = assume " + rhs_c);
-        std::string h_ra_neg = state.fresh();
-        state.emit(h_ra_neg + " = and_elim_l " + h_r); // ~A_c
-        std::string h_rc2 = state.fresh();
-        state.emit(h_rc2 + " = and_elim_r " + h_r); // C_c
-        auto [h_rc2_e, _3] = bwd(h_rc2, c_start);
-        // Convert ~A_c → ~A_e
-        std::string h_ra_e2;
-        if (needs_conv(a_start)) {
-            std::string a_e_str = elem_str_at(a_start);
-            std::string h_aa = state.fresh();
-            state.emit(h_aa + " = assume " + a_e_str);
-            auto [h_aa_c, _4] = fwd(h_aa, a_start);
-            std::string h_abot = state.fresh();
-            state.emit(h_abot + " = not_elim " + h_ra_neg + ", " + h_aa_c);
-            h_ra_e2 = state.fresh();
-            state.emit(h_ra_e2 + " = not_intro " + h_abot);
-        } else {
-            h_ra_e2 = h_ra_neg;
-        }
-        std::string h_re_and = state.fresh();
-        state.emit(h_re_and + " = and_intro " + h_ra_e2 + ", " + h_rc2_e);
-        std::string h_le_let = state.fresh();
-        state.emit(h_le_let + " = let " + lhs_e);
-        std::string h_ror = state.fresh();
-        state.emit(h_ror + " = or_intro_r " + h_le_let + ", " + h_re_and);
-        std::string h_rimp = state.fresh();
-        state.emit(h_rimp + " = implies_intro " + h_ror);
-        // or_elim
-        std::string r = state.fresh();
-        state.emit(r + " = or_elim " + h + ", " + h_limp + ", " + h_rimp);
-        return {r, end};
-    }
-
-    if (tok == "A.") {
-        size_t end = skip_wff_tokens(orig, pos);
-        if (!needs_conv(pos)) return {h, end};
-        std::string fresh = "_qbwd" + std::to_string(state.lines.size());
-        state.emit("fix " + fresh);
-        std::string h_inner = state.fresh();
-        state.emit(h_inner + " = forall_elim " + h + ", " + fresh);
-        auto [h_conv, inner_end] = bwd(h_inner, pos + 2);
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = forall_intro " + h_conv);
-        return {h_result, end};
-    }
-    if (tok == "E.") {
-        size_t end = skip_wff_tokens(orig, pos);
-        if (!needs_conv(pos)) return {h, end};
-        std::string h_witness = state.fresh();
-        state.emit(h_witness + " = exists_elim " + h);
-        auto [h_conv, inner_end] = bwd(h_witness, pos + 2);
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = exists_intro " + h_conv);
-        return {h_result, end};
-    }
-
-    return {h, pos + 1};
-}
 
 // --- Comprehension set builder with iff chaining ---
 
@@ -2586,39 +1708,23 @@ std::string MmTranslator::emit_comprehension_use(
         h = h_next;
     }
 
-    // Now h is the theorem's body with comprehension sets substituted.
-    // The original expression (after "|-") tells us the structure.
-    size_t expr_start = (!ref_thm.expression.empty() && ref_thm.expression[0] == "|-")
-                            ? 1 : 0;
-
-    ConvCtx ctx{ref_thm.expression, subst, atom_map, caller_info, db_, state};
-
     // For each essential hyp: convert caller's handle (compound-form)
     // to elem-form via backward conversion, then implies_elim.
-    size_t ess_idx = 0;
-    for (size_t i = 0; i < ref_thm.frame.hyp_labels.size(); ++i) {
-        if (ref_thm.frame.is_floating[i]) continue;
-        if (ess_idx >= ess_handles.size()) break;
-
-        const EssentialHyp* eh = db_.get_ess_hyp(ref_thm.frame.hyp_labels[i]);
-        if (!eh) { ess_idx++; continue; }
-
-        // The hyp in the original expression (after "|-")
-        size_t hyp_start = (!eh->expression.empty() && eh->expression[0] == "|-")
-                               ? 1 : 0;
-
-        // Convert caller's handle (compound) → elem form
-        ConvCtx hyp_ctx{eh->expression, subst, atom_map, caller_info, db_, state};
-        auto [h_elem, _] = hyp_ctx.bwd(ess_handles[ess_idx], hyp_start);
+    for (size_t ess_idx = 0; ess_idx < ref_info.ess_hyps.size() &&
+                              ess_idx < ess_handles.size(); ++ess_idx) {
+        std::string h_elem = convert_proof(
+            *ref_info.ess_hyps[ess_idx].ast, ess_handles[ess_idx],
+            atom_map, /*forward=*/false, state);
 
         std::string h_next = state.fresh();
         state.emit(h_next + " = implies_elim " + h + ", " + h_elem);
         h = h_next;
-        ess_idx++;
     }
 
     // h is the conclusion in elem-form. Convert to compound-form.
-    auto [h_compound, _] = ctx.fwd(h, expr_start);
+    std::string h_compound = convert_proof(
+        *ref_info.conclusion_ast, h,
+        atom_map, /*forward=*/true, state);
 
     // Close exists scopes
     for (int i = 0; i < exists_count; ++i) {
@@ -2630,15 +1736,6 @@ std::string MmTranslator::emit_comprehension_use(
     return h_compound;
 }
 
-// Unused stub for header compatibility
-std::string MmTranslator::structural_convert(
-    const std::string& source_handle,
-    const Expression&, size_t,
-    const std::unordered_map<std::string, std::string>&,
-    const FrameInfo&, const FrameInfo&, bool,
-    ProofState&) {
-    return source_handle;
-}
 
 // ===================================================================
 // Proof simulation
