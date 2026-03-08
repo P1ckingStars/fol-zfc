@@ -2,37 +2,44 @@
 
 #include "formula.h"
 #include "src/util/error.h"
-#include "src/util/registry.h"
 #include <memory>
 #include <optional>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 namespace logic {
 
 using FormulaResult = util::Result<FormulaHandle>;
 
+// ========== Scope Dependency Tracking ==========
+// Bitmask tracking which scopes a derived formula depends on.
+// Bit i set means the formula depends on scope at stack index i.
+using ScopeDeps = uint64_t;
+constexpr int MAX_SCOPE_DEPTH = 64;
+
+inline ScopeDeps scope_dep(int i) { return i < 0 ? 0 : (1ULL << i); }
+inline ScopeDeps discharge(ScopeDeps d, int i) { return d & ~(1ULL << i); }
+inline int deepest(ScopeDeps d) { return d == 0 ? -1 : 63 - __builtin_clzll(d); }
+
 class AssumptionScope {
-    std::unordered_set<FormulaHandle> derived_;
     FormulaHandle assumption_;
+    int bit_;
 public:
-    AssumptionScope(FormulaHandle const & formula);
-    FormulaHandle const& get_formula();
-    bool contains(FormulaHandle const & f);
-    void derive(FormulaHandle const & handle);
+    AssumptionScope(FormulaHandle const& formula, int bit);
+    FormulaHandle const& get_formula() const;
+    int bit() const { return bit_; }
 };
 
 class FixVarScope {
-    std::unordered_set<FormulaHandle> derived_;
     std::unique_ptr<FormulaHandle> result_;  // Heap-allocated so reference survives moves
     std::unique_ptr<QuantifierBuilder> qbuilder_;  // Must be after result_ since it depends on it
+    int bit_;
 
 public:
-    FixVarScope(FormulaBuilder& builder, Op op = Op::Forall);  // Creates QuantifierBuilder with Op::Forall
+    FixVarScope(FormulaBuilder& builder, Op op, int bit);
     Term var_term() const;  // Returns the bound variable as Term
-    bool contains(FormulaHandle const & f) const;
-    void derive(FormulaHandle const & handle);
     Op get_op() const { return qbuilder_->get_op(); }
+    int bit() const { return bit_; }
 
     // Set body and destroy QuantifierBuilder to create the formula
     FormulaHandle finalize(FormulaHandle body);
@@ -43,20 +50,29 @@ using Scope = std::variant<AssumptionScope, FixVarScope>;
 class ProofStack {
 protected:
     std::vector<Scope> scopes;
-    std::unordered_set<FormulaHandle> derived_;
+    std::unordered_map<FormulaHandle, ScopeDeps> formula_deps_;
     FormulaBuilder formula_builder_;
     std::optional<Term> last_witness_var_;
 
-    // Helper to derive formula in current scope
-    void derive_in_current_scope(FormulaHandle const& formula);
+    // Safe lookup: returns 0 (no deps) if formula not in map
+    ScopeDeps deps_of(FormulaHandle const& f) const;
 
-    // Helper to derive formula in a specific scope (by index, -1 means base level)
-    void derive_in_scope(FormulaHandle const& formula, int scope_idx);
+    // Compute which fix-var scopes' variables appear in the formula
+    ScopeDeps compute_var_deps(FormulaHandle const& f) const;
 
-    // Helper to check if a term is accessible (constants always are, fixed vars must be in scope)
+    // Single derivation method: places result at correct scope based on deps
+    void derive_with_deps(FormulaHandle const& f, ScopeDeps proof_deps);
+
+    // Erase all formula_deps_ entries that depend on the given scope bit
+    void cleanup_scope(int bit);
+
+    // Clean up and pop the current (innermost) scope
+    void close_current_scope();
+
+    // Helper to check if a term is accessible (fixed vars must be in scope)
     bool is_term_accessible(Term const& t) const;
 
-    // Helper to find the scope index that introduced a fixed variable (-1 if not found or constant)
+    // Helper to find the scope index that introduced a fixed variable (-1 if not found)
     int find_scope_for_term(Term const& t) const;
 
     // Helper to check if a formula contains a specific fixed variable
@@ -70,7 +86,7 @@ public:
 
     Term fix_var();
     FormulaHandle assume(FormulaHandle const & formula);
-    bool is_derived(FormulaHandle const &a);
+    bool is_derived(FormulaHandle const &a) const;
     void pop();
 
     // Use a proven theorem

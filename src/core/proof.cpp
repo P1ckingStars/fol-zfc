@@ -6,39 +6,22 @@ namespace logic {
 
 // ========== AssumptionScope ==========
 
-AssumptionScope::AssumptionScope(FormulaHandle const & formula)
-    : assumption_(formula) {
-    derived_.insert(formula);
-}
+AssumptionScope::AssumptionScope(FormulaHandle const& formula, int bit)
+    : assumption_(formula), bit_(bit) {}
 
-FormulaHandle const& AssumptionScope::get_formula() {
+FormulaHandle const& AssumptionScope::get_formula() const {
     return assumption_;
-}
-
-bool AssumptionScope::contains(FormulaHandle const & f) {
-    return derived_.contains(f);
-}
-
-void AssumptionScope::derive(FormulaHandle const & handle) {
-    derived_.insert(handle);
 }
 
 // ========== FixVarScope ==========
 
-FixVarScope::FixVarScope(FormulaBuilder& builder, Op op)
+FixVarScope::FixVarScope(FormulaBuilder& builder, Op op, int bit)
     : result_(std::make_unique<FormulaHandle>()),
-      qbuilder_(std::make_unique<QuantifierBuilder>(builder, op, *result_)) {}
+      qbuilder_(std::make_unique<QuantifierBuilder>(builder, op, *result_)),
+      bit_(bit) {}
 
 Term FixVarScope::var_term() const {
     return qbuilder_->var();
-}
-
-bool FixVarScope::contains(FormulaHandle const & f) const {
-    return derived_.contains(f);
-}
-
-void FixVarScope::derive(FormulaHandle const & handle) {
-    derived_.insert(handle);
 }
 
 FormulaHandle FixVarScope::finalize(FormulaHandle body) {
@@ -52,54 +35,80 @@ FormulaHandle FixVarScope::finalize(FormulaHandle body) {
 ProofStack::ProofStack(GlobalContext & context)
     : formula_builder_(context) {}
 
+ScopeDeps ProofStack::deps_of(FormulaHandle const& f) const {
+    auto it = formula_deps_.find(f);
+    return it != formula_deps_.end() ? it->second : 0;
+}
+
+ScopeDeps ProofStack::compute_var_deps(FormulaHandle const& h) const {
+    const Formula& f = h.get();
+
+    if (f.is_predicate()) {
+        ScopeDeps deps = 0;
+        for (const Term& t : f.as_predicate().args()) {
+            if (t.is_fixed()) {
+                int scope = find_scope_for_term(t);
+                if (scope >= 0) deps |= scope_dep(scope);
+            }
+        }
+        return deps;
+    }
+    else if (f.is_compound()) {
+        const Compound& c = f.as_compound();
+        ScopeDeps deps = 0;
+        if (c.left.valid()) deps |= compute_var_deps(c.left);
+        if (c.right.valid()) deps |= compute_var_deps(c.right);
+        return deps;
+    }
+    else if (f.is_quantified()) {
+        return compute_var_deps(f.as_quantified().body);
+    }
+    else if (f.is_sentence()) {
+        return 0;  // Sentences are closed, no free fixed vars
+    }
+    return 0;
+}
+
+void ProofStack::derive_with_deps(FormulaHandle const& f, ScopeDeps proof_deps) {
+    ScopeDeps total = proof_deps | compute_var_deps(f);
+    auto it = formula_deps_.find(f);
+    if (it == formula_deps_.end() || deepest(total) < deepest(it->second)) {
+        formula_deps_[f] = total;
+    }
+}
+
+void ProofStack::cleanup_scope(int bit) {
+    ScopeDeps mask = 1ULL << bit;
+    std::erase_if(formula_deps_, [mask](auto const& entry) {
+        return (entry.second & mask) != 0;
+    });
+}
+
+void ProofStack::close_current_scope() {
+    int bit = std::visit([](auto& s) { return s.bit(); }, scopes.back());
+    cleanup_scope(bit);
+    scopes.pop_back();
+}
+
 Term ProofStack::fix_var() {
-    scopes.push_back(FixVarScope(formula_builder_));
+    int bit = scopes.size();
+    scopes.push_back(FixVarScope(formula_builder_, Op::Forall, bit));
     return std::get<FixVarScope>(scopes.back()).var_term();
 }
 
 FormulaHandle ProofStack::assume(FormulaHandle const & formula) {
-    scopes.push_back(AssumptionScope(formula));
-    return std::get<AssumptionScope>(*scopes.rbegin()).get_formula();
+    int bit = scopes.size();
+    scopes.push_back(AssumptionScope(formula, bit));
+    derive_with_deps(formula, scope_dep(bit));
+    return formula;
 }
 
-bool ProofStack::is_derived(FormulaHandle const &a) {
-    if (derived_.contains(a)) {
-        return true;
-    }
-    for (auto it = scopes.rbegin(); it != scopes.rend(); it++) {
-        bool found = std::visit([&](auto&& arg) {
-            return arg.contains(a);
-        }, *it);
-        if (found) {
-            return true;
-        }
-    }
-    return false;
+bool ProofStack::is_derived(FormulaHandle const &a) const {
+    return formula_deps_.contains(a);
 }
 
 void ProofStack::pop() {
-    scopes.pop_back();
-}
-
-void ProofStack::derive_in_current_scope(FormulaHandle const& formula) {
-    if (scopes.empty()) {
-        derived_.insert(formula);
-    } else {
-        std::visit([&](auto&& scope) {
-            scope.derive(formula);
-        }, *scopes.rbegin());
-    }
-}
-
-void ProofStack::derive_in_scope(FormulaHandle const& formula, int scope_idx) {
-    if (scope_idx < 0 || static_cast<size_t>(scope_idx) >= scopes.size()) {
-        // Derive at base level
-        derived_.insert(formula);
-    } else {
-        std::visit([&](auto&& scope) {
-            scope.derive(formula);
-        }, scopes[scope_idx]);
-    }
+    close_current_scope();
 }
 
 int ProofStack::find_scope_for_term(Term const& t) const {
@@ -176,7 +185,7 @@ FormulaHandle ProofStack::make_exists_from_witness(FormulaHandle const& body, Te
 
 FormulaResult ProofStack::use_theorem(SentenceHandle & sentence) {
     auto res = formula_builder_.add_sentence(sentence);
-    derived_.insert(res);
+    derive_with_deps(res, 0);
     return res;
 }
 
@@ -190,7 +199,7 @@ FormulaResult ProofStack::and_intro(FormulaHandle const &a, FormulaHandle const 
         return MAKE_ERROR << "and_intro: right formula not derived: " << b.get();
     }
     auto formula = formula_builder_.make_and(a, b);
-    derive_in_current_scope(formula);
+    derive_with_deps(formula, deps_of(a) | deps_of(b));
     return formula;
 }
 
@@ -206,7 +215,7 @@ FormulaResult ProofStack::and_elim_l(FormulaHandle const &and_formula) {
     if (c.op != Op::And) {
         return MAKE_ERROR << "and_elim_l: expected And, got: " << f;
     }
-    derive_in_current_scope(c.left);
+    derive_with_deps(c.left, deps_of(and_formula));
     return c.left;
 }
 
@@ -222,7 +231,7 @@ FormulaResult ProofStack::and_elim_r(FormulaHandle const &and_formula) {
     if (c.op != Op::And) {
         return MAKE_ERROR << "and_elim_r: expected And, got: " << f;
     }
-    derive_in_current_scope(c.right);
+    derive_with_deps(c.right, deps_of(and_formula));
     return c.right;
 }
 
@@ -233,7 +242,7 @@ FormulaResult ProofStack::or_intro_l(FormulaHandle const &a, FormulaHandle const
         return MAKE_ERROR << "or_intro_l: formula not derived: " << a.get();
     }
     auto formula = formula_builder_.make_or(a, b);
-    derive_in_current_scope(formula);
+    derive_with_deps(formula, deps_of(a));
     return formula;
 }
 
@@ -242,7 +251,7 @@ FormulaResult ProofStack::or_intro_r(FormulaHandle const &a, FormulaHandle const
         return MAKE_ERROR << "or_intro_r: formula not derived: " << b.get();
     }
     auto formula = formula_builder_.make_or(a, b);
-    derive_in_current_scope(formula);
+    derive_with_deps(formula, deps_of(b));
     return formula;
 }
 
@@ -293,7 +302,7 @@ FormulaResult ProofStack::or_elim(FormulaHandle const &or_formula,
         return MAKE_ERROR << "or_elim: implications have different consequents";
     }
 
-    derive_in_current_scope(impl1.right);
+    derive_with_deps(impl1.right, deps_of(or_formula) | deps_of(a_implies_c) | deps_of(b_implies_c));
     return impl1.right;
 }
 
@@ -303,20 +312,19 @@ FormulaResult ProofStack::implies_intro(FormulaHandle const & conclusion) {
     if (scopes.empty() || !std::holds_alternative<AssumptionScope>(*scopes.rbegin())) {
         return MAKE_ERROR << "implies_intro: current scope is not an assumption scope";
     }
+    if (!is_derived(conclusion)) {
+        return MAKE_ERROR << "implies_intro: conclusion not derived: " << conclusion.get();
+    }
 
     auto& scope = std::get<AssumptionScope>(*scopes.rbegin());
-    if (!scope.contains(conclusion)) {
-        return MAKE_ERROR << "implies_intro: conclusion not derived in current scope: " << conclusion.get();
-    }
+    int K = scope.bit();
+    ScopeDeps result_deps = discharge(deps_of(conclusion), K);
 
     FormulaHandle assumption = scope.get_formula();
     auto new_formula = formula_builder_.make_implies(assumption, conclusion);
 
-    // Pop the assumption scope
-    scopes.pop_back();
-
-    // Derive in parent scope
-    derive_in_current_scope(new_formula);
+    close_current_scope();
+    derive_with_deps(new_formula, result_deps);
     return new_formula;
 }
 
@@ -340,7 +348,7 @@ FormulaResult ProofStack::implies_elim(FormulaHandle const &implication, Formula
         return MAKE_ERROR << "implies_elim: antecedent doesn't match implication's left side";
     }
 
-    derive_in_current_scope(c.right);
+    derive_with_deps(c.right, deps_of(implication) | deps_of(antecedent));
     return c.right;
 }
 
@@ -350,10 +358,8 @@ FormulaResult ProofStack::not_intro(FormulaHandle const &bottom) {
     if (scopes.empty() || !std::holds_alternative<AssumptionScope>(*scopes.rbegin())) {
         return MAKE_ERROR << "not_intro: current scope is not an assumption scope";
     }
-
-    auto& scope = std::get<AssumptionScope>(*scopes.rbegin());
-    if (!scope.contains(bottom)) {
-        return MAKE_ERROR << "not_intro: bottom not derived in current scope";
+    if (!is_derived(bottom)) {
+        return MAKE_ERROR << "not_intro: bottom not derived";
     }
 
     // Check that bottom is actually ⊥
@@ -362,14 +368,15 @@ FormulaResult ProofStack::not_intro(FormulaHandle const &bottom) {
         return MAKE_ERROR << "not_intro: expected bottom (⊥), got: " << f;
     }
 
+    auto& scope = std::get<AssumptionScope>(*scopes.rbegin());
+    int K = scope.bit();
+    ScopeDeps result_deps = discharge(deps_of(bottom), K);
+
     FormulaHandle assumption = scope.get_formula();
     auto negation = formula_builder_.make_not(assumption);
 
-    // Pop the assumption scope
-    scopes.pop_back();
-
-    // Derive in parent scope
-    derive_in_current_scope(negation);
+    close_current_scope();
+    derive_with_deps(negation, result_deps);
     return negation;
 }
 
@@ -394,7 +401,7 @@ FormulaResult ProofStack::not_elim(FormulaHandle const &negation, FormulaHandle 
     }
 
     auto bottom = formula_builder_.make_bottom();
-    derive_in_current_scope(bottom);
+    derive_with_deps(bottom, deps_of(negation) | deps_of(formula));
     return bottom;
 }
 
@@ -411,7 +418,7 @@ FormulaResult ProofStack::bottom_elim(FormulaHandle const &bottom, FormulaHandle
     }
 
     // Ex falso quodlibet: from ⊥ we can derive anything
-    derive_in_current_scope(formula);
+    derive_with_deps(formula, deps_of(bottom));
     return formula;
 }
 
@@ -443,7 +450,7 @@ FormulaResult ProofStack::iff_intro(FormulaHandle const &a_implies_b, FormulaHan
     }
 
     auto iff = formula_builder_.make_iff(impl1.left, impl1.right);
-    derive_in_current_scope(iff);
+    derive_with_deps(iff, deps_of(a_implies_b) | deps_of(b_implies_a));
     return iff;
 }
 
@@ -465,7 +472,7 @@ FormulaResult ProofStack::iff_elim_l(FormulaHandle const &iff_formula, FormulaHa
         return MAKE_ERROR << "iff_elim_l: formula doesn't match biconditional's left side";
     }
 
-    derive_in_current_scope(c.right);
+    derive_with_deps(c.right, deps_of(iff_formula) | deps_of(a));
     return c.right;
 }
 
@@ -487,7 +494,7 @@ FormulaResult ProofStack::iff_elim_r(FormulaHandle const &iff_formula, FormulaHa
         return MAKE_ERROR << "iff_elim_r: formula doesn't match biconditional's right side";
     }
 
-    derive_in_current_scope(c.left);
+    derive_with_deps(c.left, deps_of(iff_formula) | deps_of(b));
     return c.left;
 }
 
@@ -495,24 +502,23 @@ FormulaResult ProofStack::forall_intro(FormulaHandle const &body) {
     if (scopes.empty() || !std::holds_alternative<FixVarScope>(*scopes.rbegin())) {
         return MAKE_ERROR << "forall_intro: current scope is not a fix_var scope";
     }
-    
-    auto& scope = std::get<FixVarScope>(*scopes.rbegin());
-    if (!scope.contains(body)) {
-        return MAKE_ERROR << "forall_intro: body not derived in current scope: " << body.get();
+    if (!is_derived(body)) {
+        return MAKE_ERROR << "forall_intro: body not derived: " << body.get();
     }
 
-    if (!(scope.get_op() == Op::Forall)) {
+    auto& scope = std::get<FixVarScope>(*scopes.rbegin());
+    if (scope.get_op() != Op::Forall) {
         return MAKE_ERROR << "forall_intro: current scope is not forall: " << body.get();
     }
+
+    int K = scope.bit();
+    ScopeDeps result_deps = discharge(deps_of(body), K);
 
     // Finalize: set body and destroy QuantifierBuilder to create ∀x. body
     FormulaHandle result = scope.finalize(body);
 
-    // Pop the fix_var scope
-    scopes.pop_back();
-
-    // Derive in parent scope
-    derive_in_current_scope(result);
+    close_current_scope();
+    derive_with_deps(result, result_deps);
     return result;
 }
 
@@ -523,14 +529,13 @@ FormulaResult ProofStack::forall_elim(FormulaHandle const &formula, Term const& 
     if (!(formula->is_quantified() && formula->as_quantified().op == Op::Forall)) {
         return MAKE_ERROR << "forall_elim: formula op is not a forall quantifier";
     }
-    int scope_idx = find_scope_for_term(var);
     if (!is_term_accessible(var)) {
         return MAKE_ERROR << "forall_elim: term is not accessible in current scope";
     }
     auto generalized_term = formula->as_quantified().get_var_term();
     auto f = formula_builder_.translate_term(formula->as_quantified().body, generalized_term, var);
-    // Derive in the scope that owns the term (fixed var's scope, or base level for constants)
-    derive_in_scope(f, scope_idx);
+    // compute_var_deps(f) automatically picks up var's scope
+    derive_with_deps(f, deps_of(formula));
     return f;
 }
 
@@ -546,7 +551,7 @@ FormulaResult ProofStack::exists_intro(FormulaHandle const &body, std::optional<
             return MAKE_ERROR << "exists_intro: witness term not accessible";
         }
         FormulaHandle result = make_exists_from_witness(body, w);
-        derive_in_current_scope(result);
+        derive_with_deps(result, deps_of(body));
         return result;
     }
 
@@ -561,22 +566,21 @@ FormulaResult ProofStack::exists_intro(FormulaHandle const &body, std::optional<
         return MAKE_ERROR << "exists_intro: current scope is not Exists scope";
     }
 
-    if (!scope.contains(body)) {
-        return MAKE_ERROR << "exists_intro: body not derived in current scope: " << body.get();
-    }
+    int K = scope.bit();
+    ScopeDeps result_deps = discharge(deps_of(body), K);
 
     // Check if body contains the witness variable
     var_index witness_var = scope.var_term().as_variable();
     if (formula_contains_fixed_var(body, witness_var)) {
         // Body contains witness - generalize to create ∃x.body
         FormulaHandle result = scope.finalize(body);
-        scopes.pop_back();
-        derive_in_current_scope(result);
+        close_current_scope();
+        derive_with_deps(result, result_deps);
         return result;
     } else {
-        // Body doesn't contain witness - just close scope and derive body in parent
-        scopes.pop_back();
-        derive_in_current_scope(body);
+        // Body doesn't contain witness - just close scope and re-derive body in parent
+        close_current_scope();
+        derive_with_deps(body, result_deps);
         return body;
     }
 }
@@ -589,13 +593,14 @@ FormulaResult ProofStack::exists_elim(FormulaHandle const &formula) {
         return MAKE_ERROR << "exists_elim: formula op is not a exists quantifier";
     }
     auto generalized_term = formula->as_quantified().get_var_term();
-    scopes.push_back(FixVarScope(formula_builder_, Op::Exists));
+    int bit = scopes.size();
+    scopes.push_back(FixVarScope(formula_builder_, Op::Exists, bit));
     Term var = std::get<FixVarScope>(scopes.back()).var_term();
     last_witness_var_ = var;
     auto f = formula_builder_.translate_term(formula->as_quantified().body, generalized_term, var);
 
-    // derive in child scope
-    derive_in_current_scope(f);
+    // compute_var_deps(f) will pick up the witness var's scope automatically
+    derive_with_deps(f, deps_of(formula));
     return f;
 }
 
@@ -620,7 +625,7 @@ FormulaResult ProofStack::eq_subst(FormulaHandle const &eq_formula, FormulaHandl
 
     // Replace a with b in target
     auto result = formula_builder_.translate_term(target, a, b);
-    derive_in_current_scope(result);
+    derive_with_deps(result, deps_of(eq_formula) | deps_of(target));
     return result;
 }
 
@@ -646,16 +651,16 @@ FormulaResult ClassicalProofStack::double_neg_elim(FormulaHandle const &double_n
 
     // Extract A from ¬¬A
     FormulaHandle a = inner_not.left;
-    derive_in_current_scope(a);
+    derive_with_deps(a, deps_of(double_neg));
     return a;
 }
 
 FormulaResult ClassicalProofStack::excluded_middle(FormulaHandle const &formula) {
     // Derive A ∨ ¬A for any formula A
-    // This is an axiom in classical logic
+    // This is an axiom in classical logic — no proof dependencies
     FormulaHandle not_a = builder().make_not(formula);
     FormulaHandle lem = builder().make_or(formula, not_a);
-    derive_in_current_scope(lem);
+    derive_with_deps(lem, 0);
     return lem;
 }
 
@@ -665,10 +670,8 @@ FormulaResult ClassicalProofStack::classical_absurd(FormulaHandle const &bottom)
     if (scopes.empty() || !std::holds_alternative<AssumptionScope>(*scopes.rbegin())) {
         return MAKE_ERROR << "classical_absurd: current scope is not an assumption scope";
     }
-
-    auto& scope = std::get<AssumptionScope>(*scopes.rbegin());
-    if (!scope.contains(bottom)) {
-        return MAKE_ERROR << "classical_absurd: bottom not derived in current scope";
+    if (!is_derived(bottom)) {
+        return MAKE_ERROR << "classical_absurd: bottom not derived";
     }
 
     // Check that bottom is actually ⊥
@@ -676,6 +679,10 @@ FormulaResult ClassicalProofStack::classical_absurd(FormulaHandle const &bottom)
     if (!f.is_compound() || f.as_compound().op != Op::Bottom) {
         return MAKE_ERROR << "classical_absurd: expected bottom (⊥), got: " << f;
     }
+
+    auto& scope = std::get<AssumptionScope>(*scopes.rbegin());
+    int K = scope.bit();
+    ScopeDeps result_deps = discharge(deps_of(bottom), K);
 
     // Check that assumption is ¬A
     FormulaHandle assumption = scope.get_formula();
@@ -687,21 +694,18 @@ FormulaResult ClassicalProofStack::classical_absurd(FormulaHandle const &bottom)
     // Extract A from ¬A
     FormulaHandle a = neg_f.as_compound().left;
 
-    // Pop the assumption scope
-    scopes.pop_back();
-
-    // Derive A in parent scope (this is the classical part - from ¬A → ⊥, derive A)
-    derive_in_current_scope(a);
+    close_current_scope();
+    derive_with_deps(a, result_deps);
     return a;
 }
 
 FormulaResult ClassicalProofStack::peirce(FormulaHandle const &a, FormulaHandle const &b) {
     // Derive ((A → B) → A) → A
-    // This is Peirce's law, which is equivalent to LEM in classical logic
+    // This is Peirce's law, which is equivalent to LEM in classical logic — no proof dependencies
     FormulaHandle a_impl_b = builder().make_implies(a, b);
     FormulaHandle inner = builder().make_implies(a_impl_b, a);
     FormulaHandle peirce_formula = builder().make_implies(inner, a);
-    derive_in_current_scope(peirce_formula);
+    derive_with_deps(peirce_formula, 0);
     return peirce_formula;
 }
 
