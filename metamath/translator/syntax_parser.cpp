@@ -21,8 +21,11 @@ SyntaxParser::SyntaxParser(const MmDatabase& db) {
         const Assertion* a = db.get_assertion(label);
         if (!a) continue;
 
-        // Syntax axiom: typecode is NOT "|-"
+        // Syntax axiom: typecode is NOT "|-", and must be an axiom ($a)
+        // not a syntax theorem ($p) — syntax theorems are derived shortcuts
+        // that would create ambiguous/redundant grammar rules.
         if (a->expression.empty() || a->expression[0] == "|-") continue;
+        if (a->kind != Assertion::Kind::Axiom) continue;
 
         // Variable types for this axiom's pattern
         std::unordered_map<std::string, std::string> local_var_types;

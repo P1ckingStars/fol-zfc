@@ -28,11 +28,32 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "syntax_to_wff",
+    srcs = ["syntax_to_wff.cpp"],
+    hdrs = ["syntax_to_wff.h"],
+    deps = [
+        ":syntax_parser",
+        ":wff_ast",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "syntax_parser_test",
     srcs = ["syntax_parser_test.cpp"],
     deps = [
         ":syntax_parser",
+        "//metamath/parser:mm_database",
+    ],
+)
+
+cc_binary(
+    name = "syntax_to_wff_test",
+    srcs = ["syntax_to_wff_test.cpp"],
+    deps = [
+        ":syntax_parser",
+        ":syntax_to_wff",
         "//metamath/parser:mm_database",
     ],
 )
