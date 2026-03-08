@@ -9,6 +9,14 @@ cc_library(
 )
 
 cc_library(
+    name = "syntax_parser",
+    srcs = ["syntax_parser.cpp"],
+    hdrs = ["syntax_parser.h"],
+    deps = ["//metamath/parser:mm_database"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "mm_translator",
     srcs = ["mm_translator.cpp"],
     hdrs = ["mm_translator.h"],
@@ -18,6 +26,15 @@ cc_library(
         "//metamath/verifier:mm_verifier",
     ],
     visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "syntax_parser_test",
+    srcs = ["syntax_parser_test.cpp"],
+    deps = [
+        ":syntax_parser",
+        "//metamath/parser:mm_database",
+    ],
 )
 
 cc_binary(

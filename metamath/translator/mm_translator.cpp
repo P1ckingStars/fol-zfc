@@ -2879,7 +2879,7 @@ bool MmTranslator::translate(const std::string& label,
         "imnang", "exanali", "2exanali", "exancom", "exan",
         "nexdh", "albidh", "exsimpl", "exsimpr",
         "19.33b", "19.40b", "albiim", "exintrbi", "exintr",
-        "alsyl", "nfbidv", "3exdistr", "ax12i", "ax6v", "ax7v",
+        "alsyl", "nfbidv", "3exdistr", "ax12i", "ax6v",
         // Comprehension proof bug with class-var quantifier encoding
         "sbtlem",
         // Comprehension mismatch: eq/class formula vs elem encoding
@@ -2973,7 +2973,12 @@ bool MmTranslator::translate(const std::string& label,
 
     // Skip if formula contains untranslatable tokens
     if (formula.find("??") != std::string::npos) {
-        if (error) *error = "untranslatable token in formula: " + label;
+        // Extract the first untranslatable token for diagnostics
+        auto p1 = formula.find("??");
+        auto p2 = formula.find("??", p1 + 2);
+        std::string bad_tok = (p2 != std::string::npos)
+            ? formula.substr(p1 + 2, p2 - p1 - 2) : "?";
+        if (error) *error = "untranslatable token in formula [" + bad_tok + "]: " + label;
         ++skipped_;
         return false;
     }
