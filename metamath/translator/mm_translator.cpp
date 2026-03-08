@@ -494,6 +494,8 @@ LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
             }
             case WffNode::Kind::Literal:
                 return node.name;
+            case WffNode::Kind::Pred:
+                return render_pred(node);
             case WffNode::Kind::Verum: {
                 std::string s = info.set_var_order.empty()
                     ? info.dummy_var : info.set_var_order[0];
@@ -1155,6 +1157,7 @@ LeafRenderer make_compound_renderer(
             if (it != atoms.end()) return it->second.compound_str;
         }
         if (node.kind == WffNode::Kind::Literal) return node.name;
+        if (node.kind == WffNode::Kind::Pred) return render_pred(node);
         return "??";
     };
 }
@@ -1177,6 +1180,7 @@ LeafRenderer make_elem_renderer(
             if (it != atoms.end()) return it->second.elem_str;
         }
         if (node.kind == WffNode::Kind::Literal) return node.name;
+        if (node.kind == WffNode::Kind::Pred) return render_pred(node);
         return "??";
     };
 }
@@ -1223,6 +1227,7 @@ std::string convert_proof(
     }
 
     case WffNode::Kind::Literal:
+    case WffNode::Kind::Pred:
     case WffNode::Kind::Verum:
     case WffNode::Kind::Falsum:
         return h;

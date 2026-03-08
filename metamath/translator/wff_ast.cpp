@@ -12,6 +12,8 @@ bool WffNode::operator==(const WffNode& o) const {
         case Kind::Var:
         case Kind::Literal:
             return name == o.name;
+        case Kind::Pred:
+            return name == o.name && args == o.args;
         case Kind::Verum:
         case Kind::Falsum:
             return true;
@@ -40,6 +42,14 @@ WffPtr wff_literal(std::string fol_str) {
     auto n = std::make_shared<WffNode>();
     n->kind = WffNode::Kind::Literal;
     n->name = std::move(fol_str);
+    return n;
+}
+
+WffPtr wff_pred(std::string pred_name, std::vector<std::string> args) {
+    auto n = std::make_shared<WffNode>();
+    n->kind = WffNode::Kind::Pred;
+    n->name = std::move(pred_name);
+    n->args = std::move(args);
     return n;
 }
 
@@ -92,12 +102,86 @@ WffPtr wff_exists(std::string var, WffPtr body) {
     return n;
 }
 
+// --- Substitution ---
+
+WffPtr wff_subst(const WffPtr& node,
+                 const std::string& old_var,
+                 const std::string& new_var) {
+    if (!node) return nullptr;
+    if (old_var == new_var) return node;
+
+    switch (node->kind) {
+        case WffNode::Kind::Var:
+        case WffNode::Kind::Literal:
+        case WffNode::Kind::Verum:
+        case WffNode::Kind::Falsum:
+            return node;  // no term variables here
+
+        case WffNode::Kind::Pred: {
+            bool changed = false;
+            std::vector<std::string> new_args;
+            new_args.reserve(node->args.size());
+            for (const auto& a : node->args) {
+                if (a == old_var) {
+                    new_args.push_back(new_var);
+                    changed = true;
+                } else {
+                    new_args.push_back(a);
+                }
+            }
+            if (!changed) return node;
+            return wff_pred(node->name, std::move(new_args));
+        }
+
+        case WffNode::Kind::Neg: {
+            auto child = wff_subst(node->left, old_var, new_var);
+            if (child == node->left) return node;
+            return wff_neg(std::move(child));
+        }
+
+        case WffNode::Kind::Binary: {
+            auto l = wff_subst(node->left, old_var, new_var);
+            auto r = wff_subst(node->right, old_var, new_var);
+            if (l == node->left && r == node->right) return node;
+            return wff_binary(node->op, std::move(l), std::move(r));
+        }
+
+        case WffNode::Kind::Forall:
+        case WffNode::Kind::Exists: {
+            // If this quantifier binds old_var, stop (shadowed)
+            if (node->name == old_var) return node;
+            // If the quantifier binds new_var, we'd need alpha-renaming
+            // to avoid capture. For our use case (Metamath vars are distinct),
+            // this shouldn't happen.
+            auto body = wff_subst(node->left, old_var, new_var);
+            std::string bvar = node->name;
+            if (body == node->left) return node;
+            if (node->kind == WffNode::Kind::Forall)
+                return wff_forall(std::move(bvar), std::move(body));
+            else
+                return wff_exists(std::move(bvar), std::move(body));
+        }
+    }
+    return node;
+}
+
 // --- Emission ---
+
+std::string render_pred(const WffNode& node) {
+    std::string result = node.name + "(";
+    for (size_t i = 0; i < node.args.size(); ++i) {
+        if (i > 0) result += ", ";
+        result += node.args[i];
+    }
+    result += ")";
+    return result;
+}
 
 std::string emit_fol(const WffNode& node, const LeafRenderer& render_leaf) {
     switch (node.kind) {
         case WffNode::Kind::Var:
         case WffNode::Kind::Literal:
+        case WffNode::Kind::Pred:
         case WffNode::Kind::Verum:
         case WffNode::Kind::Falsum:
             return render_leaf(node);
@@ -134,6 +218,7 @@ bool any_leaf(const WffNode& node, const LeafPredicate& pred) {
     switch (node.kind) {
         case WffNode::Kind::Var:
         case WffNode::Kind::Literal:
+        case WffNode::Kind::Pred:
         case WffNode::Kind::Verum:
         case WffNode::Kind::Falsum:
             return pred(node);
@@ -155,6 +240,7 @@ void for_each_leaf(const WffNode& node, const LeafVisitor& visit) {
     switch (node.kind) {
         case WffNode::Kind::Var:
         case WffNode::Kind::Literal:
+        case WffNode::Kind::Pred:
         case WffNode::Kind::Verum:
         case WffNode::Kind::Falsum:
             visit(node);

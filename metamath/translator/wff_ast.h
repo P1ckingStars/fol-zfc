@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace metamath {
 
@@ -10,19 +11,20 @@ struct WffNode;
 using WffPtr = std::shared_ptr<const WffNode>;
 
 struct WffNode {
-    enum class Kind { Var, Literal, Verum, Falsum, Neg, Binary, Forall, Exists };
+    enum class Kind { Var, Literal, Pred, Verum, Falsum, Neg, Binary, Forall, Exists };
     enum class Op   { Implies, And, Or, Iff };
 
     Kind kind;
     Op   op;           // meaningful only when kind == Binary
     std::string name;  // Var: wff variable ("ph", "ps", ...)
-                       // Literal: verbatim FOL string ("elem(x, y)", "eq(x, y)")
+                       // Literal: verbatim FOL string ("elem(x, y)")
+                       // Pred: predicate name ("eq", "elem")
                        // Forall/Exists: bound variable name
+    std::vector<std::string> args;  // Pred: term arguments (e.g. {"x", "y"})
     WffPtr left;       // Neg: child. Binary: lhs. Forall/Exists: body.
     WffPtr right;      // Binary: rhs. Others: nullptr.
 
     // Syntactic (name-sensitive) equality — NOT alpha-equivalence.
-    // forall("x", body) != forall("y", body[x/y]).
     bool operator==(const WffNode& other) const;
     bool operator!=(const WffNode& other) const { return !(*this == other); }
 };
@@ -30,28 +32,40 @@ struct WffNode {
 // --- Factory functions ---
 
 WffPtr wff_var(std::string name);
-WffPtr wff_literal(std::string fol_str);
+WffPtr wff_literal(std::string fol_str);      // legacy: verbatim string
+WffPtr wff_pred(std::string pred_name,         // structured atomic predicate
+                std::vector<std::string> args);
 WffPtr wff_verum();
 WffPtr wff_falsum();
-WffPtr wff_neg(WffPtr child);           // child must be non-null
-WffPtr wff_binary(WffNode::Op op, WffPtr lhs, WffPtr rhs);  // both non-null
-WffPtr wff_forall(std::string var, WffPtr body);  // body must be non-null
-WffPtr wff_exists(std::string var, WffPtr body);  // body must be non-null
+WffPtr wff_neg(WffPtr child);
+WffPtr wff_binary(WffNode::Op op, WffPtr lhs, WffPtr rhs);
+WffPtr wff_forall(std::string var, WffPtr body);
+WffPtr wff_exists(std::string var, WffPtr body);
+
+// --- Substitution ---
+
+// Replace all free occurrences of term variable `old_var` with `new_var`.
+// This operates on Pred args and Forall/Exists bound variable names.
+// Respects shadowing: if a quantifier binds `old_var`, the body is not touched.
+WffPtr wff_subst(const WffPtr& node,
+                 const std::string& old_var,
+                 const std::string& new_var);
 
 // --- Emission ---
 
 // Render a WffNode tree to a FOL formula string.
-// render_leaf is called for Var, Literal, Verum, and Falsum nodes.
+// render_leaf is called for Var, Literal, Pred, Verum, and Falsum nodes.
 using LeafRenderer = std::function<std::string(const WffNode&)>;
 std::string emit_fol(const WffNode& node, const LeafRenderer& render_leaf);
 
+// Default rendering for Pred nodes: "name(arg1, arg2, ...)"
+std::string render_pred(const WffNode& node);
+
 // --- Tree queries ---
 
-// Returns true if any leaf (Var, Literal, Verum, Falsum) satisfies pred.
 using LeafPredicate = std::function<bool(const WffNode&)>;
 bool any_leaf(const WffNode& node, const LeafPredicate& pred);
 
-// Visit every leaf in the tree.
 using LeafVisitor = std::function<void(const WffNode&)>;
 void for_each_leaf(const WffNode& node, const LeafVisitor& visit);
 
