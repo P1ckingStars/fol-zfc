@@ -21,6 +21,8 @@ cc_library(
     srcs = ["mm_translator.cpp"],
     hdrs = ["mm_translator.h"],
     deps = [
+        ":syntax_parser",
+        ":syntax_to_wff",
         ":wff_ast",
         "//metamath/parser:mm_database",
         "//metamath/verifier:mm_verifier",

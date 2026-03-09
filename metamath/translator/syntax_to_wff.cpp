@@ -38,8 +38,8 @@ WffPtr SyntaxToWff::convert(const SyntaxNode& node,
 }
 
 WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
-    // Leaf: wff variable
-    if (node.is_leaf() && node.typecode == "wff") {
+    // Leaf: wff variable (only actual $f variable leaves, not zero-child syntax axioms)
+    if (node.label == "$f" && node.typecode == "wff") {
         return wff_var(node.token);
     }
 
@@ -95,13 +95,13 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     if (L == "wnf" && C.size() == 2) {
         std::string var = C[0].token;
         WffPtr body = convert_wff(C[1]);
+        // Setvar quantifiers are vacuous in wff-as-set encoding
+        if (setvars_.count(var))
+            return wff_binary(WffNode::Op::Implies, body, body);
         return wff_binary(WffNode::Op::Implies,
                           wff_exists(var, body),
                           wff_forall(var, body));
     }
-
-    // --- Unique existence: ∃!x.ph → ∃x(ph ∧ ∀y(ph[y/x] → y=x)) ---
-    // For now, skip (complex expansion)
 
     // --- Unique existence: E! x ph → ∃x(φ ∧ ∀y(φ[y/x] → y=x)) ---
 
@@ -110,12 +110,14 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         WffPtr body = convert_wff(C[1]);
         std::string y = fresh_var();
         extra_vars_.push_back(y);
-        return wff_exists(x,
-            wff_binary(WffNode::Op::And, body,
-                wff_forall(y,
-                    wff_binary(WffNode::Op::Implies,
-                        wff_subst(body, x, y),
-                        wff_pred("eq", {y, x})))));
+        // Strip outer ∃x if x is a setvar (vacuous)
+        auto inner = wff_binary(WffNode::Op::And, body,
+            wff_forall(y,
+                wff_binary(WffNode::Op::Implies,
+                    wff_subst(body, x, y),
+                    wff_pred("eq", {y, x}))));
+        if (setvars_.count(x)) return inner;
+        return wff_exists(x, std::move(inner));
     }
 
     // --- "At most one": E* x ph → ∃y∀x(φ → x=y) ---
@@ -125,11 +127,12 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         WffPtr body = convert_wff(C[1]);
         std::string y = fresh_var();
         extra_vars_.push_back(y);
-        return wff_exists(y,
-            wff_forall(x,
-                wff_binary(WffNode::Op::Implies,
-                    std::move(body),
-                    wff_pred("eq", {x, y}))));
+        // Strip ∀x if x is a setvar (vacuous)
+        auto inner = wff_binary(WffNode::Op::Implies,
+            std::move(body), wff_pred("eq", {x, y}));
+        if (setvars_.count(x))
+            return wff_exists(y, std::move(inner));
+        return wff_exists(y, wff_forall(x, std::move(inner)));
     }
 
     // --- Not an element: A e/ B → ¬(A ∈ B) ---
@@ -161,6 +164,9 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         std::string y = fresh_var();
         extra_vars_.push_back(y);
         WffPtr mem = expand_membership(y, C[1]);
+        // Setvar quantifiers are vacuous in wff-as-set encoding
+        if (setvars_.count(x))
+            return wff_binary(WffNode::Op::Implies, mem, mem);
         return wff_binary(WffNode::Op::Implies,
             wff_exists(x, mem),
             wff_forall(x, mem));
@@ -330,10 +336,12 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     }
 
     // --- Leaf nodes of non-wff type reaching convert_wff ---
-    // This can happen with setvar leaves in some contexts
-    if (node.is_leaf()) {
-        // Setvar leaf used as wff (shouldn't happen, but handle gracefully)
+    if (node.label == "$f") {
         return wff_literal("??leaf:" + node.typecode + ":" + node.token + "??");
+    }
+    // Zero-child syntax axiom not handled above
+    if (node.children.empty()) {
+        return wff_literal("??syntax:" + node.label + "??");
     }
 
     // --- Unsupported: return a literal marker ---

@@ -1,5 +1,0 @@
-# Translated from Metamath set.mm
-
-# eltpi
-claim mm_eltpi: forall A. forall B. forall C. forall D. forall u0. (((eq(A, B) | eq(A, C)) | eq(A, D)) -> ((eq(A, B) | eq(A, C)) | eq(A, D)))
-

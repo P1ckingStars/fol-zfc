@@ -37,14 +37,14 @@ ProofStack::ProofStack(GlobalContext & context)
 
 ScopeDeps ProofStack::deps_of(FormulaHandle const& f) const {
     auto it = formula_deps_.find(f);
-    return it != formula_deps_.end() ? it->second : 0;
+    return it != formula_deps_.end() ? it->second : ScopeDeps{};
 }
 
 ScopeDeps ProofStack::compute_var_deps(FormulaHandle const& h) const {
     const Formula& f = h.get();
 
     if (f.is_predicate()) {
-        ScopeDeps deps = 0;
+        ScopeDeps deps;
         for (const Term& t : f.as_predicate().args()) {
             if (t.is_fixed()) {
                 int scope = find_scope_for_term(t);
@@ -55,7 +55,7 @@ ScopeDeps ProofStack::compute_var_deps(FormulaHandle const& h) const {
     }
     else if (f.is_compound()) {
         const Compound& c = f.as_compound();
-        ScopeDeps deps = 0;
+        ScopeDeps deps;
         if (c.left.valid()) deps |= compute_var_deps(c.left);
         if (c.right.valid()) deps |= compute_var_deps(c.right);
         return deps;
@@ -64,23 +64,22 @@ ScopeDeps ProofStack::compute_var_deps(FormulaHandle const& h) const {
         return compute_var_deps(f.as_quantified().body);
     }
     else if (f.is_sentence()) {
-        return 0;  // Sentences are closed, no free fixed vars
+        return {};  // Sentences are closed, no free fixed vars
     }
-    return 0;
+    return {};
 }
 
 void ProofStack::derive_with_deps(FormulaHandle const& f, ScopeDeps proof_deps) {
     ScopeDeps total = proof_deps | compute_var_deps(f);
     auto it = formula_deps_.find(f);
-    if (it == formula_deps_.end() || deepest(total) < deepest(it->second)) {
+    if (it == formula_deps_.end() || total.deepest() < it->second.deepest()) {
         formula_deps_[f] = total;
     }
 }
 
 void ProofStack::cleanup_scope(int bit) {
-    ScopeDeps mask = 1ULL << bit;
-    std::erase_if(formula_deps_, [mask](auto const& entry) {
-        return (entry.second & mask) != 0;
+    std::erase_if(formula_deps_, [bit](auto const& entry) {
+        return entry.second.test(bit);
     });
 }
 
@@ -185,7 +184,7 @@ FormulaHandle ProofStack::make_exists_from_witness(FormulaHandle const& body, Te
 
 FormulaResult ProofStack::use_theorem(SentenceHandle & sentence) {
     auto res = formula_builder_.add_sentence(sentence);
-    derive_with_deps(res, 0);
+    derive_with_deps(res, {});
     return res;
 }
 
@@ -660,7 +659,7 @@ FormulaResult ClassicalProofStack::excluded_middle(FormulaHandle const &formula)
     // This is an axiom in classical logic — no proof dependencies
     FormulaHandle not_a = builder().make_not(formula);
     FormulaHandle lem = builder().make_or(formula, not_a);
-    derive_with_deps(lem, 0);
+    derive_with_deps(lem, {});
     return lem;
 }
 
@@ -705,7 +704,7 @@ FormulaResult ClassicalProofStack::peirce(FormulaHandle const &a, FormulaHandle 
     FormulaHandle a_impl_b = builder().make_implies(a, b);
     FormulaHandle inner = builder().make_implies(a_impl_b, a);
     FormulaHandle peirce_formula = builder().make_implies(inner, a);
-    derive_with_deps(peirce_formula, 0);
+    derive_with_deps(peirce_formula, {});
     return peirce_formula;
 }
 

@@ -2,6 +2,7 @@
 
 #include "../parser/mm_database.h"
 #include "../verifier/mm_verifier.h"
+#include "syntax_parser.h"
 #include "wff_ast.h"
 
 #include <map>
@@ -43,7 +44,13 @@ public:
     size_t translated_count() const { return translated_set_.size(); }
     size_t skipped_count() const { return skipped_; }
 
-    // Public types needed by ConvCtx in implementation
+    // Clear internal caches to free memory (call between batches)
+    void clear_caches() { frame_cache_.clear(); }
+
+    // Pre-populate translated_set_ with known theorem labels (for per-batch processes)
+    void add_known_theorems(const std::vector<std::string>& labels) {
+        for (const auto& l : labels) translated_set_.insert(l);
+    }
 
     struct FrameInfo {
         // wff variable → set variable mapping (e.g. "ph" → "S_ph")
@@ -101,6 +108,7 @@ public:
 private:
     const MmDatabase& db_;
     MmVerifier verifier_;
+    SyntaxParser syntax_parser_;
     std::unordered_set<std::string> translated_set_;
     size_t skipped_ = 0;
 
@@ -114,6 +122,10 @@ private:
     // Parse Metamath expression tokens into a WffNode AST
     WffPtr parse_mm_wff(const Expression& tokens, size_t start,
                         const FrameInfo& info) const;
+
+    // Mutable variant: tracks extra variables from class expansion
+    WffPtr parse_mm_wff_mut(const Expression& tokens, size_t start,
+                            FrameInfo& info);
 
     bool simulate_proof(const Assertion& thm, const FrameInfo& info_in,
                         ProofState& state, std::string* error);
@@ -189,19 +201,6 @@ private:
     // Unused lemma storage (kept for interface compatibility)
     std::vector<TranslatedTheorem> lemmas_;
 
-    // Compound path: recursively inline the referenced theorem's proof
-    // (kept as fallback)
-    bool inline_theorem_proof(
-        const std::string& ref_label,
-        const Assertion& ref_thm,
-        const std::map<std::string, Expression>& subst,
-        const FrameInfo& caller_info,
-        const std::vector<std::string>& ess_handles,
-        ProofState& state,
-        std::string* error);
-
-    // --- New helper functions for extended axiom/definition support ---
-
     // Use a bridge theorem and instantiate with forall_elim chain
     std::string emit_bridge_use(const std::string& bridge_name,
                                 const std::vector<std::string>& args,
@@ -217,7 +216,6 @@ private:
                                ProofState& state);
 
     // Resolve wff substitution to its corresponding set variable.
-    // For compound expressions, calls build_comp_impl to create a witness set.
     std::string get_wff_set(const Expression& wff_expr,
                             const FrameInfo& thm_info,
                             ProofState& state);
@@ -225,9 +223,6 @@ private:
     // Utility
     bool is_syntax_builder(const Assertion* a) const;
     static std::string sanitize_label(const std::string& mm_label);
-
-    // Collect set variable names that appear in a FOL formula string
-    static std::vector<std::string> collect_set_vars(const std::string& formula);
 };
 
 }  // namespace metamath

@@ -152,7 +152,9 @@ WffPtr wff_subst(const WffPtr& node,
             if (node->name == old_var) return node;
             // If the quantifier binds new_var, we'd need alpha-renaming
             // to avoid capture. For our use case (Metamath vars are distinct),
-            // this shouldn't happen.
+            // this shouldn't happen. Assert to catch violations early.
+            assert(node->name != new_var &&
+                   "wff_subst: variable capture — alpha-renaming needed");
             auto body = wff_subst(node->left, old_var, new_var);
             std::string bvar = node->name;
             if (body == node->left) return node;
@@ -186,8 +188,12 @@ std::string emit_fol(const WffNode& node, const LeafRenderer& render_leaf) {
         case WffNode::Kind::Falsum:
             return render_leaf(node);
 
-        case WffNode::Kind::Neg:
-            return "~" + emit_fol(*node.left, render_leaf);
+        case WffNode::Kind::Neg: {
+            std::string inner = emit_fol(*node.left, render_leaf);
+            if (!inner.empty() && inner[0] == '~')
+                return "~ " + inner;
+            return "~" + inner;
+        }
 
         case WffNode::Kind::Binary: {
             const char* op_str = nullptr;

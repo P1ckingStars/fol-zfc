@@ -12,14 +12,75 @@ namespace logic {
 using FormulaResult = util::Result<FormulaHandle>;
 
 // ========== Scope Dependency Tracking ==========
-// Bitmask tracking which scopes a derived formula depends on.
+// Dynamic bitset tracking which scopes a derived formula depends on.
 // Bit i set means the formula depends on scope at stack index i.
-using ScopeDeps = uint64_t;
-constexpr int MAX_SCOPE_DEPTH = 64;
+// Supports arbitrary scope depth (no 64-bit limit).
+class ScopeDeps {
+    std::vector<uint64_t> words_;
 
-inline ScopeDeps scope_dep(int i) { return i < 0 ? 0 : (1ULL << i); }
-inline ScopeDeps discharge(ScopeDeps d, int i) { return d & ~(1ULL << i); }
-inline int deepest(ScopeDeps d) { return d == 0 ? -1 : 63 - __builtin_clzll(d); }
+    static size_t word_idx(int i) { return i / 64; }
+    static uint64_t word_bit(int i) { return 1ULL << (i % 64); }
+
+public:
+    ScopeDeps() = default;
+
+    static ScopeDeps from_bit(int i) {
+        if (i < 0) return {};
+        ScopeDeps d;
+        d.words_.resize(word_idx(i) + 1, 0);
+        d.words_[word_idx(i)] |= word_bit(i);
+        return d;
+    }
+
+    bool empty() const {
+        for (auto w : words_) if (w) return false;
+        return true;
+    }
+
+    bool test(int i) const {
+        size_t wi = word_idx(i);
+        return wi < words_.size() && (words_[wi] & word_bit(i)) != 0;
+    }
+
+    void set(int i) {
+        size_t wi = word_idx(i);
+        if (wi >= words_.size()) words_.resize(wi + 1, 0);
+        words_[wi] |= word_bit(i);
+    }
+
+    void clear(int i) {
+        size_t wi = word_idx(i);
+        if (wi < words_.size()) words_[wi] &= ~word_bit(i);
+    }
+
+    int deepest() const {
+        for (int w = static_cast<int>(words_.size()) - 1; w >= 0; --w) {
+            if (words_[w]) return w * 64 + 63 - __builtin_clzll(words_[w]);
+        }
+        return -1;
+    }
+
+    ScopeDeps operator|(ScopeDeps const& o) const {
+        ScopeDeps r;
+        r.words_.resize(std::max(words_.size(), o.words_.size()), 0);
+        for (size_t i = 0; i < words_.size(); ++i) r.words_[i] |= words_[i];
+        for (size_t i = 0; i < o.words_.size(); ++i) r.words_[i] |= o.words_[i];
+        return r;
+    }
+
+    ScopeDeps& operator|=(ScopeDeps const& o) {
+        if (o.words_.size() > words_.size()) words_.resize(o.words_.size(), 0);
+        for (size_t i = 0; i < o.words_.size(); ++i) words_[i] |= o.words_[i];
+        return *this;
+    }
+};
+
+inline ScopeDeps scope_dep(int i) { return ScopeDeps::from_bit(i); }
+
+inline ScopeDeps discharge(ScopeDeps d, int i) {
+    d.clear(i);
+    return d;
+}
 
 class AssumptionScope {
     FormulaHandle assumption_;
