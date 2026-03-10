@@ -136,15 +136,6 @@ private:
                     ProofState& state,
                     std::string* error);
 
-    // Inline ND proofs for Hilbert axioms
-    // Returns handle name of the result formula
-    std::string inline_ax1(const std::string& a, const std::string& b,
-                           ProofState& state);
-    std::string inline_ax2(const std::string& a, const std::string& b,
-                           const std::string& c, ProofState& state);
-    std::string inline_ax3(const std::string& a, const std::string& b,
-                           ProofState& state);
-
     // ---------------------------------------------------------------
     // Hybrid theorem reference system
     // ---------------------------------------------------------------
@@ -178,6 +169,11 @@ private:
     // Comprehension-based compound substitution
     // ---------------------------------------------------------------
 
+    // Get the set variable representing a wff expression (simple or compound)
+    std::string get_wff_set(const Expression& wff_expr,
+                            const FrameInfo& thm_info,
+                            ProofState& state);
+
     // For each compound wff var, create a witness set via comprehension
     // axiom, then forall_elim + structural conversion.
     // Returns handle to the result formula.
@@ -191,34 +187,16 @@ private:
         ProofState& state,
         std::string* error);
 
-    // Build a comprehension witness set for a compound Metamath expression.
-    // Returns (witness_set_var, iff_handle) where iff connects
-    // elem(dummy, witness) <-> compound_formula
-    static std::pair<std::string, std::string> build_comprehension_set(
-        const Expression& mm_tokens, size_t start,
-        const FrameInfo& caller_info, ProofState& state);
-
     // Unused lemma storage (kept for interface compatibility)
     std::vector<TranslatedTheorem> lemmas_;
 
-    // Use a bridge theorem and instantiate with forall_elim chain
-    std::string emit_bridge_use(const std::string& bridge_name,
-                                const std::vector<std::string>& args,
-                                ProofState& state);
-
-    // Emit trivial A <-> A biconditional via two identity implications
-    std::string emit_identity_bic(const std::string& formula,
-                                  ProofState& state);
-
-    // Re-derive formula in current fix scope via identity implication
-    std::string emit_transport(const std::string& outer_handle,
-                               const std::string& formula,
-                               ProofState& state);
-
-    // Resolve wff substitution to its corresponding set variable.
-    std::string get_wff_set(const Expression& wff_expr,
-                            const FrameInfo& thm_info,
-                            ProofState& state);
+    // translate() sub-steps
+    bool try_bridge_equiv(const std::string& label, const FrameInfo& info,
+                          const WffPtr& claim_ast, TranslatedTheorem& result);
+    bool try_trivial_claim(const FrameInfo& info, const WffPtr& claim_ast,
+                           int num_foralls, bool needs_dummy,
+                           TranslatedTheorem& result);
+    static bool is_skipped(const std::string& label);
 
     // Utility
     bool is_syntax_builder(const Assertion* a) const;

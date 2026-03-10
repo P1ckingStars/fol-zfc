@@ -17,10 +17,45 @@ cc_library(
 )
 
 cc_library(
+    name = "proof_emit",
+    srcs = ["proof_emit.cpp"],
+    hdrs = ["proof_emit.h"],
+    deps = [":mm_translator_base"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "comprehension",
+    srcs = ["comprehension.cpp"],
+    hdrs = ["comprehension.h"],
+    deps = [
+        ":mm_translator_base",
+        ":proof_emit",
+        ":wff_ast",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "mm_translator_base",
+    hdrs = ["mm_translator.h"],
+    deps = [
+        ":syntax_parser",
+        ":wff_ast",
+        "//metamath/parser:mm_database",
+        "//metamath/verifier:mm_verifier",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "mm_translator",
     srcs = ["mm_translator.cpp"],
     hdrs = ["mm_translator.h"],
     deps = [
+        ":comprehension",
+        ":mm_translator_base",
+        ":proof_emit",
         ":syntax_parser",
         ":syntax_to_wff",
         ":wff_ast",

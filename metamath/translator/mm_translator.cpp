@@ -1,4 +1,6 @@
 #include "mm_translator.h"
+#include "comprehension.h"
+#include "proof_emit.h"
 #include "syntax_to_wff.h"
 
 #include <algorithm>
@@ -31,12 +33,6 @@ bool MmTranslator::is_syntax_builder(const Assertion* a) const {
 // ===================================================================
 
 namespace {
-
-// Negate a formula string, adding a space to avoid ~~ tokens.
-std::string neg(const std::string& s) {
-    if (!s.empty() && s[0] == '~') return "~ " + s;
-    return "~" + s;
-}
 
 // Leaf renderer: converts Var/Literal/Verum/Falsum to FOL strings.
 // IMPORTANT: The returned lambda captures `info` by reference.
@@ -73,6 +69,193 @@ LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
 }
 
 }  // anonymous namespace
+
+// ===================================================================
+// Comprehension helpers (member wrappers)
+// ===================================================================
+
+std::string MmTranslator::get_wff_set(const Expression& wff_expr,
+                                       const FrameInfo& thm_info,
+                                       ProofState& state) {
+    if (wff_expr.size() == 1) {
+        auto it = thm_info.wff_to_set.find(wff_expr[0]);
+        if (it != thm_info.wff_to_set.end()) return it->second;
+    }
+    // Compound case: use build_comp_impl to create witness set
+    auto cr = build_comp_impl(wff_expr, 0, thm_info, state);
+    if (cr.set_var.empty()) return "";
+    return cr.set_var;
+}
+
+std::string MmTranslator::emit_comprehension_use(
+    const std::string& ref_label,
+    const Assertion& ref_thm,
+    const FrameInfo& ref_info,
+    const FrameInfo& caller_info,
+    const std::map<std::string, Expression>& subst,
+    const std::vector<std::string>& ess_handles,
+    ProofState& state,
+    std::string* error) {
+
+    std::string fol_label = sanitize_label(ref_label);
+
+    // For each wff var in ref's frame, create a comprehension set for the
+    // substitution value (or just use the caller's set var if simple).
+    struct Binding {
+        std::string wff_var;
+        std::string target_set;   // witness or caller's set var
+        std::string iff_handle;   // non-empty if compound
+    };
+    std::vector<Binding> bindings;
+    int exists_count = 0;  // number of exists scopes opened
+
+    for (const auto& ref_set : ref_info.set_var_order) {
+        std::string wff_var;
+        for (const auto& [wv, sv] : ref_info.wff_to_set) {
+            if (sv == ref_set) { wff_var = wv; break; }
+        }
+        if (wff_var.empty()) {
+            if (error) *error = "can't find wff var for " + ref_set;
+            return "";
+        }
+        auto sit = subst.find(wff_var);
+        if (sit == subst.end()) {
+            // Dummy wff var in ref's frame: use caller's dummy var
+            bindings.push_back({wff_var, caller_info.dummy_var, ""});
+            continue;
+        }
+        const auto& val = sit->second;
+
+        if (val.size() == 1 && caller_info.wff_to_set.count(val[0])) {
+            bindings.push_back({wff_var, caller_info.wff_to_set.at(val[0]), ""});
+        } else {
+            auto cr = build_comp_impl(val, 0, caller_info, state);
+            if (cr.set_var.empty()) {
+                std::string val_str;
+                for (const auto& t : val) val_str += t + " ";
+                if (error) *error = "comprehension failed for " + wff_var + " [" + val_str + "]";
+                return "";
+            }
+            bindings.push_back({wff_var, cr.set_var, cr.iff_handle});
+            exists_count += cr.exists_opened;
+        }
+    }
+
+    // Build the WffAtom map for structural conversion
+    std::unordered_map<std::string, WffAtom> atom_map;
+    for (const auto& b : bindings) {
+        WffAtom wa;
+        wa.witness_set = b.target_set;
+        wa.iff_handle = b.iff_handle;
+        wa.elem_str = "elem(" + caller_info.dummy_var + ", " + b.target_set + ")";
+        // Compute compound form
+        auto sit = subst.find(b.wff_var);
+        if (sit != subst.end()) {
+            wa.compound_str = translate_expr(sit->second, 0, caller_info);
+            // Wrap in parens if it starts with a quantifier to avoid precedence issues
+            if (wa.compound_str.substr(0, 6) == "forall" ||
+                wa.compound_str.substr(0, 6) == "exists") {
+                wa.compound_str = "(" + wa.compound_str + ")";
+            }
+        } else {
+            wa.compound_str = wa.elem_str;
+        }
+        atom_map[b.wff_var] = wa;
+    }
+
+    // Add T./F. as atoms if they appear in the referenced expression.
+    for (const auto& tok : ref_thm.expression) {
+        if ((tok == "T." || tok == "F.") && atom_map.find(tok) == atom_map.end()) {
+            std::string tf_set;
+            if (!ref_info.set_var_order.empty()) {
+                for (const auto& b : bindings) {
+                    std::string ref_wff;
+                    for (const auto& [wv, sv] : ref_info.wff_to_set) {
+                        if (sv == ref_info.set_var_order[0]) { ref_wff = wv; break; }
+                    }
+                    if (b.wff_var == ref_wff) { tf_set = b.target_set; break; }
+                }
+            }
+            if (tf_set.empty()) tf_set = caller_info.dummy_var;
+
+            WffAtom wa;
+            wa.witness_set = tf_set;
+            wa.iff_handle = "";
+            wa.elem_str = "elem(" + caller_info.dummy_var + ", " + tf_set + ")";
+            std::string taut = "(elem(" + caller_info.dummy_var + ", " + tf_set +
+                               ") -> elem(" + caller_info.dummy_var + ", " + tf_set + "))";
+            wa.compound_str = (tok == "T.") ? taut : neg(taut);
+            atom_map[tok] = wa;
+        }
+    }
+
+    // Use the theorem
+    std::string h = state.fresh();
+    state.emit(h + " = use " + fol_label);
+
+    // forall_elim for used setvars
+    for (const auto& ref_sv : ref_info.used_setvars) {
+        auto sit = subst.find(ref_sv);
+        std::string target_sv;
+        if (sit != subst.end() && !sit->second.empty()) {
+            if (sit->second.size() > 1) {
+                if (error) *error = "compound class subst for setvar " + ref_sv;
+                return "";
+            }
+            target_sv = sit->second[0];
+        } else {
+            target_sv = ref_sv;
+        }
+        std::string h_next = state.fresh();
+        state.emit(h_next + " = forall_elim " + h + ", " + target_sv);
+        h = h_next;
+    }
+
+    // forall_elim with witness/caller sets
+    for (const auto& b : bindings) {
+        std::string h_next = state.fresh();
+        state.emit(h_next + " = forall_elim " + h + ", " + b.target_set);
+        h = h_next;
+    }
+
+    // forall_elim for dummy (last, innermost quantifier)
+    if (ref_info.needs_dummy) {
+        std::string h_next = state.fresh();
+        state.emit(h_next + " = forall_elim " + h + ", " + caller_info.dummy_var);
+        h = h_next;
+    }
+
+    // For each essential hyp: convert caller's handle (compound-form)
+    // to elem-form via backward conversion, then implies_elim.
+    for (size_t ess_idx = 0; ess_idx < ref_info.ess_hyps.size() &&
+                              ess_idx < ess_handles.size(); ++ess_idx) {
+        std::string h_elem = convert_proof(
+            *ref_info.ess_hyps[ess_idx].ast, ess_handles[ess_idx],
+            atom_map, /*forward=*/false, state);
+
+        std::string h_next = state.fresh();
+        state.emit(h_next + " = implies_elim " + h + ", " + h_elem);
+        h = h_next;
+    }
+
+    // h is the conclusion in elem-form. Convert to compound-form.
+    std::string h_compound = convert_proof(
+        *ref_info.conclusion_ast, h,
+        atom_map, /*forward=*/true, state);
+
+    // Close exists scopes
+    for (int i = 0; i < exists_count; ++i) {
+        std::string h_next = state.fresh();
+        state.emit(h_next + " = exists_intro " + h_compound);
+        h_compound = h_next;
+    }
+
+    return h_compound;
+}
+
+// ===================================================================
+// Expression translation (continued)
+// ===================================================================
 
 WffPtr MmTranslator::parse_mm_wff(const Expression& tokens, size_t start,
                                     const FrameInfo& info) const {
@@ -201,127 +384,6 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
     info.needs_dummy = true;
 
     return true;
-}
-
-// ===================================================================
-// Helper functions for extended axiom/definition support
-// ===================================================================
-
-std::string MmTranslator::emit_bridge_use(const std::string& bridge_name,
-                                           const std::vector<std::string>& args,
-                                           ProofState& state) {
-    std::string h = state.fresh();
-    state.emit(h + " = use " + bridge_name);
-    for (const auto& arg : args) {
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = forall_elim " + h + ", " + arg);
-        h = h_next;
-    }
-    return h;
-}
-
-std::string MmTranslator::emit_identity_bic(const std::string& formula,
-                                             ProofState& state) {
-    std::string h1 = state.fresh();
-    state.emit(h1 + " = assume " + formula);
-    std::string hf = state.fresh();
-    state.emit(hf + " = implies_intro " + h1);
-    std::string h2 = state.fresh();
-    state.emit(h2 + " = assume " + formula);
-    std::string hb = state.fresh();
-    state.emit(hb + " = implies_intro " + h2);
-    std::string r = state.fresh();
-    state.emit(r + " = iff_intro " + hf + ", " + hb);
-    return r;
-}
-
-std::string MmTranslator::emit_transport(const std::string& outer_handle,
-                                          const std::string& formula,
-                                          ProofState& state) {
-    std::string h_a = state.fresh();
-    state.emit(h_a + " = assume " + formula);
-    std::string h_id = state.fresh();
-    state.emit(h_id + " = implies_intro " + h_a);
-    std::string h_local = state.fresh();
-    state.emit(h_local + " = implies_elim " + h_id + ", " + outer_handle);
-    return h_local;
-}
-
-// ===================================================================
-// Inline ND proofs for Hilbert axioms
-// ===================================================================
-
-// ax-1: A -> (B -> A)
-std::string MmTranslator::inline_ax1(const std::string& a,
-                                      const std::string& b,
-                                      ProofState& state) {
-    std::string ha = state.fresh();
-    std::string hb = state.fresh();
-    std::string hab = state.fresh();
-    std::string ha2 = state.fresh();
-    std::string h_inner = state.fresh();
-    std::string h_outer = state.fresh();
-
-    state.emit(ha + " = assume " + a);
-    state.emit(hb + " = assume " + b);
-    state.emit(hab + " = and_intro " + ha + ", " + hb);
-    state.emit(ha2 + " = and_elim_l " + hab);
-    state.emit(h_inner + " = implies_intro " + ha2);
-    state.emit(h_outer + " = implies_intro " + h_inner);
-    return h_outer;
-}
-
-// ax-2: (A -> (B -> C)) -> ((A -> B) -> (A -> C))
-std::string MmTranslator::inline_ax2(const std::string& a,
-                                      const std::string& b,
-                                      const std::string& c,
-                                      ProofState& state) {
-    std::string h1 = state.fresh();
-    std::string h2 = state.fresh();
-    std::string h3 = state.fresh();
-    std::string h4 = state.fresh();
-    std::string h5 = state.fresh();
-    std::string h6 = state.fresh();
-    std::string h7 = state.fresh();
-    std::string h8 = state.fresh();
-    std::string h9 = state.fresh();
-
-    state.emit(h1 + " = assume " + a + " -> (" + b + " -> " + c + ")");
-    state.emit(h2 + " = assume " + a + " -> " + b);
-    state.emit(h3 + " = assume " + a);
-    state.emit(h4 + " = implies_elim " + h1 + ", " + h3);
-    state.emit(h5 + " = implies_elim " + h2 + ", " + h3);
-    state.emit(h6 + " = implies_elim " + h4 + ", " + h5);
-    state.emit(h7 + " = implies_intro " + h6);
-    state.emit(h8 + " = implies_intro " + h7);
-    state.emit(h9 + " = implies_intro " + h8);
-    return h9;
-}
-
-// ax-3: (~A -> ~B) -> (B -> A)
-std::string MmTranslator::inline_ax3(const std::string& a,
-                                      const std::string& b,
-                                      ProofState& state) {
-    std::string h1 = state.fresh();
-    std::string h2 = state.fresh();
-    std::string h3 = state.fresh();
-    std::string h4 = state.fresh();
-    std::string h5 = state.fresh();
-    std::string h6 = state.fresh();
-    std::string h7 = state.fresh();
-    std::string h8 = state.fresh();
-    std::string h9 = state.fresh();
-
-    state.emit(h1 + " = assume " + neg(a) + " -> " + neg(b));
-    state.emit(h2 + " = assume " + b);
-    state.emit(h3 + " = assume " + neg(a));
-    state.emit(h4 + " = implies_elim " + h1 + ", " + h3);
-    state.emit(h5 + " = not_elim " + h4 + ", " + h2);
-    state.emit(h6 + " = not_intro " + h5);
-    state.emit(h7 + " = double_neg_elim " + h6);
-    state.emit(h8 + " = implies_intro " + h7);
-    state.emit(h9 + " = implies_intro " + h8);
-    return h9;
 }
 
 // ===================================================================
@@ -464,1055 +526,6 @@ std::string MmTranslator::emit_comprehension_axioms() {
     return s;
 }
 
-// --- Helper: skip over one wff subexpression in MM tokens ---
-// --- Structural conversion ---
-namespace {
-
-struct WffAtom {
-    std::string witness_set;
-    std::string iff_handle;
-    std::string compound_str;
-    std::string elem_str;
-};
-
-using FrameInfo = MmTranslator::FrameInfo;
-using ProofState = MmTranslator::ProofState;
-
-// Leaf renderer using WffAtom compound_str for Var nodes.
-// IMPORTANT: captures `atoms` by reference; caller must ensure it outlives the lambda.
-LeafRenderer make_compound_renderer(
-    const std::unordered_map<std::string, WffAtom>& atoms) {
-    return [&atoms](const WffNode& node) -> std::string {
-        if (node.kind == WffNode::Kind::Var) {
-            auto it = atoms.find(node.name);
-            if (it != atoms.end()) return it->second.compound_str;
-        }
-        if (node.kind == WffNode::Kind::Verum) {
-            auto it = atoms.find("T.");
-            if (it != atoms.end()) return it->second.compound_str;
-        }
-        if (node.kind == WffNode::Kind::Falsum) {
-            auto it = atoms.find("F.");
-            if (it != atoms.end()) return it->second.compound_str;
-        }
-        if (node.kind == WffNode::Kind::Literal) return node.name;
-        if (node.kind == WffNode::Kind::Pred) return render_pred(node);
-        return "??";
-    };
-}
-
-// Leaf renderer using WffAtom elem_str for Var nodes.
-// IMPORTANT: captures `atoms` by reference; caller must ensure it outlives the lambda.
-LeafRenderer make_elem_renderer(
-    const std::unordered_map<std::string, WffAtom>& atoms) {
-    return [&atoms](const WffNode& node) -> std::string {
-        if (node.kind == WffNode::Kind::Var) {
-            auto it = atoms.find(node.name);
-            if (it != atoms.end()) return it->second.elem_str;
-        }
-        if (node.kind == WffNode::Kind::Verum) {
-            auto it = atoms.find("T.");
-            if (it != atoms.end()) return it->second.elem_str;
-        }
-        if (node.kind == WffNode::Kind::Falsum) {
-            auto it = atoms.find("F.");
-            if (it != atoms.end()) return it->second.elem_str;
-        }
-        if (node.kind == WffNode::Kind::Literal) return node.name;
-        if (node.kind == WffNode::Kind::Pred) return render_pred(node);
-        return "??";
-    };
-}
-
-// Check if any leaf in the subtree needs iff conversion.
-bool needs_conv(const WffNode& node,
-                const std::unordered_map<std::string, WffAtom>& atoms) {
-    return any_leaf(node, [&](const WffNode& leaf) {
-        if (leaf.kind != WffNode::Kind::Var) return false;
-        auto it = atoms.find(leaf.name);
-        return it != atoms.end() && !it->second.iff_handle.empty();
-    });
-}
-
-// Convert a proof handle between elem-form and compound-form by walking
-// the WffNode tree and emitting natural deduction proof steps.
-//
-// forward=true:  elem-form → compound-form (uses iff_elim_l at atoms)
-// forward=false: compound-form → elem-form (uses iff_elim_r at atoms)
-std::string convert_proof(
-    const WffNode& node,
-    const std::string& h,
-    const std::unordered_map<std::string, WffAtom>& atoms,
-    bool forward,
-    ProofState& state)
-{
-    // Early exit: no atoms in this subtree need conversion
-    if (!needs_conv(node, atoms)) return h;
-
-    auto src = forward ? make_elem_renderer(atoms) : make_compound_renderer(atoms);
-    auto tgt = forward ? make_compound_renderer(atoms) : make_elem_renderer(atoms);
-
-    switch (node.kind) {
-
-    case WffNode::Kind::Var: {
-        auto it = atoms.find(node.name);
-        if (it == atoms.end() || it->second.iff_handle.empty()) return h;
-        std::string r = state.fresh();
-        if (forward)
-            state.emit(r + " = iff_elim_l " + it->second.iff_handle + ", " + h);
-        else
-            state.emit(r + " = iff_elim_r " + it->second.iff_handle + ", " + h);
-        return r;
-    }
-
-    case WffNode::Kind::Literal:
-    case WffNode::Kind::Pred:
-    case WffNode::Kind::Verum:
-    case WffNode::Kind::Falsum:
-        return h;
-
-    case WffNode::Kind::Neg: {
-        // h : ~A_src, want ~A_tgt
-        std::string a_tgt = emit_fol(*node.left, tgt);
-        std::string h_assume = state.fresh();
-        state.emit(h_assume + " = assume " + a_tgt);
-        std::string h_src = convert_proof(*node.left, h_assume, atoms, !forward, state);
-        std::string h_bot = state.fresh();
-        state.emit(h_bot + " = not_elim " + h + ", " + h_src);
-        std::string r = state.fresh();
-        state.emit(r + " = not_intro " + h_bot);
-        return r;
-    }
-
-    case WffNode::Kind::Binary: {
-        switch (node.op) {
-
-        case WffNode::Op::Implies: {
-            // h : A_src -> B_src, want A_tgt -> B_tgt
-            std::string a_tgt = emit_fol(*node.left, tgt);
-            std::string h_assume = state.fresh();
-            state.emit(h_assume + " = assume " + a_tgt);
-            std::string h_a_src = convert_proof(*node.left, h_assume, atoms, !forward, state);
-            std::string h_b_src = state.fresh();
-            state.emit(h_b_src + " = implies_elim " + h + ", " + h_a_src);
-            std::string h_b_tgt = convert_proof(*node.right, h_b_src, atoms, forward, state);
-            std::string r = state.fresh();
-            state.emit(r + " = implies_intro " + h_b_tgt);
-            return r;
-        }
-
-        case WffNode::Op::And: {
-            // h : A_src & B_src, want A_tgt & B_tgt
-            std::string h_a = state.fresh();
-            state.emit(h_a + " = and_elim_l " + h);
-            std::string h_a_tgt = convert_proof(*node.left, h_a, atoms, forward, state);
-            std::string h_b = state.fresh();
-            state.emit(h_b + " = and_elim_r " + h);
-            std::string h_b_tgt = convert_proof(*node.right, h_b, atoms, forward, state);
-            std::string r = state.fresh();
-            state.emit(r + " = and_intro " + h_a_tgt + ", " + h_b_tgt);
-            return r;
-        }
-
-        case WffNode::Op::Or: {
-            // h : A_src | B_src, want A_tgt | B_tgt
-            std::string a_src = emit_fol(*node.left, src);
-            std::string b_tgt = emit_fol(*node.right, tgt);
-            std::string a_tgt = emit_fol(*node.left, tgt);
-            // Case A: assume A_src, convert to A_tgt, or_intro_l
-            std::string h_a = state.fresh();
-            state.emit(h_a + " = assume " + a_src);
-            std::string h_a_tgt = convert_proof(*node.left, h_a, atoms, forward, state);
-            std::string h_b_let = state.fresh();
-            state.emit(h_b_let + " = let " + b_tgt);
-            std::string h_a_or = state.fresh();
-            state.emit(h_a_or + " = or_intro_l " + h_a_tgt + ", " + h_b_let);
-            std::string h_a_imp = state.fresh();
-            state.emit(h_a_imp + " = implies_intro " + h_a_or);
-            // Case B: assume B_src, convert to B_tgt, or_intro_r
-            std::string b_src = emit_fol(*node.right, src);
-            std::string h_b = state.fresh();
-            state.emit(h_b + " = assume " + b_src);
-            std::string h_b_tgt = convert_proof(*node.right, h_b, atoms, forward, state);
-            std::string h_a_let = state.fresh();
-            state.emit(h_a_let + " = let " + a_tgt);
-            std::string h_b_or = state.fresh();
-            state.emit(h_b_or + " = or_intro_r " + h_a_let + ", " + h_b_tgt);
-            std::string h_b_imp = state.fresh();
-            state.emit(h_b_imp + " = implies_intro " + h_b_or);
-            // or_elim
-            std::string r = state.fresh();
-            state.emit(r + " = or_elim " + h + ", " + h_a_imp + ", " + h_b_imp);
-            return r;
-        }
-
-        case WffNode::Op::Iff: {
-            // h : A_src <-> B_src, want A_tgt <-> B_tgt
-            std::string a_tgt = emit_fol(*node.left, tgt);
-            std::string b_tgt = emit_fol(*node.right, tgt);
-            // Forward dir: A_tgt -> B_tgt
-            std::string h_fa = state.fresh();
-            state.emit(h_fa + " = assume " + a_tgt);
-            std::string h_fa_src = convert_proof(*node.left, h_fa, atoms, !forward, state);
-            std::string h_fb_src = state.fresh();
-            state.emit(h_fb_src + " = iff_elim_l " + h + ", " + h_fa_src);
-            std::string h_fb_tgt = convert_proof(*node.right, h_fb_src, atoms, forward, state);
-            std::string h_fwd = state.fresh();
-            state.emit(h_fwd + " = implies_intro " + h_fb_tgt);
-            // Backward dir: B_tgt -> A_tgt
-            std::string h_ba = state.fresh();
-            state.emit(h_ba + " = assume " + b_tgt);
-            std::string h_ba_src = convert_proof(*node.right, h_ba, atoms, !forward, state);
-            std::string h_bb_src = state.fresh();
-            state.emit(h_bb_src + " = iff_elim_r " + h + ", " + h_ba_src);
-            std::string h_bb_tgt = convert_proof(*node.left, h_bb_src, atoms, forward, state);
-            std::string h_bwd = state.fresh();
-            state.emit(h_bwd + " = implies_intro " + h_bb_tgt);
-            // Combine
-            std::string r = state.fresh();
-            state.emit(r + " = iff_intro " + h_fwd + ", " + h_bwd);
-            return r;
-        }
-
-        } // switch op
-        break;
-    }
-
-    case WffNode::Kind::Forall: {
-        std::string fresh = state.fresh() + "_v";
-        state.emit("fix " + fresh);
-        std::string h_inner = state.fresh();
-        state.emit(h_inner + " = forall_elim " + h + ", " + fresh);
-        std::string h_conv = convert_proof(*node.left, h_inner, atoms, forward, state);
-        std::string r = state.fresh();
-        state.emit(r + " = forall_intro " + h_conv);
-        return r;
-    }
-
-    case WffNode::Kind::Exists: {
-        std::string h_witness = state.fresh();
-        state.emit(h_witness + " = exists_elim " + h);
-        std::string h_conv = convert_proof(*node.left, h_witness, atoms, forward, state);
-        std::string r = state.fresh();
-        state.emit(r + " = exists_intro " + h_conv);
-        return r;
-    }
-
-    } // switch kind
-
-    return h; // unreachable
-}
-
-
-// --- Comprehension set builder with iff chaining ---
-
-struct CompResult {
-    std::string set_var;       // witness set name or caller's S_var
-    std::string iff_handle;    // fully expanded iff, empty if identity
-    std::string compound_str;  // FOL string of fully expanded compound form
-    int exists_opened = 0;     // number of exists scopes opened
-};
-
-static CompResult build_comp_impl(
-    const Expression& mm_tokens, size_t start,
-    const FrameInfo& caller_info, ProofState& state) {
-
-    size_t pos = start;
-    if (pos >= mm_tokens.size()) return {};
-    const auto& tok = mm_tokens[pos];
-
-    // Leaf: wff variable in caller's frame
-    auto wff_it = caller_info.wff_to_set.find(tok);
-    if (wff_it != caller_info.wff_to_set.end()) {
-        std::string elem_str = "elem(" + caller_info.dummy_var + ", " +
-                               wff_it->second + ")";
-        return {wff_it->second, "", elem_str, 0};
-    }
-
-    // Verum (T.) / Falsum (F.) — create witness set via comprehension
-    if (tok == "T." || tok == "F.") {
-        std::string any_set = caller_info.set_var_order.empty()
-            ? caller_info.dummy_var
-            : caller_info.set_var_order[0];
-        std::string axiom = (tok == "T.") ? "wff_true" : "wff_false";
-        std::string h_ax = state.fresh();
-        state.emit(h_ax + " = use " + axiom);
-        std::string h1 = state.fresh();
-        state.emit(h1 + " = forall_elim " + h_ax + ", " + any_set);
-        std::string witness = state.fresh() + "_w";
-        std::string h2 = state.fresh();
-        state.emit(h2 + " = exists_elim " + h1 + ", " + witness);
-        std::string axiom_iff = state.fresh();
-        state.emit(axiom_iff + " = forall_elim " + h2 + ", " +
-                   caller_info.dummy_var);
-        std::string taut = "(elem(" + caller_info.dummy_var + ", " +
-                           any_set + ") -> elem(" + caller_info.dummy_var +
-                           ", " + any_set + "))";
-        std::string compound = (tok == "T.") ? taut : neg(taut);
-        return {witness, axiom_iff, compound, 1};
-    }
-
-    // Quantifier normalization: A., E., F/
-    if (tok == "A." || tok == "E.") {
-        pos++;
-        if (pos >= mm_tokens.size()) return {};
-        std::string bound = mm_tokens[pos];
-        pos++;
-        // Detect A. x x = x → T. (always true: reflexivity + universal)
-        if (tok == "A." && pos + 2 < mm_tokens.size() &&
-            mm_tokens[pos] == bound && mm_tokens[pos + 1] == "=" &&
-            mm_tokens[pos + 2] == bound) {
-            Expression t_expr = {"T."};
-            return build_comp_impl(t_expr, 0, caller_info, state);
-        }
-        // Vacuous: skip quantifier (x doesn't appear in wff-as-set encoding)
-        return build_comp_impl(mm_tokens, pos, caller_info, state);
-    }
-    if (tok == "F/") {
-        pos++;
-        if (pos >= mm_tokens.size()) return {};
-        std::string setvar = mm_tokens[pos];
-        pos++;
-        // Desugar: F/ x body → ( E. x body -> A. x body )
-        Expression body(mm_tokens.begin() + pos, mm_tokens.end());
-        Expression desugared = {"("};
-        desugared.push_back("E."); desugared.push_back(setvar);
-        desugared.insert(desugared.end(), body.begin(), body.end());
-        desugared.push_back("->");
-        desugared.push_back("A."); desugared.push_back(setvar);
-        desugared.insert(desugared.end(), body.begin(), body.end());
-        desugared.push_back(")");
-        return build_comp_impl(desugared, 0, caller_info, state);
-    }
-
-    // Negation: -. A
-    if (tok == "-.") {
-        auto inner = build_comp_impl(mm_tokens, pos + 1, caller_info, state);
-        if (inner.set_var.empty()) return {};
-
-        std::string h_ax = state.fresh();
-        state.emit(h_ax + " = use wff_neg");
-        std::string h1 = state.fresh();
-        state.emit(h1 + " = forall_elim " + h_ax + ", " + inner.set_var);
-        std::string witness = state.fresh() + "_w";
-        std::string h2 = state.fresh();
-        state.emit(h2 + " = exists_elim " + h1 + ", " + witness);
-        std::string axiom_iff = state.fresh();
-        state.emit(axiom_iff + " = forall_elim " + h2 + ", " +
-                   caller_info.dummy_var);
-
-        std::string compound = neg(inner.compound_str);
-        int total_exists = inner.exists_opened + 1;
-
-        if (inner.iff_handle.empty()) {
-            return {witness, axiom_iff, compound, total_exists};
-        }
-
-        // Chain: axiom says elem(u0,W) <-> ~elem(u0,inner.set)
-        //        inner says elem(u0,inner.set) <-> inner.compound
-        //        Want: elem(u0,W) <-> ~inner.compound
-        std::string elem_w = "elem(" + caller_info.dummy_var + ", " +
-                             witness + ")";
-        std::string elem_inner = "elem(" + caller_info.dummy_var + ", " +
-                                 inner.set_var + ")";
-
-        // Forward: elem(u0,W) -> ~inner.compound
-        std::string hf1 = state.fresh();
-        state.emit(hf1 + " = assume " + elem_w);
-        std::string hf2 = state.fresh();
-        state.emit(hf2 + " = iff_elim_l " + axiom_iff + ", " + hf1);
-        std::string hf3 = state.fresh();
-        state.emit(hf3 + " = assume " + inner.compound_str);
-        std::string hf4 = state.fresh();
-        state.emit(hf4 + " = iff_elim_r " + inner.iff_handle + ", " + hf3);
-        std::string hf5 = state.fresh();
-        state.emit(hf5 + " = not_elim " + hf2 + ", " + hf4);
-        std::string hf6 = state.fresh();
-        state.emit(hf6 + " = not_intro " + hf5);
-        std::string hf7 = state.fresh();
-        state.emit(hf7 + " = implies_intro " + hf6);
-
-        // Backward: ~inner.compound -> elem(u0,W)
-        std::string hb1 = state.fresh();
-        state.emit(hb1 + " = assume " + compound);
-        std::string hb2 = state.fresh();
-        state.emit(hb2 + " = assume " + elem_inner);
-        std::string hb3 = state.fresh();
-        state.emit(hb3 + " = iff_elim_l " + inner.iff_handle + ", " + hb2);
-        std::string hb4 = state.fresh();
-        state.emit(hb4 + " = not_elim " + hb1 + ", " + hb3);
-        std::string hb5 = state.fresh();
-        state.emit(hb5 + " = not_intro " + hb4);
-        std::string hb6 = state.fresh();
-        state.emit(hb6 + " = iff_elim_r " + axiom_iff + ", " + hb5);
-        std::string hb7 = state.fresh();
-        state.emit(hb7 + " = implies_intro " + hb6);
-
-        std::string chained = state.fresh();
-        state.emit(chained + " = iff_intro " + hf7 + ", " + hb7);
-        return {witness, chained, compound, total_exists};
-    }
-
-    // Function-style 3-ary: if-(A, B, C), cadd(A, B, C), hadd(A, B, C)
-    if (tok == "if-" || tok == "cadd" || tok == "hadd") {
-        // Desugar to binary ops and recurse.
-        // Build a synthetic expression with the desugared form.
-        // if-(A,B,C) = (A /\ B) \/ (-. A /\ C)
-        // cadd(A,B,C) = (A /\ B) \/ (C /\ -. (A <-> B))
-        // hadd(A,B,C) = -. (-. (A <-> B) <-> C)
-        pos++; // skip keyword
-        if (pos < mm_tokens.size() && mm_tokens[pos] == "(") pos++; // skip (
-        // Find the three arguments by scanning for commas at depth 0
-        size_t arg1_start = pos;
-        int depth2 = 0;
-        while (pos < mm_tokens.size()) {
-            if (mm_tokens[pos] == "(") depth2++;
-            else if (mm_tokens[pos] == ")") { if (depth2 == 0) break; depth2--; }
-            else if (depth2 == 0 && mm_tokens[pos] == ",") break;
-            pos++;
-        }
-        size_t arg1_end = pos;
-        pos++; // skip ,
-        size_t arg2_start = pos;
-        depth2 = 0;
-        while (pos < mm_tokens.size()) {
-            if (mm_tokens[pos] == "(") depth2++;
-            else if (mm_tokens[pos] == ")") { if (depth2 == 0) break; depth2--; }
-            else if (depth2 == 0 && mm_tokens[pos] == ",") break;
-            pos++;
-        }
-        size_t arg2_end = pos;
-        pos++; // skip ,
-        size_t arg3_start = pos;
-        depth2 = 0;
-        while (pos < mm_tokens.size()) {
-            if (mm_tokens[pos] == "(") depth2++;
-            else if (mm_tokens[pos] == ")") { if (depth2 == 0) break; depth2--; }
-            pos++;
-        }
-        // pos is at closing )
-        if (pos < mm_tokens.size()) pos++; // skip )
-
-        // Build desugared expression and recurse
-        Expression desugared;
-        Expression arg1(mm_tokens.begin() + arg1_start, mm_tokens.begin() + arg1_end);
-        Expression arg2(mm_tokens.begin() + arg2_start, mm_tokens.begin() + arg2_end);
-        Expression arg3(mm_tokens.begin() + arg3_start, mm_tokens.begin() + pos - 1);
-
-        if (tok == "if-") {
-            // (A /\ B) \/ (-. A /\ C)
-            desugared = {"(", "("}; desugared.insert(desugared.end(), arg1.begin(), arg1.end());
-            desugared.push_back("/\\"); desugared.insert(desugared.end(), arg2.begin(), arg2.end());
-            desugared.push_back(")"); desugared.push_back("\\/");
-            desugared.push_back("("); desugared.push_back("-."); desugared.insert(desugared.end(), arg1.begin(), arg1.end());
-            desugared.push_back("/\\"); desugared.insert(desugared.end(), arg3.begin(), arg3.end());
-            desugared.push_back(")"); desugared.push_back(")");
-        } else if (tok == "cadd") {
-            // (A /\ B) \/ (C /\ -. (A <-> B))
-            desugared = {"(", "("}; desugared.insert(desugared.end(), arg1.begin(), arg1.end());
-            desugared.push_back("/\\"); desugared.insert(desugared.end(), arg2.begin(), arg2.end());
-            desugared.push_back(")"); desugared.push_back("\\/");
-            desugared.push_back("("); desugared.insert(desugared.end(), arg3.begin(), arg3.end());
-            desugared.push_back("/\\"); desugared.push_back("-.");
-            desugared.push_back("("); desugared.insert(desugared.end(), arg1.begin(), arg1.end());
-            desugared.push_back("<->"); desugared.insert(desugared.end(), arg2.begin(), arg2.end());
-            desugared.push_back(")");
-            desugared.push_back(")"); desugared.push_back(")");
-        } else { // hadd
-            // -. (-. (A <-> B) <-> C)
-            desugared = {"-.", "(", "-.", "("}; desugared.insert(desugared.end(), arg1.begin(), arg1.end());
-            desugared.push_back("<->"); desugared.insert(desugared.end(), arg2.begin(), arg2.end());
-            desugared.push_back(")"); desugared.push_back("<->");
-            desugared.insert(desugared.end(), arg3.begin(), arg3.end());
-            desugared.push_back(")");
-        }
-        return build_comp_impl(desugared, 0, caller_info, state);
-    }
-
-    // Binary/ternary: ( A OP B ) or ( A OP B OP C )
-    if (tok == "(") {
-        pos++;
-        size_t lhs_start = pos;
-        int depth = 0;
-        while (pos < mm_tokens.size()) {
-            if (mm_tokens[pos] == "(") depth++;
-            else if (mm_tokens[pos] == ")") {
-                if (depth == 0) break;
-                depth--;
-            } else if (depth == 0 &&
-                       (mm_tokens[pos] == "->" || mm_tokens[pos] == "/\\" ||
-                        mm_tokens[pos] == "\\/" || mm_tokens[pos] == "<->" ||
-                        mm_tokens[pos] == "\\/_" || mm_tokens[pos] == "-/\\" ||
-                        mm_tokens[pos] == "-\\/"))
-                break;
-            pos++;
-        }
-        std::string op = mm_tokens[pos];
-        size_t rhs_start = pos + 1;
-
-        // Check for n-way: ( A /\ B /\ C /\ ... ) or ( A \/ B \/ ... )
-        if (op == "/\\" || op == "\\/") {
-            // Scan past rhs to find potential repeated operator at depth 0
-            size_t rhs_scan = rhs_start;
-            int d = 0;
-            while (rhs_scan < mm_tokens.size()) {
-                if (mm_tokens[rhs_scan] == "(") d++;
-                else if (mm_tokens[rhs_scan] == ")") {
-                    if (d == 0) break;
-                    d--;
-                } else if (d == 0 && mm_tokens[rhs_scan] == op) break;
-                rhs_scan++;
-            }
-            if (rhs_scan < mm_tokens.size() && mm_tokens[rhs_scan] == op) {
-                // N-way! Left-associate first two: ( ( A op B ) op rest... )
-                Expression desugared = {"(", "("};
-                desugared.insert(desugared.end(), mm_tokens.begin() + lhs_start,
-                                 mm_tokens.begin() + pos); // A
-                desugared.push_back(op);
-                desugared.insert(desugared.end(), mm_tokens.begin() + rhs_start,
-                                 mm_tokens.begin() + rhs_scan); // B
-                desugared.push_back(")");
-                desugared.push_back(op);
-                // Rest goes from rhs_scan+1 to the closing )
-                size_t rest_start = rhs_scan + 1;
-                size_t rest_end = rest_start;
-                d = 0;
-                while (rest_end < mm_tokens.size()) {
-                    if (mm_tokens[rest_end] == "(") d++;
-                    else if (mm_tokens[rest_end] == ")") {
-                        if (d == 0) break;
-                        d--;
-                    }
-                    rest_end++;
-                }
-                desugared.insert(desugared.end(), mm_tokens.begin() + rest_start,
-                                 mm_tokens.begin() + rest_end);
-                desugared.push_back(")");
-                // Recurse — will handle remaining repeated ops if any
-                return build_comp_impl(desugared, 0, caller_info, state);
-            }
-        }
-
-        // Desugar XOR/NAND/NOR to compound expressions
-        if (op == "\\/_" || op == "-/\\" || op == "-\\/") {
-            // Find RHS end (closing paren)
-            size_t rhs_end = rhs_start;
-            int d = 0;
-            while (rhs_end < mm_tokens.size()) {
-                if (mm_tokens[rhs_end] == "(") d++;
-                else if (mm_tokens[rhs_end] == ")") {
-                    if (d == 0) break;
-                    d--;
-                }
-                rhs_end++;
-            }
-            Expression desugared;
-            Expression lhs_toks(mm_tokens.begin() + lhs_start, mm_tokens.begin() + pos);
-            Expression rhs_toks(mm_tokens.begin() + rhs_start, mm_tokens.begin() + rhs_end);
-            if (op == "\\/_") {
-                // ~(A <-> B)
-                desugared = {"-.", "("}; desugared.insert(desugared.end(), lhs_toks.begin(), lhs_toks.end());
-                desugared.push_back("<->"); desugared.insert(desugared.end(), rhs_toks.begin(), rhs_toks.end());
-                desugared.push_back(")");
-            } else if (op == "-/\\") {
-                // ~(A /\ B)
-                desugared = {"-.", "("}; desugared.insert(desugared.end(), lhs_toks.begin(), lhs_toks.end());
-                desugared.push_back("/\\"); desugared.insert(desugared.end(), rhs_toks.begin(), rhs_toks.end());
-                desugared.push_back(")");
-            } else { // -\/
-                // ~(A \/ B)
-                desugared = {"-.", "("}; desugared.insert(desugared.end(), lhs_toks.begin(), lhs_toks.end());
-                desugared.push_back("\\/"); desugared.insert(desugared.end(), rhs_toks.begin(), rhs_toks.end());
-                desugared.push_back(")");
-            }
-            return build_comp_impl(desugared, 0, caller_info, state);
-        }
-
-        auto lhs = build_comp_impl(mm_tokens, lhs_start, caller_info, state);
-        auto rhs = build_comp_impl(mm_tokens, rhs_start, caller_info, state);
-        if (lhs.set_var.empty() || rhs.set_var.empty()) return {};
-
-        std::string axiom, fol_op;
-        if (op == "->") { axiom = "wff_impl"; fol_op = " -> "; }
-        else if (op == "/\\") { axiom = "wff_and"; fol_op = " & "; }
-        else if (op == "\\/") { axiom = "wff_or"; fol_op = " | "; }
-        else if (op == "<->") { axiom = "wff_bic"; fol_op = " <-> "; }
-        else return {};
-
-        std::string h_ax = state.fresh();
-        state.emit(h_ax + " = use " + axiom);
-        std::string h1 = state.fresh();
-        state.emit(h1 + " = forall_elim " + h_ax + ", " + lhs.set_var);
-        std::string h2 = state.fresh();
-        state.emit(h2 + " = forall_elim " + h1 + ", " + rhs.set_var);
-        std::string witness = state.fresh() + "_w";
-        std::string h3 = state.fresh();
-        state.emit(h3 + " = exists_elim " + h2 + ", " + witness);
-        std::string axiom_iff = state.fresh();
-        state.emit(axiom_iff + " = forall_elim " + h3 + ", " +
-                   caller_info.dummy_var);
-
-        std::string compound = "(" + lhs.compound_str + fol_op +
-                               rhs.compound_str + ")";
-        int total_exists = lhs.exists_opened + rhs.exists_opened + 1;
-
-        if (lhs.iff_handle.empty() && rhs.iff_handle.empty()) {
-            return {witness, axiom_iff, compound, total_exists};
-        }
-
-        // Need to chain: axiom iff + child iffs → fully expanded iff
-        std::string elem_w = "elem(" + caller_info.dummy_var + ", " +
-                             witness + ")";
-        std::string elem_lhs = "elem(" + caller_info.dummy_var + ", " +
-                               lhs.set_var + ")";
-        std::string elem_rhs = "elem(" + caller_info.dummy_var + ", " +
-                               rhs.set_var + ")";
-
-        // Helpers: convert between elem-form and compound-form using child iffs
-        auto lhs_fwd = [&](const std::string& h) -> std::string {
-            if (lhs.iff_handle.empty()) return h;
-            std::string r = state.fresh();
-            state.emit(r + " = iff_elim_l " + lhs.iff_handle + ", " + h);
-            return r;
-        };
-        auto lhs_bwd = [&](const std::string& h) -> std::string {
-            if (lhs.iff_handle.empty()) return h;
-            std::string r = state.fresh();
-            state.emit(r + " = iff_elim_r " + lhs.iff_handle + ", " + h);
-            return r;
-        };
-        auto rhs_fwd = [&](const std::string& h) -> std::string {
-            if (rhs.iff_handle.empty()) return h;
-            std::string r = state.fresh();
-            state.emit(r + " = iff_elim_l " + rhs.iff_handle + ", " + h);
-            return r;
-        };
-        auto rhs_bwd = [&](const std::string& h) -> std::string {
-            if (rhs.iff_handle.empty()) return h;
-            std::string r = state.fresh();
-            state.emit(r + " = iff_elim_r " + rhs.iff_handle + ", " + h);
-            return r;
-        };
-
-        if (op == "->") {
-            // Forward: elem(u0,W) -> (lhs.compound -> rhs.compound)
-            std::string hf1 = state.fresh();
-            state.emit(hf1 + " = assume " + elem_w);
-            std::string hf2 = state.fresh();
-            state.emit(hf2 + " = iff_elim_l " + axiom_iff + ", " + hf1);
-            std::string hf3 = state.fresh();
-            state.emit(hf3 + " = assume " + lhs.compound_str);
-            std::string hf4 = lhs_bwd(hf3);
-            std::string hf5 = state.fresh();
-            state.emit(hf5 + " = implies_elim " + hf2 + ", " + hf4);
-            std::string hf6 = rhs_fwd(hf5);
-            std::string hf7 = state.fresh();
-            state.emit(hf7 + " = implies_intro " + hf6);
-            std::string hf8 = state.fresh();
-            state.emit(hf8 + " = implies_intro " + hf7);
-
-            // Backward: (lhs.compound -> rhs.compound) -> elem(u0,W)
-            std::string hb1 = state.fresh();
-            state.emit(hb1 + " = assume " + compound);
-            std::string hb2 = state.fresh();
-            state.emit(hb2 + " = assume " + elem_lhs);
-            std::string hb3 = lhs_fwd(hb2);
-            std::string hb4 = state.fresh();
-            state.emit(hb4 + " = implies_elim " + hb1 + ", " + hb3);
-            std::string hb5 = rhs_bwd(hb4);
-            std::string hb6 = state.fresh();
-            state.emit(hb6 + " = implies_intro " + hb5);
-            std::string hb7 = state.fresh();
-            state.emit(hb7 + " = iff_elim_r " + axiom_iff + ", " + hb6);
-            std::string hb8 = state.fresh();
-            state.emit(hb8 + " = implies_intro " + hb7);
-
-            std::string chained = state.fresh();
-            state.emit(chained + " = iff_intro " + hf8 + ", " + hb8);
-            return {witness, chained, compound, total_exists};
-        }
-
-        if (op == "/\\") {
-            // Forward: elem(u0,W) -> (lhs.compound & rhs.compound)
-            std::string hf1 = state.fresh();
-            state.emit(hf1 + " = assume " + elem_w);
-            std::string hf2 = state.fresh();
-            state.emit(hf2 + " = iff_elim_l " + axiom_iff + ", " + hf1);
-            std::string hf3 = state.fresh();
-            state.emit(hf3 + " = and_elim_l " + hf2);
-            std::string hf4 = lhs_fwd(hf3);
-            std::string hf5 = state.fresh();
-            state.emit(hf5 + " = and_elim_r " + hf2);
-            std::string hf6 = rhs_fwd(hf5);
-            std::string hf7 = state.fresh();
-            state.emit(hf7 + " = and_intro " + hf4 + ", " + hf6);
-            std::string hf8 = state.fresh();
-            state.emit(hf8 + " = implies_intro " + hf7);
-
-            // Backward: (lhs.compound & rhs.compound) -> elem(u0,W)
-            std::string hb1 = state.fresh();
-            state.emit(hb1 + " = assume " + compound);
-            std::string hb2 = state.fresh();
-            state.emit(hb2 + " = and_elim_l " + hb1);
-            std::string hb3 = lhs_bwd(hb2);
-            std::string hb4 = state.fresh();
-            state.emit(hb4 + " = and_elim_r " + hb1);
-            std::string hb5 = rhs_bwd(hb4);
-            std::string hb6 = state.fresh();
-            state.emit(hb6 + " = and_intro " + hb3 + ", " + hb5);
-            std::string hb7 = state.fresh();
-            state.emit(hb7 + " = iff_elim_r " + axiom_iff + ", " + hb6);
-            std::string hb8 = state.fresh();
-            state.emit(hb8 + " = implies_intro " + hb7);
-
-            std::string chained = state.fresh();
-            state.emit(chained + " = iff_intro " + hf8 + ", " + hb8);
-            return {witness, chained, compound, total_exists};
-        }
-
-        if (op == "\\/") {
-            // Forward: elem(u0,W) -> (lhs.compound | rhs.compound)
-            std::string hf1 = state.fresh();
-            state.emit(hf1 + " = assume " + elem_w);
-            std::string hf2 = state.fresh();
-            state.emit(hf2 + " = iff_elim_l " + axiom_iff + ", " + hf1);
-            // Case left
-            std::string hf3 = state.fresh();
-            state.emit(hf3 + " = assume " + elem_lhs);
-            std::string hf4 = lhs_fwd(hf3);
-            std::string hf5l = state.fresh();
-            state.emit(hf5l + " = let " + rhs.compound_str);
-            std::string hf5 = state.fresh();
-            state.emit(hf5 + " = or_intro_l " + hf4 + ", " + hf5l);
-            std::string hf6 = state.fresh();
-            state.emit(hf6 + " = implies_intro " + hf5);
-            // Case right
-            std::string hf7 = state.fresh();
-            state.emit(hf7 + " = assume " + elem_rhs);
-            std::string hf8 = rhs_fwd(hf7);
-            std::string hf9l = state.fresh();
-            state.emit(hf9l + " = let " + lhs.compound_str);
-            std::string hf9 = state.fresh();
-            state.emit(hf9 + " = or_intro_r " + hf9l + ", " + hf8);
-            std::string hf10 = state.fresh();
-            state.emit(hf10 + " = implies_intro " + hf9);
-            // or_elim
-            std::string hf11 = state.fresh();
-            state.emit(hf11 + " = or_elim " + hf2 + ", " + hf6 + ", " +
-                       hf10);
-            std::string hf12 = state.fresh();
-            state.emit(hf12 + " = implies_intro " + hf11);
-
-            // Backward: (lhs.compound | rhs.compound) -> elem(u0,W)
-            std::string hb1 = state.fresh();
-            state.emit(hb1 + " = assume " + compound);
-            // Case left
-            std::string hb2 = state.fresh();
-            state.emit(hb2 + " = assume " + lhs.compound_str);
-            std::string hb3 = lhs_bwd(hb2);
-            std::string hb4l = state.fresh();
-            state.emit(hb4l + " = let " + elem_rhs);
-            std::string hb4 = state.fresh();
-            state.emit(hb4 + " = or_intro_l " + hb3 + ", " + hb4l);
-            std::string hb5 = state.fresh();
-            state.emit(hb5 + " = implies_intro " + hb4);
-            // Case right
-            std::string hb6 = state.fresh();
-            state.emit(hb6 + " = assume " + rhs.compound_str);
-            std::string hb7 = rhs_bwd(hb6);
-            std::string hb8l = state.fresh();
-            state.emit(hb8l + " = let " + elem_lhs);
-            std::string hb8 = state.fresh();
-            state.emit(hb8 + " = or_intro_r " + hb8l + ", " + hb7);
-            std::string hb9 = state.fresh();
-            state.emit(hb9 + " = implies_intro " + hb8);
-            // or_elim
-            std::string hb10 = state.fresh();
-            state.emit(hb10 + " = or_elim " + hb1 + ", " + hb5 + ", " +
-                       hb9);
-            std::string hb11 = state.fresh();
-            state.emit(hb11 + " = iff_elim_r " + axiom_iff + ", " + hb10);
-            std::string hb12 = state.fresh();
-            state.emit(hb12 + " = implies_intro " + hb11);
-
-            std::string chained = state.fresh();
-            state.emit(chained + " = iff_intro " + hf12 + ", " + hb12);
-            return {witness, chained, compound, total_exists};
-        }
-
-        if (op == "<->") {
-            // Forward: elem(u0,W) -> (lhs.compound <-> rhs.compound)
-            std::string hf1 = state.fresh();
-            state.emit(hf1 + " = assume " + elem_w);
-            std::string hf2 = state.fresh();
-            state.emit(hf2 + " = iff_elim_l " + axiom_iff + ", " + hf1);
-            // fwd dir: lhs.compound -> rhs.compound
-            std::string hf3 = state.fresh();
-            state.emit(hf3 + " = assume " + lhs.compound_str);
-            std::string hf4 = lhs_bwd(hf3);
-            std::string hf5 = state.fresh();
-            state.emit(hf5 + " = iff_elim_l " + hf2 + ", " + hf4);
-            std::string hf6 = rhs_fwd(hf5);
-            std::string hf7 = state.fresh();
-            state.emit(hf7 + " = implies_intro " + hf6);
-            // bwd dir: rhs.compound -> lhs.compound
-            std::string hf8 = state.fresh();
-            state.emit(hf8 + " = assume " + rhs.compound_str);
-            std::string hf9 = rhs_bwd(hf8);
-            std::string hf10 = state.fresh();
-            state.emit(hf10 + " = iff_elim_r " + hf2 + ", " + hf9);
-            std::string hf11 = lhs_fwd(hf10);
-            std::string hf12 = state.fresh();
-            state.emit(hf12 + " = implies_intro " + hf11);
-            // combine
-            std::string hf13 = state.fresh();
-            state.emit(hf13 + " = iff_intro " + hf7 + ", " + hf12);
-            std::string hf14 = state.fresh();
-            state.emit(hf14 + " = implies_intro " + hf13);
-
-            // Backward: (lhs.compound <-> rhs.compound) -> elem(u0,W)
-            std::string hb1 = state.fresh();
-            state.emit(hb1 + " = assume " + compound);
-            // fwd dir: elem_lhs -> elem_rhs
-            std::string hb2 = state.fresh();
-            state.emit(hb2 + " = assume " + elem_lhs);
-            std::string hb3 = lhs_fwd(hb2);
-            std::string hb4 = state.fresh();
-            state.emit(hb4 + " = iff_elim_l " + hb1 + ", " + hb3);
-            std::string hb5 = rhs_bwd(hb4);
-            std::string hb6 = state.fresh();
-            state.emit(hb6 + " = implies_intro " + hb5);
-            // bwd dir: elem_rhs -> elem_lhs
-            std::string hb7 = state.fresh();
-            state.emit(hb7 + " = assume " + elem_rhs);
-            std::string hb8 = rhs_fwd(hb7);
-            std::string hb9 = state.fresh();
-            state.emit(hb9 + " = iff_elim_r " + hb1 + ", " + hb8);
-            std::string hb10 = lhs_bwd(hb9);
-            std::string hb11 = state.fresh();
-            state.emit(hb11 + " = implies_intro " + hb10);
-            // combine
-            std::string hb12 = state.fresh();
-            state.emit(hb12 + " = iff_intro " + hb6 + ", " + hb11);
-            std::string hb13 = state.fresh();
-            state.emit(hb13 + " = iff_elim_r " + axiom_iff + ", " + hb12);
-            std::string hb14 = state.fresh();
-            state.emit(hb14 + " = implies_intro " + hb13);
-
-            std::string chained = state.fresh();
-            state.emit(chained + " = iff_intro " + hf14 + ", " + hb14);
-            return {witness, chained, compound, total_exists};
-        }
-
-        return {};
-    }
-
-    // Setvar: no comprehension needed, use directly.
-    // Only accept tokens that are actual setvars from the caller's frame.
-    if (std::find(caller_info.setvars.begin(), caller_info.setvars.end(),
-                  tok) != caller_info.setvars.end()) {
-        return {tok, "", tok, 0};
-    }
-
-    // Unknown token (wff variable not in caller's frame, quantifier, etc.)
-    return {};
-}
-
-}  // anonymous namespace
-
-// --- build_comprehension_set (thin wrapper for header compatibility) ---
-std::pair<std::string, std::string> MmTranslator::build_comprehension_set(
-    const Expression& mm_tokens, size_t start,
-    const FrameInfo& caller_info, ProofState& state) {
-    auto cr = build_comp_impl(mm_tokens, start, caller_info, state);
-    return {cr.set_var, cr.iff_handle};
-}
-
-// --- get_wff_set ---
-std::string MmTranslator::get_wff_set(const Expression& wff_expr,
-                                       const FrameInfo& thm_info,
-                                       ProofState& state) {
-    if (wff_expr.size() == 1) {
-        auto it = thm_info.wff_to_set.find(wff_expr[0]);
-        if (it != thm_info.wff_to_set.end()) return it->second;
-    }
-    // Compound case: use build_comp_impl to create witness set
-    auto cr = build_comp_impl(wff_expr, 0, thm_info, state);
-    if (cr.set_var.empty()) return "";
-    return cr.set_var;
-}
-
-// --- emit_comprehension_use ---
-std::string MmTranslator::emit_comprehension_use(
-    const std::string& ref_label,
-    const Assertion& ref_thm,
-    const FrameInfo& ref_info,
-    const FrameInfo& caller_info,
-    const std::map<std::string, Expression>& subst,
-    const std::vector<std::string>& ess_handles,
-    ProofState& state,
-    std::string* error) {
-
-    std::string fol_label = sanitize_label(ref_label);
-
-    // For each wff var in ref's frame, create a comprehension set for the
-    // substitution value (or just use the caller's set var if simple).
-    struct Binding {
-        std::string wff_var;
-        std::string target_set;   // witness or caller's set var
-        std::string iff_handle;   // non-empty if compound
-    };
-    std::vector<Binding> bindings;
-    int exists_count = 0;  // number of exists scopes opened
-
-    for (const auto& ref_set : ref_info.set_var_order) {
-        std::string wff_var;
-        for (const auto& [wv, sv] : ref_info.wff_to_set) {
-            if (sv == ref_set) { wff_var = wv; break; }
-        }
-        if (wff_var.empty()) {
-            if (error) *error = "can't find wff var for " + ref_set;
-            return "";
-        }
-        auto sit = subst.find(wff_var);
-        if (sit == subst.end()) {
-            // Dummy wff var in ref's frame: use caller's dummy var
-            bindings.push_back({wff_var, caller_info.dummy_var, ""});
-            continue;
-        }
-        const auto& val = sit->second;
-
-        if (val.size() == 1 && caller_info.wff_to_set.count(val[0])) {
-            bindings.push_back({wff_var, caller_info.wff_to_set.at(val[0]), ""});
-        } else {
-            auto cr = build_comp_impl(val, 0, caller_info, state);
-            if (cr.set_var.empty()) {
-                std::string val_str;
-                for (const auto& t : val) val_str += t + " ";
-                if (error) *error = "comprehension failed for " + wff_var + " [" + val_str + "]";
-                return "";
-            }
-            bindings.push_back({wff_var, cr.set_var, cr.iff_handle});
-            exists_count += cr.exists_opened;
-        }
-    }
-
-    // Build the WffAtom map for structural conversion
-    std::unordered_map<std::string, WffAtom> atom_map;
-    for (const auto& b : bindings) {
-        WffAtom wa;
-        wa.witness_set = b.target_set;
-        wa.iff_handle = b.iff_handle;
-        wa.elem_str = "elem(" + caller_info.dummy_var + ", " + b.target_set + ")";
-        // Compute compound form
-        auto sit = subst.find(b.wff_var);
-        if (sit != subst.end()) {
-            wa.compound_str = translate_expr(sit->second, 0, caller_info);
-            // Wrap in parens if it starts with a quantifier to avoid precedence issues
-            if (wa.compound_str.substr(0, 6) == "forall" ||
-                wa.compound_str.substr(0, 6) == "exists") {
-                wa.compound_str = "(" + wa.compound_str + ")";
-            }
-        } else {
-            wa.compound_str = wa.elem_str;
-        }
-        atom_map[b.wff_var] = wa;
-    }
-
-    // Add T./F. as atoms if they appear in the referenced expression.
-    // T./F. reuse the first set variable (matching translate_expr behavior).
-    for (const auto& tok : ref_thm.expression) {
-        if ((tok == "T." || tok == "F.") && atom_map.find(tok) == atom_map.end()) {
-            // T./F. in the ref theorem used ref_info.set_var_order[0] or dummy.
-            // Find the corresponding binding's target_set.
-            std::string tf_set;
-            if (!ref_info.set_var_order.empty()) {
-                // Find binding for ref's first set var
-                for (const auto& b : bindings) {
-                    std::string ref_wff;
-                    for (const auto& [wv, sv] : ref_info.wff_to_set) {
-                        if (sv == ref_info.set_var_order[0]) { ref_wff = wv; break; }
-                    }
-                    if (b.wff_var == ref_wff) { tf_set = b.target_set; break; }
-                }
-            }
-            if (tf_set.empty()) tf_set = caller_info.dummy_var;
-
-            WffAtom wa;
-            wa.witness_set = tf_set;
-            wa.iff_handle = "";  // no conversion needed — T./F. is already in compound form
-            wa.elem_str = "elem(" + caller_info.dummy_var + ", " + tf_set + ")";
-            std::string taut = "(elem(" + caller_info.dummy_var + ", " + tf_set +
-                               ") -> elem(" + caller_info.dummy_var + ", " + tf_set + "))";
-            wa.compound_str = (tok == "T.") ? taut : neg(taut);
-            atom_map[tok] = wa;
-        }
-    }
-
-    // Use the theorem
-    std::string h = state.fresh();
-    state.emit(h + " = use " + fol_label);
-
-    // forall_elim for used setvars
-    for (const auto& ref_sv : ref_info.used_setvars) {
-        auto sit = subst.find(ref_sv);
-        std::string target_sv;
-        if (sit != subst.end() && !sit->second.empty()) {
-            if (sit->second.size() > 1) {
-                // Compound class substitution — can't use forall_elim
-                if (error) *error = "compound class subst for setvar " + ref_sv;
-                return "";
-            }
-            target_sv = sit->second[0];
-        } else {
-            target_sv = ref_sv;
-        }
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = forall_elim " + h + ", " + target_sv);
-        h = h_next;
-    }
-
-    // forall_elim with witness/caller sets
-    for (const auto& b : bindings) {
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = forall_elim " + h + ", " + b.target_set);
-        h = h_next;
-    }
-
-    // forall_elim for dummy (last, innermost quantifier)
-    if (ref_info.needs_dummy) {
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = forall_elim " + h + ", " + caller_info.dummy_var);
-        h = h_next;
-    }
-
-    // For each essential hyp: convert caller's handle (compound-form)
-    // to elem-form via backward conversion, then implies_elim.
-    for (size_t ess_idx = 0; ess_idx < ref_info.ess_hyps.size() &&
-                              ess_idx < ess_handles.size(); ++ess_idx) {
-        std::string h_elem = convert_proof(
-            *ref_info.ess_hyps[ess_idx].ast, ess_handles[ess_idx],
-            atom_map, /*forward=*/false, state);
-
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = implies_elim " + h + ", " + h_elem);
-        h = h_next;
-    }
-
-    // h is the conclusion in elem-form. Convert to compound-form.
-    std::string h_compound = convert_proof(
-        *ref_info.conclusion_ast, h,
-        atom_map, /*forward=*/true, state);
-
-    // Close exists scopes
-    for (int i = 0; i < exists_count; ++i) {
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = exists_intro " + h_compound);
-        h_compound = h_next;
-    }
-
-    return h_compound;
-}
 
 
 // ===================================================================
@@ -1661,254 +674,21 @@ bool MmTranslator::apply_step(const std::string& step_label,
     }
 
     // --- Definition axioms: df-bi, df-an, df-or ---
-    if (step_label == "df-bi") {
+    if (step_label == "df-bi" || step_label == "df-an" ||
+        step_label == "df-or") {
         auto it_ph = subst.find("ph");
         auto it_ps = subst.find("ps");
         if (it_ph == subst.end() || it_ps == subst.end()) {
-            if (error) *error = "df-bi: missing substitution";
+            if (error) *error = step_label + ": missing substitution";
             return false;
         }
         std::string a = translate_expr(it_ph->second, 0, thm_info);
         std::string b = translate_expr(it_ps->second, 0, thm_info);
-
-        // Forward: (A <-> B) -> ~((A -> B) -> ~(B -> A))
-        std::string h_fwd_bic = state.fresh();
-        state.emit(h_fwd_bic + " = assume " + a + " <-> " + b);
-        std::string h_fwd_a = state.fresh();
-        state.emit(h_fwd_a + " = assume " + a);
-        std::string h_fwd_b1 = state.fresh();
-        state.emit(h_fwd_b1 + " = iff_elim_l " + h_fwd_bic + ", " + h_fwd_a);
-        std::string h_fwd_ab = state.fresh();
-        state.emit(h_fwd_ab + " = implies_intro " + h_fwd_b1);
-        std::string h_fwd_b2 = state.fresh();
-        state.emit(h_fwd_b2 + " = assume " + b);
-        std::string h_fwd_a2 = state.fresh();
-        state.emit(h_fwd_a2 + " = iff_elim_r " + h_fwd_bic + ", " + h_fwd_b2);
-        std::string h_fwd_ba = state.fresh();
-        state.emit(h_fwd_ba + " = implies_intro " + h_fwd_a2);
-        std::string h_fwd_neg_a = state.fresh();
-        state.emit(h_fwd_neg_a + " = assume (" + a + " -> " + b +
-                   ") -> ~(" + b + " -> " + a + ")");
-        std::string h_fwd_nba = state.fresh();
-        state.emit(h_fwd_nba + " = implies_elim " + h_fwd_neg_a + ", " +
-                   h_fwd_ab);
-        std::string h_fwd_bot = state.fresh();
-        state.emit(h_fwd_bot + " = not_elim " + h_fwd_nba + ", " + h_fwd_ba);
-        std::string h_fwd_neg = state.fresh();
-        state.emit(h_fwd_neg + " = not_intro " + h_fwd_bot);
-        std::string h_fwd = state.fresh();
-        state.emit(h_fwd + " = implies_intro " + h_fwd_neg);
-
-        // Backward: ~((A -> B) -> ~(B -> A)) -> (A <-> B)
-        std::string h_bwd_h = state.fresh();
-        state.emit(h_bwd_h + " = assume ~((" + a + " -> " + b +
-                   ") -> ~(" + b + " -> " + a + "))");
-        std::string h_nab = state.fresh();
-        state.emit(h_nab + " = assume ~(" + a + " -> " + b + ")");
-        std::string h_ab_a = state.fresh();
-        state.emit(h_ab_a + " = assume " + a + " -> " + b);
-        std::string h_ab_bot = state.fresh();
-        state.emit(h_ab_bot + " = not_elim " + h_nab + ", " + h_ab_a);
-        std::string h_nba_let = state.fresh();
-        state.emit(h_nba_let + " = let ~(" + b + " -> " + a + ")");
-        std::string h_nba1 = state.fresh();
-        state.emit(h_nba1 + " = bottom_elim " + h_ab_bot + ", " + h_nba_let);
-        std::string h_ab_impl = state.fresh();
-        state.emit(h_ab_impl + " = implies_intro " + h_nba1);
-        std::string h_bwd_bot1 = state.fresh();
-        state.emit(h_bwd_bot1 + " = not_elim " + h_bwd_h + ", " + h_ab_impl);
-        std::string h_nnab = state.fresh();
-        state.emit(h_nnab + " = not_intro " + h_bwd_bot1);
-        std::string h_ab_proved = state.fresh();
-        state.emit(h_ab_proved + " = double_neg_elim " + h_nnab);
-        std::string h_nba2 = state.fresh();
-        state.emit(h_nba2 + " = assume ~(" + b + " -> " + a + ")");
-        std::string h_ba_a = state.fresh();
-        state.emit(h_ba_a + " = assume " + a + " -> " + b);
-        std::string h_ba_pair = state.fresh();
-        state.emit(h_ba_pair + " = and_intro " + h_ba_a + ", " + h_nba2);
-        std::string h_nba3 = state.fresh();
-        state.emit(h_nba3 + " = and_elim_r " + h_ba_pair);
-        std::string h_ba_impl = state.fresh();
-        state.emit(h_ba_impl + " = implies_intro " + h_nba3);
-        std::string h_bwd_bot2 = state.fresh();
-        state.emit(h_bwd_bot2 + " = not_elim " + h_bwd_h + ", " + h_ba_impl);
-        std::string h_nnba = state.fresh();
-        state.emit(h_nnba + " = not_intro " + h_bwd_bot2);
-        std::string h_ba_proved = state.fresh();
-        state.emit(h_ba_proved + " = double_neg_elim " + h_nnba);
-        std::string h_bic = state.fresh();
-        state.emit(h_bic + " = iff_intro " + h_ab_proved + ", " + h_ba_proved);
-        std::string h_bwd = state.fresh();
-        state.emit(h_bwd + " = implies_intro " + h_bic);
-
-        // h_fwd: (A <-> B) -> ~((A -> B) -> ~(B -> A))
-        // h_bwd: ~((A -> B) -> ~(B -> A)) -> (A <-> B)
-        // Metamath expects ~(h_fwd -> ~h_bwd), not an iff.
-        std::string bi_inner = "((" + a + " -> " + b + ") -> ~(" + b +
-                               " -> " + a + "))";
-        std::string bi_neg = neg(bi_inner);
-        std::string fwd_s = "((" + a + " <-> " + b + ") -> " + bi_neg + ")";
-        std::string bwd_s = "(" + bi_neg + " -> (" + a + " <-> " + b + "))";
-        std::string h_da = state.fresh();
-        state.emit(h_da + " = assume " + fwd_s + " -> " + neg(bwd_s));
-        std::string h_neg_bwd = state.fresh();
-        state.emit(h_neg_bwd + " = implies_elim " + h_da + ", " + h_fwd);
-        std::string h_dfbi_bot = state.fresh();
-        state.emit(h_dfbi_bot + " = not_elim " + h_neg_bwd + ", " + h_bwd);
-        std::string h_dfbi_neg = state.fresh();
-        state.emit(h_dfbi_neg + " = not_intro " + h_dfbi_bot);
-        state.stack.push_back({result, h_dfbi_neg});
-        return true;
-    }
-
-    if (step_label == "df-an") {
-        auto it_ph = subst.find("ph");
-        auto it_ps = subst.find("ps");
-        if (it_ph == subst.end() || it_ps == subst.end()) {
-            if (error) *error = "df-an: missing substitution";
-            return false;
-        }
-        std::string a = translate_expr(it_ph->second, 0, thm_info);
-        std::string b = translate_expr(it_ps->second, 0, thm_info);
-
-        // Forward: (A & B) -> ~(A -> ~B)
-        std::string hf_ab = state.fresh();
-        state.emit(hf_ab + " = assume " + a + " & " + b);
-        std::string hf_a = state.fresh();
-        state.emit(hf_a + " = and_elim_l " + hf_ab);
-        std::string hf_b = state.fresh();
-        state.emit(hf_b + " = and_elim_r " + hf_ab);
-        std::string hf_impl = state.fresh();
-        state.emit(hf_impl + " = assume " + a + " -> " + neg(b));
-        std::string hf_nb = state.fresh();
-        state.emit(hf_nb + " = implies_elim " + hf_impl + ", " + hf_a);
-        std::string hf_bot = state.fresh();
-        state.emit(hf_bot + " = not_elim " + hf_nb + ", " + hf_b);
-        std::string hf_neg = state.fresh();
-        state.emit(hf_neg + " = not_intro " + hf_bot);
-        std::string hf_fwd = state.fresh();
-        state.emit(hf_fwd + " = implies_intro " + hf_neg);
-
-        // Backward: ~(A -> ~B) -> (A & B)
-        std::string hb_h = state.fresh();
-        state.emit(hb_h + " = assume " + neg("(" + a + " -> " + neg(b) + ")"));
-        std::string hb_na = state.fresh();
-        state.emit(hb_na + " = assume " + neg(a));
-        std::string hb_aa = state.fresh();
-        state.emit(hb_aa + " = assume " + a);
-        std::string hb_bot1 = state.fresh();
-        state.emit(hb_bot1 + " = not_elim " + hb_na + ", " + hb_aa);
-        std::string hb_nb_let = state.fresh();
-        state.emit(hb_nb_let + " = let ~" + b);
-        std::string hb_nb1 = state.fresh();
-        state.emit(hb_nb1 + " = bottom_elim " + hb_bot1 + ", " + hb_nb_let);
-        std::string hb_impl1 = state.fresh();
-        state.emit(hb_impl1 + " = implies_intro " + hb_nb1);
-        std::string hb_bot2 = state.fresh();
-        state.emit(hb_bot2 + " = not_elim " + hb_h + ", " + hb_impl1);
-        std::string hb_nna = state.fresh();
-        state.emit(hb_nna + " = not_intro " + hb_bot2);
-        std::string hb_a = state.fresh();
-        state.emit(hb_a + " = double_neg_elim " + hb_nna);
-        std::string hb_nb2 = state.fresh();
-        state.emit(hb_nb2 + " = assume " + neg(b));
-        std::string hb_aa2 = state.fresh();
-        state.emit(hb_aa2 + " = assume " + a);
-        std::string hb_pair = state.fresh();
-        state.emit(hb_pair + " = and_intro " + hb_aa2 + ", " + hb_nb2);
-        std::string hb_nb3 = state.fresh();
-        state.emit(hb_nb3 + " = and_elim_r " + hb_pair);
-        std::string hb_impl2 = state.fresh();
-        state.emit(hb_impl2 + " = implies_intro " + hb_nb3);
-        std::string hb_bot3 = state.fresh();
-        state.emit(hb_bot3 + " = not_elim " + hb_h + ", " + hb_impl2);
-        std::string hb_nnb = state.fresh();
-        state.emit(hb_nnb + " = not_intro " + hb_bot3);
-        std::string hb_b = state.fresh();
-        state.emit(hb_b + " = double_neg_elim " + hb_nnb);
-        std::string hb_and = state.fresh();
-        state.emit(hb_and + " = and_intro " + hb_a + ", " + hb_b);
-        std::string hb_bwd = state.fresh();
-        state.emit(hb_bwd + " = implies_intro " + hb_and);
-
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = iff_intro " + hf_fwd + ", " + hb_bwd);
-        state.stack.push_back({result, h_result});
-        return true;
-    }
-
-    if (step_label == "df-or") {
-        auto it_ph = subst.find("ph");
-        auto it_ps = subst.find("ps");
-        if (it_ph == subst.end() || it_ps == subst.end()) {
-            if (error) *error = "df-or: missing substitution";
-            return false;
-        }
-        std::string a = translate_expr(it_ph->second, 0, thm_info);
-        std::string b = translate_expr(it_ps->second, 0, thm_info);
-
-        // Forward: (A | B) -> (~A -> B)
-        std::string hf_disj = state.fresh();
-        state.emit(hf_disj + " = assume " + a + " | " + b);
-        std::string hf_na = state.fresh();
-        state.emit(hf_na + " = assume " + neg(a));
-        std::string hf_ca = state.fresh();
-        state.emit(hf_ca + " = assume " + a);
-        std::string hf_ca_bot = state.fresh();
-        state.emit(hf_ca_bot + " = not_elim " + hf_na + ", " + hf_ca);
-        std::string hf_b_let = state.fresh();
-        state.emit(hf_b_let + " = let " + b);
-        std::string hf_ca_b = state.fresh();
-        state.emit(hf_ca_b + " = bottom_elim " + hf_ca_bot + ", " + hf_b_let);
-        std::string hf_ca_impl = state.fresh();
-        state.emit(hf_ca_impl + " = implies_intro " + hf_ca_b);
-        std::string hf_cb = state.fresh();
-        state.emit(hf_cb + " = assume " + b);
-        std::string hf_cb_impl = state.fresh();
-        state.emit(hf_cb_impl + " = implies_intro " + hf_cb);
-        std::string hf_b = state.fresh();
-        state.emit(hf_b + " = or_elim " + hf_disj + ", " + hf_ca_impl +
-                   ", " + hf_cb_impl);
-        std::string hf_inner = state.fresh();
-        state.emit(hf_inner + " = implies_intro " + hf_b);
-        std::string hf_fwd = state.fresh();
-        state.emit(hf_fwd + " = implies_intro " + hf_inner);
-
-        // Backward: (~A -> B) -> (A | B)
-        std::string hb_h = state.fresh();
-        state.emit(hb_h + " = assume " + neg(a) + " -> " + b);
-        std::string hb_em_let = state.fresh();
-        state.emit(hb_em_let + " = let " + a);
-        std::string hb_em = state.fresh();
-        state.emit(hb_em + " = excluded_middle " + hb_em_let);
-        std::string hb_ca = state.fresh();
-        state.emit(hb_ca + " = assume " + a);
-        std::string hb_b_let = state.fresh();
-        state.emit(hb_b_let + " = let " + b);
-        std::string hb_ca_or = state.fresh();
-        state.emit(hb_ca_or + " = or_intro_l " + hb_ca + ", " + hb_b_let);
-        std::string hb_ca_impl = state.fresh();
-        state.emit(hb_ca_impl + " = implies_intro " + hb_ca_or);
-        std::string hb_cna = state.fresh();
-        state.emit(hb_cna + " = assume " + neg(a));
-        std::string hb_cna_b = state.fresh();
-        state.emit(hb_cna_b + " = implies_elim " + hb_h + ", " + hb_cna);
-        std::string hb_a_let = state.fresh();
-        state.emit(hb_a_let + " = let " + a);
-        std::string hb_cna_or = state.fresh();
-        state.emit(hb_cna_or + " = or_intro_r " + hb_a_let + ", " + hb_cna_b);
-        std::string hb_cna_impl = state.fresh();
-        state.emit(hb_cna_impl + " = implies_intro " + hb_cna_or);
-        std::string hb_or = state.fresh();
-        state.emit(hb_or + " = or_elim " + hb_em + ", " + hb_ca_impl +
-                   ", " + hb_cna_impl);
-        std::string hb_bwd = state.fresh();
-        state.emit(hb_bwd + " = implies_intro " + hb_or);
-
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = iff_intro " + hf_fwd + ", " + hb_bwd);
-        state.stack.push_back({result, h_result});
+        std::string h;
+        if (step_label == "df-bi") h = inline_df_bi(a, b, state);
+        else if (step_label == "df-an") h = inline_df_an(a, b, state);
+        else h = inline_df_or(a, b, state);
+        state.stack.push_back({result, h});
         return true;
     }
 
@@ -2252,21 +1032,18 @@ bool MmTranslator::simulate_proof(const Assertion& thm,
 }
 
 // ===================================================================
-// Main translation entry point
+// translate() helpers
 // ===================================================================
 
-bool MmTranslator::translate(const std::string& label,
-                              TranslatedTheorem& result,
-                              std::string* error) {
-    // Skip theorems with known encoding issues
+bool MmTranslator::is_skipped(const std::string& label) {
     static const std::unordered_set<std::string> skip_labels = {
-        // T./F. set-variable mismatch (15)
+        // T./F. set-variable mismatch
         "alfal", "altru", "bifal", "bitru", "cadtru",
         "dftru2", "dfnot", "falim", "mptru", "nbfal",
         "tbtru", "truan", "trud", "trujust", "trut",
-        // hadd/cadd structural conversion (2)
+        // hadd/cadd structural conversion
         "cadnot", "hadnot",
-        // Quantifier bridge mismatch after vacuous stripping (11)
+        // Quantifier bridge mismatch after vacuous stripping
         "eximal", "ax6ev", "speimfw", "speimfwALT", "spimfw", "2exnaln",
         "spimw", "spimew", "equs4v", "alequexv", "equsv",
         // Non-vacuous quantifier encoding mismatch
@@ -2334,7 +1111,154 @@ bool MmTranslator::translate(const std::string& label,
         // implies_elim antecedent mismatch (replacement axiom)
         "axreplem",
     };
-    if (skip_labels.count(label)) {
+    return skip_labels.count(label) > 0;
+}
+
+bool MmTranslator::try_bridge_equiv(const std::string& label,
+                                     const FrameInfo& info,
+                                     const WffPtr& claim_ast,
+                                     TranslatedTheorem& result) {
+    struct BridgeEquiv {
+        std::string bridge_name;
+        enum class Src { Setvar, WffSet, Dummy };
+        struct Param { Src src; size_t idx; };
+        std::vector<Param> params;
+    };
+    using S = BridgeEquiv::Src;
+    static const std::unordered_map<std::string, BridgeEquiv> bridge_equiv = {
+        {"ax7",      {"ax_7",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"ax8",      {"ax_8",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"ax9",      {"ax_9",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"equid",    {"eq_refl", {{S::Setvar,0}}}},
+        {"equcomi",  {"eq_sym",  {{S::Setvar,0},{S::Setvar,1}}}},
+        {"equcomiv", {"eq_sym",  {{S::Setvar,0},{S::Setvar,1}}}},
+        {"equcom",   {"eq_sym_iff",  {{S::Setvar,0},{S::Setvar,1}}}},
+        {"equtr",    {"eq_trans",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"equtrr",   {"eq_subst_eq", {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"equequ1",  {"equequ1_bridge", {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"elequ2",   {"elequ2_bridge",  {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"elequ1",   {"elequ1_bridge",  {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"equcoms",  {"equcoms_bridge", {{S::Setvar,0},{S::Setvar,1},{S::WffSet,0},{S::Dummy,0}}}},
+        {"equcomd",  {"equcomd_bridge", {{S::Setvar,0},{S::Setvar,1},{S::WffSet,0},{S::Dummy,0}}}},
+    };
+    auto it = bridge_equiv.find(label);
+    if (it == bridge_equiv.end()) return false;
+
+    // Strip forall vars from claim AST
+    const WffNode* body = claim_ast.get();
+    std::vector<std::string> forall_vars;
+    while (body && body->kind == WffNode::Kind::Forall) {
+        forall_vars.push_back(body->name);
+        body = body->left.get();
+    }
+
+    ProofState tstate;
+    for (const auto& v : forall_vars)
+        tstate.emit("fix " + v);
+
+    std::string h = tstate.fresh();
+    tstate.emit(h + " = use " + it->second.bridge_name);
+    for (const auto& p : it->second.params) {
+        std::string arg;
+        switch (p.src) {
+            case S::Setvar: arg = info.setvars.at(p.idx); break;
+            case S::WffSet: arg = info.set_var_order.at(p.idx); break;
+            case S::Dummy:  arg = info.dummy_var; break;
+        }
+        std::string h_next = tstate.fresh();
+        tstate.emit(h_next + " = forall_elim " + h + ", " + arg);
+        h = h_next;
+    }
+
+    for (int i = static_cast<int>(forall_vars.size()) - 1; i >= 0; --i) {
+        std::string h_next = tstate.fresh();
+        tstate.emit(h_next + " = forall_intro " + h);
+        h = h_next;
+    }
+
+    tstate.emit("qed " + h);
+    result.proof_lines = tstate.lines;
+    translated_set_.insert(label);
+    return true;
+}
+
+bool MmTranslator::try_trivial_claim(const FrameInfo& info,
+                                      const WffPtr& claim_ast,
+                                      int num_foralls, bool needs_dummy,
+                                      TranslatedTheorem& result) {
+    // Strip outer forall quantifiers
+    const WffNode* body = claim_ast.get();
+    while (body && body->kind == WffNode::Kind::Forall)
+        body = body->left.get();
+
+    bool is_trivial_iff = false, is_trivial_impl = false;
+    std::string trivial_sub;
+
+    // Verum body: renders to (elem(d,s) -> elem(d,s))
+    if (body && body->kind == WffNode::Kind::Verum) {
+        is_trivial_impl = true;
+        std::string s = info.set_var_order.empty()
+            ? info.dummy_var : info.set_var_order[0];
+        trivial_sub = "elem(" + info.dummy_var + ", " + s + ")";
+    }
+
+    if (body && body->kind == WffNode::Kind::Binary) {
+        auto renderer = make_claim_renderer(info);
+        std::string lhs_str = emit_fol(*body->left, renderer);
+        std::string rhs_str = emit_fol(*body->right, renderer);
+        if (body->op == WffNode::Op::Iff && lhs_str == rhs_str) {
+            is_trivial_iff = true;
+            trivial_sub = std::move(lhs_str);
+        } else if (body->op == WffNode::Op::Implies && lhs_str == rhs_str) {
+            is_trivial_impl = true;
+            trivial_sub = std::move(lhs_str);
+        }
+    }
+
+    if (!is_trivial_iff && !is_trivial_impl) return false;
+
+    ProofState tstate;
+    for (const auto& sv : info.used_setvars)
+        tstate.emit("fix " + sv);
+    if (needs_dummy) {
+        for (const auto& sv : info.set_var_order)
+            tstate.emit("fix " + sv);
+        tstate.emit("fix " + info.dummy_var);
+    }
+
+    std::string h1 = tstate.fresh();
+    tstate.emit(h1 + " = assume " + trivial_sub);
+    std::string h2 = tstate.fresh();
+    tstate.emit(h2 + " = implies_intro " + h1);
+    std::string last;
+    if (is_trivial_iff) {
+        std::string h3 = tstate.fresh();
+        tstate.emit(h3 + " = assume " + trivial_sub);
+        std::string h4 = tstate.fresh();
+        tstate.emit(h4 + " = implies_intro " + h3);
+        last = tstate.fresh();
+        tstate.emit(last + " = iff_intro " + h2 + ", " + h4);
+    } else {
+        last = h2;
+    }
+    for (int i = num_foralls - 1; i >= 0; --i) {
+        std::string h = tstate.fresh();
+        tstate.emit(h + " = forall_intro " + last);
+        last = h;
+    }
+    tstate.emit("qed " + last);
+    result.proof_lines = std::move(tstate.lines);
+    return true;
+}
+
+// ===================================================================
+// Main translation entry point
+// ===================================================================
+
+bool MmTranslator::translate(const std::string& label,
+                              TranslatedTheorem& result,
+                              std::string* error) {
+    if (is_skipped(label)) {
         if (error) *error = "known encoding issue: " + label;
         ++skipped_;
         return false;
@@ -2430,157 +1354,19 @@ bool MmTranslator::translate(const std::string& label,
     result.fol_label = sanitize_label(label);
     result.claim_formula = formula;
 
-    // --- Bridge-equivalent theorems ---
-    // Some Metamath theorems have claims identical to bridge axioms.
-    // Generate direct proofs: use bridge + forall_elim + forall_intro.
+    // Bridge-equivalent theorems (direct bridge proofs)
+    if (try_bridge_equiv(label, info, claim_ast, result))
+        return true;
+
+    // Trivial claims: A <-> A, A -> A, Verum
     {
-        struct BridgeEquiv {
-            std::string bridge_name;
-            enum class Src { Setvar, WffSet, Dummy };
-            struct Param { Src src; size_t idx; };
-            std::vector<Param> params;
-        };
-        using S = BridgeEquiv::Src;
-        static const std::unordered_map<std::string, BridgeEquiv> bridge_equiv = {
-            {"ax7",      {"ax_7",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"ax8",      {"ax_8",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"ax9",      {"ax_9",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"equid",    {"eq_refl", {{S::Setvar,0}}}},
-            {"equcomi",  {"eq_sym",  {{S::Setvar,0},{S::Setvar,1}}}},
-            {"equcomiv", {"eq_sym",  {{S::Setvar,0},{S::Setvar,1}}}},
-            {"equcom",   {"eq_sym_iff",  {{S::Setvar,0},{S::Setvar,1}}}},
-            {"equtr",    {"eq_trans",    {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"equtrr",   {"eq_subst_eq", {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"equequ1",  {"equequ1_bridge", {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"elequ2",   {"elequ2_bridge",  {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"elequ1",   {"elequ1_bridge",  {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
-            {"equcoms",  {"equcoms_bridge", {{S::Setvar,0},{S::Setvar,1},{S::WffSet,0},{S::Dummy,0}}}},
-            {"equcomd",  {"equcomd_bridge", {{S::Setvar,0},{S::Setvar,1},{S::WffSet,0},{S::Dummy,0}}}},
-            // axextb: can't bridge (forall z outside claim vs inside biconditional)
-        };
-        auto it = bridge_equiv.find(label);
-        if (it != bridge_equiv.end()) {
-            // Strip forall vars from claim
-            const WffNode* body = claim_ast.get();
-            std::vector<std::string> forall_vars;
-            while (body && body->kind == WffNode::Kind::Forall) {
-                forall_vars.push_back(body->name);
-                body = body->left.get();
-            }
-
-            ProofState tstate;
-            for (const auto& v : forall_vars)
-                tstate.emit("fix " + v);
-
-            // Resolve bridge params to actual variable names
-            std::string h = tstate.fresh();
-            tstate.emit(h + " = use " + it->second.bridge_name);
-            for (const auto& p : it->second.params) {
-                std::string arg;
-                switch (p.src) {
-                    case S::Setvar: arg = info.setvars.at(p.idx); break;
-                    case S::WffSet: arg = info.set_var_order.at(p.idx); break;
-                    case S::Dummy:  arg = info.dummy_var; break;
-                }
-                std::string h_next = tstate.fresh();
-                tstate.emit(h_next + " = forall_elim " + h + ", " + arg);
-                h = h_next;
-            }
-
-            // Close forall scopes
-            for (int i = static_cast<int>(forall_vars.size()) - 1; i >= 0; --i) {
-                std::string h_next = tstate.fresh();
-                tstate.emit(h_next + " = forall_intro " + h);
-                h = h_next;
-            }
-
-            tstate.emit("qed " + h);
-            result.proof_lines = tstate.lines;
-            translated_set_.insert(label);
-            return true;
-        }
-    }
-
-    // --- Detect trivial claims (A <-> A) or (A -> A) via AST ---
-    {
-        // Strip outer forall quantifiers from the full claim AST
         const WffNode* body = claim_ast.get();
         int num_foralls = 0;
         while (body && body->kind == WffNode::Kind::Forall) {
             ++num_foralls;
             body = body->left.get();
         }
-
-        bool is_trivial_iff = false, is_trivial_impl = false;
-        std::string trivial_sub;
-
-        // Verum body: renders to (elem(d,s) -> elem(d,s)), trivially provable
-        if (body && body->kind == WffNode::Kind::Verum) {
-            is_trivial_impl = true;
-            std::string s = info.set_var_order.empty()
-                ? info.dummy_var : info.set_var_order[0];
-            trivial_sub = "elem(" + info.dummy_var + ", " + s + ")";
-        }
-
-        if (body && body->kind == WffNode::Kind::Binary) {
-            // Compare rendered strings to handle Verum/Falsum equivalences
-            auto renderer = make_claim_renderer(info);
-            std::string lhs_str = emit_fol(*body->left, renderer);
-            std::string rhs_str = emit_fol(*body->right, renderer);
-            if (body->op == WffNode::Op::Iff && lhs_str == rhs_str) {
-                is_trivial_iff = true;
-                trivial_sub = std::move(lhs_str);
-            } else if (body->op == WffNode::Op::Implies && lhs_str == rhs_str) {
-                is_trivial_impl = true;
-                trivial_sub = std::move(lhs_str);
-            }
-        }
-
-        if (is_trivial_iff || is_trivial_impl) {
-            const std::string& sub = trivial_sub;
-
-            ProofState tstate;
-            for (const auto& sv : info.used_setvars)
-                tstate.emit("fix " + sv);
-            if (needs_dummy) {
-                for (const auto& sv : info.set_var_order)
-                    tstate.emit("fix " + sv);
-                tstate.emit("fix " + info.dummy_var);
-            }
-
-            if (is_trivial_iff) {
-                std::string h1 = tstate.fresh();
-                tstate.emit(h1 + " = assume " + sub);
-                std::string h2 = tstate.fresh();
-                tstate.emit(h2 + " = implies_intro " + h1);
-                std::string h3 = tstate.fresh();
-                tstate.emit(h3 + " = assume " + sub);
-                std::string h4 = tstate.fresh();
-                tstate.emit(h4 + " = implies_intro " + h3);
-                std::string h5 = tstate.fresh();
-                tstate.emit(h5 + " = iff_intro " + h2 + ", " + h4);
-                std::string last = h5;
-                for (int i = num_foralls - 1; i >= 0; --i) {
-                    std::string h = tstate.fresh();
-                    tstate.emit(h + " = forall_intro " + last);
-                    last = h;
-                }
-                tstate.emit("qed " + last);
-            } else {
-                std::string h1 = tstate.fresh();
-                tstate.emit(h1 + " = assume " + sub);
-                std::string h2 = tstate.fresh();
-                tstate.emit(h2 + " = implies_intro " + h1);
-                std::string last = h2;
-                for (int i = num_foralls - 1; i >= 0; --i) {
-                    std::string h = tstate.fresh();
-                    tstate.emit(h + " = forall_intro " + last);
-                    last = h;
-                }
-                tstate.emit("qed " + last);
-            }
-
-            result.proof_lines = std::move(tstate.lines);
+        if (try_trivial_claim(info, claim_ast, num_foralls, needs_dummy, result)) {
             translated_set_.insert(label);
             frame_cache_.emplace(label, std::move(info));
             return true;
