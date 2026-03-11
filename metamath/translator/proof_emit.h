@@ -42,4 +42,9 @@ std::string inline_df_or(const std::string& a, const std::string& b,
 // Negate a formula string, adding a space to avoid ~~ tokens.
 std::string neg(const std::string& s);
 
+// Create a LeafRenderer that converts WffNode leaves to FOL strings
+// using the wff-as-set encoding from a FrameInfo.
+// IMPORTANT: captures `info` by reference; caller must ensure it outlives the lambda.
+LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info);
+
 }  // namespace metamath

@@ -217,11 +217,12 @@ std::string convert_proof(
     }
 
     case WffNode::Kind::Exists: {
-        std::string h_witness = state.fresh();
-        state.emit(h_witness + " = exists_elim " + h);
-        std::string h_conv = convert_proof(*node.left, h_witness, atoms, forward, state);
+        std::string witness = state.fresh() + "_w";
+        std::string h_body = state.fresh();
+        state.emit(h_body + " = iota_elim " + h + ", " + witness);
+        std::string h_conv = convert_proof(*node.left, h_body, atoms, forward, state);
         std::string r = state.fresh();
-        state.emit(r + " = exists_intro " + h_conv);
+        state.emit(r + " = exists_intro " + h_conv + ", " + witness);
         return r;
     }
 
@@ -246,7 +247,7 @@ CompResult build_comp_impl(
     if (wff_it != caller_info.wff_to_set.end()) {
         std::string elem_str = "elem(" + caller_info.dummy_var + ", " +
                                wff_it->second + ")";
-        return {wff_it->second, "", elem_str, 0};
+        return {wff_it->second, "", elem_str};
     }
 
     // Verum (T.) / Falsum (F.) — create witness set via comprehension
@@ -261,7 +262,7 @@ CompResult build_comp_impl(
         state.emit(h1 + " = forall_elim " + h_ax + ", " + any_set);
         std::string witness = state.fresh() + "_w";
         std::string h2 = state.fresh();
-        state.emit(h2 + " = exists_elim " + h1 + ", " + witness);
+        state.emit(h2 + " = iota_elim " + h1 + ", " + witness);
         std::string axiom_iff = state.fresh();
         state.emit(axiom_iff + " = forall_elim " + h2 + ", " +
                    caller_info.dummy_var);
@@ -269,7 +270,7 @@ CompResult build_comp_impl(
                            any_set + ") -> elem(" + caller_info.dummy_var +
                            ", " + any_set + "))";
         std::string compound = (tok == "T.") ? taut : neg(taut);
-        return {witness, axiom_iff, compound, 1};
+        return {witness, axiom_iff, compound};
     }
 
     // Quantifier normalization: A., E., F/
@@ -284,6 +285,12 @@ CompResult build_comp_impl(
             mm_tokens[pos + 2] == bound) {
             Expression t_expr = {"T."};
             return build_comp_impl(t_expr, 0, caller_info, state);
+        }
+        // Non-vacuous quantifier: if the bound variable appears in the body
+        // tokens, the quantifier can't be stripped (comprehension axioms only
+        // handle propositional connectives, not quantifiers over setvars).
+        for (size_t i = pos; i < mm_tokens.size(); ++i) {
+            if (mm_tokens[i] == bound) return {};
         }
         // Vacuous: skip quantifier (x doesn't appear in wff-as-set encoding)
         return build_comp_impl(mm_tokens, pos, caller_info, state);
@@ -316,16 +323,15 @@ CompResult build_comp_impl(
         state.emit(h1 + " = forall_elim " + h_ax + ", " + inner.set_var);
         std::string witness = state.fresh() + "_w";
         std::string h2 = state.fresh();
-        state.emit(h2 + " = exists_elim " + h1 + ", " + witness);
+        state.emit(h2 + " = iota_elim " + h1 + ", " + witness);
         std::string axiom_iff = state.fresh();
         state.emit(axiom_iff + " = forall_elim " + h2 + ", " +
                    caller_info.dummy_var);
 
         std::string compound = neg(inner.compound_str);
-        int total_exists = inner.exists_opened + 1;
 
         if (inner.iff_handle.empty()) {
-            return {witness, axiom_iff, compound, total_exists};
+            return {witness, axiom_iff, compound};
         }
 
         // Chain: axiom says elem(u0,W) <-> ~elem(u0,inner.set)
@@ -370,7 +376,7 @@ CompResult build_comp_impl(
 
         std::string chained = state.fresh();
         state.emit(chained + " = iff_intro " + hf7 + ", " + hb7);
-        return {witness, chained, compound, total_exists};
+        return {witness, chained, compound};
     }
 
     // Function-style 3-ary: if-(A, B, C), cadd(A, B, C), hadd(A, B, C)
@@ -411,13 +417,14 @@ CompResult build_comp_impl(
             pos++;
         }
         // pos is at closing )
+        size_t arg3_end = pos;
         if (pos < mm_tokens.size()) pos++; // skip )
 
         // Build desugared expression and recurse
         Expression desugared;
         Expression arg1(mm_tokens.begin() + arg1_start, mm_tokens.begin() + arg1_end);
         Expression arg2(mm_tokens.begin() + arg2_start, mm_tokens.begin() + arg2_end);
-        Expression arg3(mm_tokens.begin() + arg3_start, mm_tokens.begin() + pos - 1);
+        Expression arg3(mm_tokens.begin() + arg3_start, mm_tokens.begin() + arg3_end);
 
         if (tok == "if-") {
             // (A /\ B) \/ (-. A /\ C)
@@ -467,6 +474,7 @@ CompResult build_comp_impl(
                 break;
             pos++;
         }
+        if (pos >= mm_tokens.size()) return {};  // no operator found
         std::string op = mm_tokens[pos];
         size_t rhs_start = pos + 1;
 
@@ -548,8 +556,27 @@ CompResult build_comp_impl(
             return build_comp_impl(desugared, 0, caller_info, state);
         }
 
-        auto lhs = build_comp_impl(mm_tokens, lhs_start, caller_info, state);
-        auto rhs = build_comp_impl(mm_tokens, rhs_start, caller_info, state);
+        // Extract sub-expressions so recursive calls see correct boundaries
+        // (e.g., "x e. A" pattern uses mm_tokens.size() to verify it's the
+        // full expression — passing the full vector would break that check).
+        size_t rhs_end = rhs_start;
+        {
+            int d = 0;
+            while (rhs_end < mm_tokens.size()) {
+                if (mm_tokens[rhs_end] == "(") d++;
+                else if (mm_tokens[rhs_end] == ")") {
+                    if (d == 0) break;
+                    d--;
+                }
+                rhs_end++;
+            }
+        }
+        Expression lhs_toks(mm_tokens.begin() + lhs_start,
+                            mm_tokens.begin() + pos);
+        Expression rhs_toks(mm_tokens.begin() + rhs_start,
+                            mm_tokens.begin() + rhs_end);
+        auto lhs = build_comp_impl(lhs_toks, 0, caller_info, state);
+        auto rhs = build_comp_impl(rhs_toks, 0, caller_info, state);
         if (lhs.set_var.empty() || rhs.set_var.empty()) return {};
 
         std::string axiom, fol_op;
@@ -567,17 +594,16 @@ CompResult build_comp_impl(
         state.emit(h2 + " = forall_elim " + h1 + ", " + rhs.set_var);
         std::string witness = state.fresh() + "_w";
         std::string h3 = state.fresh();
-        state.emit(h3 + " = exists_elim " + h2 + ", " + witness);
+        state.emit(h3 + " = iota_elim " + h2 + ", " + witness);
         std::string axiom_iff = state.fresh();
         state.emit(axiom_iff + " = forall_elim " + h3 + ", " +
                    caller_info.dummy_var);
 
         std::string compound = "(" + lhs.compound_str + fol_op +
                                rhs.compound_str + ")";
-        int total_exists = lhs.exists_opened + rhs.exists_opened + 1;
 
         if (lhs.iff_handle.empty() && rhs.iff_handle.empty()) {
-            return {witness, axiom_iff, compound, total_exists};
+            return {witness, axiom_iff, compound};
         }
 
         // Need to chain: axiom iff + child iffs → fully expanded iff
@@ -649,7 +675,7 @@ CompResult build_comp_impl(
 
             std::string chained = state.fresh();
             state.emit(chained + " = iff_intro " + hf8 + ", " + hb8);
-            return {witness, chained, compound, total_exists};
+            return {witness, chained, compound};
         }
 
         if (op == "/\\") {
@@ -687,7 +713,7 @@ CompResult build_comp_impl(
 
             std::string chained = state.fresh();
             state.emit(chained + " = iff_intro " + hf8 + ", " + hb8);
-            return {witness, chained, compound, total_exists};
+            return {witness, chained, compound};
         }
 
         if (op == "\\/") {
@@ -757,7 +783,7 @@ CompResult build_comp_impl(
 
             std::string chained = state.fresh();
             state.emit(chained + " = iff_intro " + hf12 + ", " + hb12);
-            return {witness, chained, compound, total_exists};
+            return {witness, chained, compound};
         }
 
         if (op == "<->") {
@@ -821,17 +847,91 @@ CompResult build_comp_impl(
 
             std::string chained = state.fresh();
             state.emit(chained + " = iff_intro " + hf14 + ", " + hb14);
-            return {witness, chained, compound, total_exists};
+            return {witness, chained, compound};
         }
 
         return {};
     }
 
+    // Membership pattern: x e. A (setvar membership in set/class)
+    // Produces a witness set C where elem(u, C) <-> elem(x, A).
+    // The variable x may come from a referenced theorem's frame (not
+    // the caller's mandatory frame), so we detect the pattern by the
+    // "e." token rather than requiring x to be in caller_info.setvars.
+    if (pos + 2 < mm_tokens.size() && mm_tokens[pos + 1] == "e." &&
+        pos + 2 == mm_tokens.size() - 1) {
+        const std::string& sv_x = tok;
+        const std::string& sv_A = mm_tokens[pos + 2];
+        // Both variables must be fixed setvars in the current proof scope.
+        bool x_ok = (sv_x == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_x) !=
+                         caller_info.setvars.end());
+        bool a_ok = (std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_A) !=
+                         caller_info.setvars.end());
+        if (!x_ok || !a_ok) return {};
+        std::string compound = "elem(" + sv_x + ", " + sv_A + ")";
+
+        // x is the dummy var: elem(u0, A) — witness is A directly
+        if (sv_x == caller_info.dummy_var) {
+            return {sv_A, "", compound};
+        }
+
+        // General case: use wff_elem axiom
+        std::string h_ax = state.fresh();
+        state.emit(h_ax + " = use wff_elem");
+        std::string h1 = state.fresh();
+        state.emit(h1 + " = forall_elim " + h_ax + ", " + sv_x);
+        std::string h2 = state.fresh();
+        state.emit(h2 + " = forall_elim " + h1 + ", " + sv_A);
+        std::string witness = state.fresh() + "_w";
+        std::string h3 = state.fresh();
+        state.emit(h3 + " = iota_elim " + h2 + ", " + witness);
+        std::string h_iff = state.fresh();
+        state.emit(h_iff + " = forall_elim " + h3 + ", " +
+                   caller_info.dummy_var);
+        return {witness, h_iff, compound};
+    }
+
+    // Equality pattern: x = y (setvar equality)
+    // Produces a witness set C where elem(u, C) <-> eq(x, y).
+    if (pos + 2 < mm_tokens.size() && mm_tokens[pos + 1] == "=" &&
+        pos + 2 == mm_tokens.size() - 1) {
+        const std::string& sv_x = tok;
+        const std::string& sv_y = mm_tokens[pos + 2];
+        bool x_ok = (sv_x == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_x) !=
+                         caller_info.setvars.end());
+        bool y_ok = (sv_y == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_y) !=
+                         caller_info.setvars.end());
+        if (!x_ok || !y_ok) return {};
+        std::string compound = "eq(" + sv_x + ", " + sv_y + ")";
+
+        std::string h_ax = state.fresh();
+        state.emit(h_ax + " = use wff_eq");
+        std::string h1 = state.fresh();
+        state.emit(h1 + " = forall_elim " + h_ax + ", " + sv_x);
+        std::string h2 = state.fresh();
+        state.emit(h2 + " = forall_elim " + h1 + ", " + sv_y);
+        std::string witness = state.fresh() + "_w";
+        std::string h3 = state.fresh();
+        state.emit(h3 + " = iota_elim " + h2 + ", " + witness);
+        std::string h_iff = state.fresh();
+        state.emit(h_iff + " = forall_elim " + h3 + ", " +
+                   caller_info.dummy_var);
+        return {witness, h_iff, compound};
+    }
+
     // Setvar: no comprehension needed, use directly.
-    // Only accept tokens that are actual setvars from the caller's frame.
-    if (std::find(caller_info.setvars.begin(), caller_info.setvars.end(),
+    // Only match when the entire remaining expression is a single token.
+    if (pos + 1 >= mm_tokens.size() &&
+        std::find(caller_info.setvars.begin(), caller_info.setvars.end(),
                   tok) != caller_info.setvars.end()) {
-        return {tok, "", tok, 0};
+        return {tok, "", tok};
     }
 
     // Unknown token (wff variable not in caller's frame, quantifier, etc.)

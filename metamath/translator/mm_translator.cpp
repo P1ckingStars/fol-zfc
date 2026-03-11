@@ -32,10 +32,6 @@ bool MmTranslator::is_syntax_builder(const Assertion* a) const {
 }
 
 // ===================================================================
-// Expression translation
-// ===================================================================
-
-// ===================================================================
 // Comprehension helpers (member wrappers)
 // ===================================================================
 
@@ -265,6 +261,7 @@ std::string MmTranslator::translate_expr(const Expression& tokens,
                                           size_t start,
                                           const FrameInfo& info) const {
     WffPtr ast = parse_mm_wff(tokens, start, info);
+    if (!ast) return "??null??";
     return emit_fol(*ast, make_claim_renderer(info));
 }
 
@@ -363,8 +360,8 @@ const MmTranslator::FrameInfo* MmTranslator::get_frame_info(
 
     FrameInfo info;
     if (!build_frame_info(thm, info, error)) return nullptr;
-    auto [inserted, ok] = frame_cache_.emplace(label, std::move(info));
-    return &inserted->second;
+    auto [it2, _] = frame_cache_.emplace(label, std::move(info));
+    return &it2->second;
 }
 
 bool MmTranslator::is_simple_substitution(

@@ -342,4 +342,36 @@ std::string inline_df_or(const std::string& a, const std::string& b,
     return h_result;
 }
 
+// IMPORTANT: captures `info` by reference; caller must ensure it outlives the lambda.
+LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
+    return [&info](const WffNode& node) -> std::string {
+        switch (node.kind) {
+            case WffNode::Kind::Var: {
+                auto it = info.wff_to_set.find(node.name);
+                if (it != info.wff_to_set.end())
+                    return "elem(" + info.dummy_var + ", " + it->second + ")";
+                return node.name;
+            }
+            case WffNode::Kind::Literal:
+                return node.name;
+            case WffNode::Kind::Pred:
+                return render_pred(node);
+            case WffNode::Kind::Verum: {
+                std::string s = info.set_var_order.empty()
+                    ? info.dummy_var : info.set_var_order[0];
+                return "(elem(" + info.dummy_var + ", " + s +
+                       ") -> elem(" + info.dummy_var + ", " + s + "))";
+            }
+            case WffNode::Kind::Falsum: {
+                std::string s = info.set_var_order.empty()
+                    ? info.dummy_var : info.set_var_order[0];
+                return "~(elem(" + info.dummy_var + ", " + s +
+                       ") -> elem(" + info.dummy_var + ", " + s + "))";
+            }
+            default:
+                return "??";
+        }
+    };
+}
+
 }  // namespace metamath
