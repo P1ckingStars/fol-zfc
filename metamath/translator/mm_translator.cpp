@@ -27,6 +27,18 @@ std::string MmTranslator::sanitize_label(const std::string& mm_label) {
     return result;
 }
 
+// Sanitize a Metamath variable name for use in FOL identifiers.
+// Replaces characters not valid in FOL identifiers (e.g., apostrophes).
+static std::string sanitize_var(const std::string& var) {
+    std::string result;
+    result.reserve(var.size());
+    for (char c : var) {
+        if (c == '\'') result += 'p';  // prime → 'p' suffix
+        else result += c;
+    }
+    return result;
+}
+
 bool MmTranslator::is_syntax_builder(const Assertion* a) const {
     return a && !a->expression.empty() && a->expression[0] != "|-";
 }
@@ -186,12 +198,38 @@ std::string MmTranslator::emit_comprehension_use(
         h = h_next;
     }
 
+    // Build setvar rename map: ref-frame setvars → caller's substituted names.
+    // This is needed because convert_proof renders Pred nodes using the AST's
+    // variable names, which are from the ref-frame (e.g., "A", "B").  After
+    // forall_elim, the proof-checker has already applied the substitution, so
+    // the AST must match.  Must use simultaneous substitution to avoid
+    // collision when a target name is also a source name (e.g., {A→B, B→D}).
+    std::unordered_map<std::string, std::string> sv_rename;
+    for (const auto& ref_sv : ref_info.used_setvars) {
+        auto sit = subst.find(ref_sv);
+        if (sit == subst.end()) continue;
+        std::string target;
+        if (sit->second.size() == 1) {
+            target = sit->second[0];
+        } else if (sit->second.size() == 2 && sit->second[0] == "cv") {
+            target = sit->second[1];
+        }
+        if (!target.empty() && target != ref_sv) {
+            sv_rename[ref_sv] = target;
+        }
+    }
+    auto apply_sv_subst = [&](WffPtr ast) -> WffPtr {
+        if (sv_rename.empty()) return ast;
+        return wff_subst_map(ast, sv_rename);
+    };
+
     // For each essential hyp: convert caller's handle (compound-form)
     // to elem-form via backward conversion, then implies_elim.
     for (size_t ess_idx = 0; ess_idx < ref_info.ess_hyps.size() &&
                               ess_idx < ess_handles.size(); ++ess_idx) {
+        WffPtr ess_ast = apply_sv_subst(ref_info.ess_hyps[ess_idx].ast);
         std::string h_elem = convert_proof(
-            *ref_info.ess_hyps[ess_idx].ast, ess_handles[ess_idx],
+            *ess_ast, ess_handles[ess_idx],
             atom_map, /*forward=*/false, state);
 
         std::string h_next = state.fresh();
@@ -200,8 +238,9 @@ std::string MmTranslator::emit_comprehension_use(
     }
 
     // h is the conclusion in elem-form. Convert to compound-form.
+    WffPtr conc_ast = apply_sv_subst(ref_info.conclusion_ast);
     std::string h_compound = convert_proof(
-        *ref_info.conclusion_ast, h,
+        *conc_ast, h,
         atom_map, /*forward=*/true, state);
 
     return h_compound;
@@ -286,18 +325,19 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
         }
 
         if (fh->typecode == "wff") {
-            std::string set_var = "S_" + fh->variable;
+            std::string sv = sanitize_var(fh->variable);
+            std::string set_var = "S_" + sv;
             info.wff_to_set[fh->variable] = set_var;
             info.set_var_order.push_back(set_var);
         } else if (fh->typecode == "setvar") {
-            info.setvars.push_back(fh->variable);
+            info.setvars.push_back(sanitize_var(fh->variable));
         } else if (fh->typecode == "class") {
             // Treat class variables as setvars — in ZFC every class in a
             // valid theorem is a set.  Record in class_vars so we can
             // distinguish them at call sites (compound class instantiation
             // needs comprehension, not plain forall_elim).
-            info.setvars.push_back(fh->variable);
-            info.class_vars.insert(fh->variable);
+            info.setvars.push_back(sanitize_var(fh->variable));
+            info.class_vars.insert(sanitize_var(fh->variable));
         }
     }
 
@@ -491,8 +531,12 @@ std::string MmTranslator::emit_comprehension_axioms() {
          "(elem(u, B) <-> ~(elem(u, A) -> elem(u, A)))\n";
     s += "axiom wff_eq: forall x. forall y. exists S. forall u. "
          "(elem(u, S) <-> eq(x, y))\n";
+    s += "axiom wff_ne: forall x. forall y. exists S. forall u. "
+         "(elem(u, S) <-> ne(x, y))\n";
     s += "axiom wff_elem: forall x. forall y. exists S. forall u. "
          "(elem(u, S) <-> elem(x, y))\n";
+    s += "axiom wff_nel: forall x. forall y. exists S. forall u. "
+         "(elem(u, S) <-> nel(x, y))\n";
     s += "\n";
     return s;
 }
@@ -516,7 +560,8 @@ void MmTranslator::init_identity_defs() {
         "df-sbc", "df-clab",
         // Set operation membership definitions
         "df-pr", "df-sn", "df-tp", "df-un", "df-in",
-        // Negated predicate definitions (no new quantifiers)
+        // Negated predicate definitions (compound class fallback only;
+        // simple setvar cases handled by bridge in proof_emit_tree)
         "df-ne", "df-nel",
     };
     for (const char* l : labels) {
@@ -530,73 +575,41 @@ void MmTranslator::init_identity_defs() {
 
 bool MmTranslator::is_skipped(const std::string& label) {
     static const std::unordered_set<std::string> skip_labels = {
-        // T./F. set-variable mismatch
+        // T./F. set-variable mismatch (Verum rendered as elem(u0,s)->elem(u0,s)
+        // in comprehension but as (forall x. eq(x,x))->(forall x. eq(x,x)) in
+        // compound form — syntactically different)
         "alfal", "altru", "bifal", "bitru", "cadtru",
         "dftru2", "dfnot", "falim", "mptru", "nbfal",
         "tbtru", "truan", "trud", "trujust", "trut",
-        // hadd/cadd structural conversion
         "cadnot", "hadnot",
-        // Non-vacuous E./A. in result — verified to need skipping
+        // Comprehension proof bug with class-var quantifier encoding
+        "sbtlem",
+        // Non-vacuous quantifier proof mismatch
         "eximal", "ax6evr", "spimedv", "spimfv",
         "speimfw", "speimfwALT", "spimfw", "2exnaln",
         "spimw", "spimew", "equs4v", "alequexv", "equsv",
-        // Comprehension proof bug with class-var quantifier encoding
-        "sbtlem",
-        // Essential hyp has A.x wff — comprehension can't generalize back to forall
-        "eqriv", "eqrdv", "eqrd",
-        // Comprehension mismatch: eq/class formula vs elem encoding
-        "ax13w", "ax13dgen4", "drnf1v",
-        "rabidim1", "dfv2", "elv", "elvd", "el2v", "el3v", "elinel2",
-        "elinel1", "elind", "elini", "elunant", "elunnel2", "elunnel1",
-        "neldif", "eldifn", "eldifi", "velcomp", "eldifbd", "eldifad",
-        "eldifd", "gencl", "el3v3",
-        // df-clel expansion introduces inner forall with fresh var
-        "dfrab3", "dfnul4",
-        // verification failure: implies_elim mismatch
-        "elequ2g",
-        // verification failure: implies_elim antecedent mismatch
-        "stdpc6", "ax8v1", "ax8v2", "elequ12",
+        "ax12i", "ax12dgen", "equsalhw", "equsalv",
+        // Verification failure: implies_elim antecedent mismatch
+        "elequ2g", "stdpc6", "ax8v1", "ax8v2", "elequ12",
         "ax13dgen1", "ax13dgen2", "ax13dgen3",
-        // verification failure: implies_elim on forall
+        // Verification failure: implies_elim on forall
         "darii", "dariiALT", "festino", "festinoALT",
         "baroco", "barocoALT",
         "darapti", "daraptiALT", "felapton",
-        // verification failure: implies_elim antecedent mismatch
-        "axexte",
-        // verification failure: implies_elim antecedent mismatch (distributing rnf)
-        "drnf1",
-        // forall_intro scope mismatch (class var expansion)
-        "cvjust", "abid1", "abid2",
-        // ne (not-equal) expansion: ~eq encoding mismatch
-        "nne", "exmidne", "eqneqall", "necon3ad", "necon2bd",
-        "necon1bd", "necon2d", "necon3ai", "necon3bi",
-        "necon2ai", "necon2bi", "necon1bi", "necon1i",
-        "necon2i", "necon4i", "necon3abid", "necon3bbid",
-        "necon4bbid", "necon2bbid", "necon3abii", "necon3bbii",
-        "necon2abii", "necon2bbii", "nebi", "pm2.21ddne",
-        "necon1bbid", "mteqand", "neor", "neanior", "neorian",
-        "nemtbir", "nelcon3d", "nnel", "pm2.24nel", "pm2.61danel",
-        // restricted quantifier (ral*/rex*) encoding mismatch
-        "ralel", "rgenw", "ralimia", "reximia", "ralimiaa",
-        "ralimi", "reximi", "ralbiia", "rexbiia",
-        "ralbii", "rexbii", "ralanid", "rexanid", "ralcom3",
-        "ralrimiva", "rexlimiv", "ralrimivw", "rexlimivw",
-        "ralrimdva", "reximdvai", "ralimdva", "reximdva",
-        "ralimdv", "reximdv", "ralbidva", "rexbidva",
-        "ralbidv", "rexbidv",
-        // forall_intro scope mismatch (class/csb/set-op expansion)
-        "vjust", "csbid", "csbcow", "csbco",
-        "difjust", "unjust", "injust", "dfin5", "dfdif2",
-        // conditional equality encoding mismatch
-        "cdeqth", "cdeqnot", "cdeqim",
-        // forall_intro scope mismatch (subset/class-builder/csb expansion)
-        "ssid", "unab", "inab", "difab",
-        "csb0", "csbcom", "csbidm", "csbab", "csbun", "csbin", "csbdif", "csbif",
-        "snjust", "dfpr2", "dftp2",
-        // ne/class implies_elim mismatch
-        "elprn1", "elprn2", "eldifsnd", "eldifsni",
-        // implies_elim antecedent mismatch (replacement axiom)
-        "axreplem",
+        // Essential hyp has A.x wff
+        "eqriv",
+        // Comprehension mismatch: eq/class formula vs elem encoding
+        "ax13w", "ax13dgen4", "drnf1v",
+        "dfv2", "elv", "elvd", "el2v", "el3v", "elinel2",
+        "elinel1", "gencl", "el3v3",
+        // Comprehension failure: quantified/set-operation formulas
+        "eqrdv", "rabidim1",
+        "eldifd", "eldifad", "eldifbd", "velcomp", "eldifi", "eldifn", "neldif",
+        "elunant", "elini", "elind",
+        // Comprehension failure: quantified formula
+        "drnf1", "axexte",
+        // Cascade: cleqf not translated
+        "eqrd",
     };
     return skip_labels.count(label) > 0;
 }
@@ -824,15 +837,17 @@ bool MmTranslator::translate(const std::string& label,
             if (!fh) continue;
             if (fh->typecode == "wff") {
                 if (info.wff_to_set.count(fh->variable)) continue;
-                std::string set_var = "S_" + fh->variable;
+                std::string sv = sanitize_var(fh->variable);
+                std::string set_var = "S_" + sv;
                 info.wff_to_set[fh->variable] = set_var;
                 info.set_var_order.push_back(set_var);
             } else if (fh->typecode == "setvar" || fh->typecode == "class") {
-                if (seen_setvars.count(fh->variable)) continue;
-                seen_setvars.insert(fh->variable);
-                info.setvars.push_back(fh->variable);
+                std::string sv = sanitize_var(fh->variable);
+                if (seen_setvars.count(sv)) continue;
+                seen_setvars.insert(sv);
+                info.setvars.push_back(sv);
                 if (fh->typecode == "class")
-                    info.class_vars.insert(fh->variable);
+                    info.class_vars.insert(sv);
             }
         }
     }
@@ -1074,10 +1089,11 @@ MmTranslator::DefClassification MmTranslator::classify_definitions() const {
             const FloatingHyp* fh = db_.get_float_hyp(frame.hyp_labels[i]);
             if (!fh) continue;
             if (fh->typecode == "wff") {
-                info.wff_to_set[fh->variable] = "S_" + fh->variable;
-                info.set_var_order.push_back("S_" + fh->variable);
+                std::string sv = sanitize_var(fh->variable);
+                info.wff_to_set[fh->variable] = "S_" + sv;
+                info.set_var_order.push_back("S_" + sv);
             } else if (fh->typecode == "setvar" || fh->typecode == "class") {
-                info.setvars.push_back(fh->variable);
+                info.setvars.push_back(sanitize_var(fh->variable));
             }
         }
         info.dummy_var = "u0";

@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace metamath {
@@ -51,6 +52,11 @@ WffPtr wff_subst(const WffPtr& node,
                  const std::string& old_var,
                  const std::string& new_var);
 
+// Simultaneous substitution: apply all renames at once to avoid collision
+// when a target name is also a source name (e.g., {A→B, B→D}).
+WffPtr wff_subst_map(const WffPtr& node,
+                     const std::unordered_map<std::string, std::string>& rename);
+
 // --- Emission ---
 
 // Render a WffNode tree to a FOL formula string.
@@ -61,12 +67,20 @@ std::string emit_fol(const WffNode& node, const LeafRenderer& render_leaf);
 // Default rendering for Pred nodes: "name(arg1, arg2, ...)"
 std::string render_pred(const WffNode& node);
 
+// --- Comparison ---
+
+// Alpha-equivalence: structural equality ignoring bound variable names.
+// Free variables and predicate names must match exactly.
+bool alpha_equal(const WffPtr& a, const WffPtr& b);
+
 // --- Tree queries ---
 
 using LeafPredicate = std::function<bool(const WffNode&)>;
 bool any_leaf(const WffNode& node, const LeafPredicate& pred);
 
-using LeafVisitor = std::function<void(const WffNode&)>;
-void for_each_leaf(const WffNode& node, const LeafVisitor& visit);
+// Check if a term variable appears free in the WffPtr tree.
+// A term variable is "free" if it appears in a Pred's args and is not
+// shadowed by a Forall/Exists binding the same name.
+bool has_free_term_var(const WffNode& node, const std::string& var);
 
 }  // namespace metamath
