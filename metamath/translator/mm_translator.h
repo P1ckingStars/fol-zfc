@@ -13,6 +13,9 @@
 
 namespace metamath {
 
+struct ProofTree;
+struct ProofNode;
+
 struct TranslatedTheorem {
     std::string mm_label;
     std::string fol_label;
@@ -34,9 +37,6 @@ public:
 
     // Emit .fol.proof content for translated theorems
     static std::string emit_proof(const std::vector<TranslatedTheorem>& thms);
-
-    // Get generated instantiation lemmas (must be emitted before main theorems)
-    const std::vector<TranslatedTheorem>& lemmas() const { return lemmas_; }
 
     // Emit comprehension axioms needed by the translation
     static std::string emit_comprehension_axioms();
@@ -71,6 +71,11 @@ public:
         // Setvars that actually appear in the FOL formula (subset of setvars)
         std::vector<std::string> used_setvars;
 
+        // Number of mandatory setvars (from the theorem's mandatory frame).
+        // Setvars beyond this index in used_setvars are optional (from proof
+        // pre-scan) and create vacuous foralls in the claim.
+        size_t mandatory_setvar_count = 0;
+
         // Whether the claim formula includes the dummy var quantifier
         bool needs_dummy = true;
 
@@ -85,19 +90,12 @@ public:
         // Conclusion AST (parsed from assertion expression)
         WffPtr conclusion_ast;
 
-        // Copy of frame data for proof simulation
+        // Copy of frame data for proof tree building
         std::vector<std::string> hyp_labels;
         std::vector<bool> is_floating;
     };
 
-    struct StackEntry {
-        Expression expr;     // Metamath expression (with typecode)
-        std::string handle;  // FOL-ZFC handle ("" = type-checking only)
-    };
-
     struct ProofState {
-        std::vector<StackEntry> stack;
-        std::vector<StackEntry> saved;   // compressed proof saves
         std::vector<std::string> lines;
         int counter = 0;
 
@@ -115,6 +113,8 @@ private:
     bool build_frame_info(const Assertion& thm, FrameInfo& info,
                           std::string* error);
 
+    void init_identity_defs();
+
     // Expression translation
     std::string translate_expr(const Expression& tokens, size_t start,
                                const FrameInfo& info) const;
@@ -127,17 +127,8 @@ private:
     WffPtr parse_mm_wff_mut(const Expression& tokens, size_t start,
                             FrameInfo& info);
 
-    bool simulate_proof(const Assertion& thm, const FrameInfo& info_in,
-                        ProofState& state, std::string* error);
-
-    // Process one assertion application during proof simulation
-    bool apply_step(const std::string& step_label,
-                    const FrameInfo& thm_info,
-                    ProofState& state,
-                    std::string* error);
-
     // ---------------------------------------------------------------
-    // Hybrid theorem reference system
+    // Theorem reference and substitution
     // ---------------------------------------------------------------
 
     // Frame cache: avoids rebuilding FrameInfo for referenced theorems
@@ -187,8 +178,24 @@ private:
         ProofState& state,
         std::string* error);
 
-    // Unused lemma storage (kept for interface compatibility)
-    std::vector<TranslatedTheorem> lemmas_;
+    // ---------------------------------------------------------------
+    // Tree-based proof emission
+    // ---------------------------------------------------------------
+
+    // Definitions that are identity biconditionals (both sides same WffPtr)
+    std::unordered_set<std::string> wff_identity_defs_;
+
+    // Emit FOL proof from a proof tree. Returns handle to final result.
+    std::string emit_proof_tree(const ProofTree& tree,
+                                const FrameInfo& thm_info,
+                                ProofState& state,
+                                std::string* error);
+
+    // Recursively emit a single tree node. Returns FOL handle.
+    std::string emit_node(size_t idx, const ProofTree& tree,
+                          const FrameInfo& thm_info,
+                          std::unordered_map<size_t, std::string>& handles,
+                          ProofState& state, std::string* error);
 
     // translate() sub-steps
     bool try_bridge_equiv(const std::string& label, const FrameInfo& info,
@@ -201,6 +208,18 @@ private:
     // Utility
     bool is_syntax_builder(const Assertion* a) const;
     static std::string sanitize_label(const std::string& mm_label);
+
+public:
+    // Definition classification for proof reconstruction.
+    // Analyzes all df-* axioms and determines which are "identity biconditionals"
+    // (both sides expand to the same WffPtr via SyntaxToWff).
+    struct DefClassification {
+        std::vector<std::string> identity;     // Both sides same WffPtr
+        std::vector<std::string> non_identity; // Sides differ
+        std::vector<std::pair<std::string, std::string>> not_bic; // Parsed but not <->
+        std::vector<std::string> parse_fail;   // Couldn't parse one/both sides
+    };
+    DefClassification classify_definitions() const;
 };
 
 }  // namespace metamath

@@ -1,6 +1,7 @@
 #include "mm_translator.h"
 #include "comprehension.h"
 #include "proof_emit.h"
+#include "proof_tree.h"
 #include "syntax_to_wff.h"
 
 #include <algorithm>
@@ -9,7 +10,9 @@
 namespace metamath {
 
 MmTranslator::MmTranslator(const MmDatabase& db)
-    : db_(db), verifier_(db), syntax_parser_(db) {}
+    : db_(db), verifier_(db), syntax_parser_(db) {
+    init_identity_defs();
+}
 
 // ===================================================================
 // Utility
@@ -32,43 +35,7 @@ bool MmTranslator::is_syntax_builder(const Assertion* a) const {
 // Expression translation
 // ===================================================================
 
-namespace {
-
-// Leaf renderer: converts Var/Literal/Verum/Falsum to FOL strings.
-// IMPORTANT: The returned lambda captures `info` by reference.
-// The caller must ensure `info` outlives the lambda.
-LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
-    return [&info](const WffNode& node) -> std::string {
-        switch (node.kind) {
-            case WffNode::Kind::Var: {
-                auto it = info.wff_to_set.find(node.name);
-                if (it != info.wff_to_set.end())
-                    return "elem(" + info.dummy_var + ", " + it->second + ")";
-                return node.name;
-            }
-            case WffNode::Kind::Literal:
-                return node.name;
-            case WffNode::Kind::Pred:
-                return render_pred(node);
-            case WffNode::Kind::Verum: {
-                std::string s = info.set_var_order.empty()
-                    ? info.dummy_var : info.set_var_order[0];
-                return "(elem(" + info.dummy_var + ", " + s +
-                       ") -> elem(" + info.dummy_var + ", " + s + "))";
-            }
-            case WffNode::Kind::Falsum: {
-                std::string s = info.set_var_order.empty()
-                    ? info.dummy_var : info.set_var_order[0];
-                return "~(elem(" + info.dummy_var + ", " + s +
-                       ") -> elem(" + info.dummy_var + ", " + s + "))";
-            }
-            default:
-                return "??";
-        }
-    };
-}
-
-}  // anonymous namespace
+// make_claim_renderer is defined in proof_emit.h/cpp
 
 // ===================================================================
 // Comprehension helpers (member wrappers)
@@ -194,7 +161,8 @@ std::string MmTranslator::emit_comprehension_use(
     state.emit(h + " = use " + fol_label);
 
     // forall_elim for used setvars
-    for (const auto& ref_sv : ref_info.used_setvars) {
+    for (size_t sv_idx = 0; sv_idx < ref_info.used_setvars.size(); ++sv_idx) {
+        const auto& ref_sv = ref_info.used_setvars[sv_idx];
         auto sit = subst.find(ref_sv);
         std::string target_sv;
         if (sit != subst.end() && !sit->second.empty()) {
@@ -203,6 +171,9 @@ std::string MmTranslator::emit_comprehension_use(
                 return "";
             }
             target_sv = sit->second[0];
+        } else if (sv_idx >= ref_info.mandatory_setvar_count) {
+            // Optional setvar (vacuous in claim) — use caller's dummy var
+            target_sv = caller_info.dummy_var;
         } else {
             target_sv = ref_sv;
         }
@@ -383,6 +354,11 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
     // for set-encoded wff variables and comprehension witnesses.
     info.needs_dummy = true;
 
+    // Populate used_setvars from mandatory frame so emit_simple_use generates
+    // correct forall_elim chains when referencing this theorem.
+    info.used_setvars = info.setvars;
+    info.mandatory_setvar_count = info.setvars.size();
+
     return true;
 }
 
@@ -442,7 +418,8 @@ std::string MmTranslator::emit_simple_use(
     state.emit(h + " = use " + fol_label);
 
     // forall_elim for each used setvar in R's frame.
-    for (const auto& ref_sv : ref_info.used_setvars) {
+    for (size_t sv_idx = 0; sv_idx < ref_info.used_setvars.size(); ++sv_idx) {
+        const auto& ref_sv = ref_info.used_setvars[sv_idx];
         auto sit = subst.find(ref_sv);
         std::string target_sv;
         if (sit != subst.end() && !sit->second.empty()) {
@@ -451,6 +428,9 @@ std::string MmTranslator::emit_simple_use(
                 return "";
             }
             target_sv = sit->second[0];
+        } else if (sv_idx >= ref_info.mandatory_setvar_count) {
+            // Optional setvar (vacuous in claim) — use caller's dummy var
+            target_sv = caller_info.dummy_var;
         } else {
             target_sv = ref_sv;
         }
@@ -522,6 +502,10 @@ std::string MmTranslator::emit_comprehension_axioms() {
          "(elem(u, B) <-> (elem(u, A) -> elem(u, A)))\n";
     s += "axiom wff_false: forall A. exists B. forall u. "
          "(elem(u, B) <-> ~(elem(u, A) -> elem(u, A)))\n";
+    s += "axiom wff_eq: forall x. forall y. exists S. forall u. "
+         "(elem(u, S) <-> eq(x, y))\n";
+    s += "axiom wff_elem: forall x. forall y. exists S. forall u. "
+         "(elem(u, S) <-> elem(x, y))\n";
     s += "\n";
     return s;
 }
@@ -529,506 +513,28 @@ std::string MmTranslator::emit_comprehension_axioms() {
 
 
 // ===================================================================
-// Proof simulation
+// Identity definition labels (populated once in constructor)
 // ===================================================================
 
-bool MmTranslator::apply_step(const std::string& step_label,
-                               const FrameInfo& thm_info,
-                               ProofState& state,
-                               std::string* error) {
-    // Check if it's a hypothesis first
-    const FloatingHyp* fh = db_.get_float_hyp(step_label);
-    if (fh) {
-        state.stack.push_back({{fh->typecode, fh->variable}, ""});
-        return true;
-    }
-
-    const EssentialHyp* eh = db_.get_ess_hyp(step_label);
-    if (eh) {
-        std::string handle;
-        for (const auto& hyp : thm_info.ess_hyps) {
-            if (hyp.mm_label == step_label) {
-                handle = "hyp_" + sanitize_label(step_label);
-                break;
-            }
-        }
-        state.stack.push_back({eh->expression, handle});
-        return true;
-    }
-
-    // Must be an assertion
-    const Assertion* assertion = db_.get_assertion(step_label);
-    if (!assertion) {
-        if (error) *error = "unknown label: " + step_label;
-        return false;
-    }
-
-    const MandatoryFrame& frame = assertion->frame;
-    size_t n_hyps = frame.hyp_labels.size();
-
-    if (state.stack.size() < n_hyps) {
-        if (error) *error = "stack underflow applying " + step_label;
-        return false;
-    }
-
-    // Pop n_hyps items
-    size_t base = state.stack.size() - n_hyps;
-    std::vector<StackEntry> popped(state.stack.begin() + base,
-                                    state.stack.end());
-    state.stack.resize(base);
-
-    // --- Syntax builder: skip (push result with empty handle) ---
-    if (is_syntax_builder(assertion)) {
-        std::map<std::string, Expression> subst;
-        for (size_t i = 0; i < n_hyps; ++i) {
-            if (!frame.is_floating[i]) continue;
-            const FloatingHyp* f = db_.get_float_hyp(frame.hyp_labels[i]);
-            if (!f) continue;
-            subst[f->variable] = Expression(popped[i].expr.begin() + 1,
-                                             popped[i].expr.end());
-        }
-        Expression result = MmVerifier::substitute(assertion->expression, subst);
-        state.stack.push_back({result, ""});
-        return true;
-    }
-
-    // --- Build substitution from floating hyps ---
-    std::map<std::string, Expression> subst;
-    for (size_t i = 0; i < n_hyps; ++i) {
-        if (!frame.is_floating[i]) continue;
-        const FloatingHyp* f = db_.get_float_hyp(frame.hyp_labels[i]);
-        if (!f) continue;
-        subst[f->variable] = Expression(popped[i].expr.begin() + 1,
-                                         popped[i].expr.end());
-    }
-
-    // Collect essential hypothesis handles
-    std::vector<std::string> ess_handles;
-    for (size_t i = 0; i < n_hyps; ++i) {
-        if (frame.is_floating[i]) continue;
-        ess_handles.push_back(popped[i].handle);
-    }
-
-    // Compute result expression
-    Expression result = MmVerifier::substitute(assertion->expression, subst);
-
-    // --- ax-mp: implies_elim ---
-    if (step_label == "ax-mp") {
-        if (ess_handles.size() < 2) {
-            if (error) *error = "ax-mp: need 2 essential hypotheses";
-            return false;
-        }
-        std::string h = state.fresh();
-        state.emit(h + " = implies_elim " + ess_handles[1] + ", " +
-                   ess_handles[0]);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- ax-1: inline ND proof ---
-    if (step_label == "ax-1") {
-        auto it_ph = subst.find("ph");
-        auto it_ps = subst.find("ps");
-        if (it_ph == subst.end() || it_ps == subst.end()) {
-            if (error) *error = "ax-1: missing substitution variables";
-            return false;
-        }
-        std::string fol_a = translate_expr(it_ph->second, 0, thm_info);
-        std::string fol_b = translate_expr(it_ps->second, 0, thm_info);
-        std::string h = inline_ax1(fol_a, fol_b, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- ax-2: inline ND proof ---
-    if (step_label == "ax-2") {
-        auto it_ph = subst.find("ph");
-        auto it_ps = subst.find("ps");
-        auto it_ch = subst.find("ch");
-        if (it_ph == subst.end() || it_ps == subst.end() ||
-            it_ch == subst.end()) {
-            if (error) *error = "ax-2: missing substitution variables";
-            return false;
-        }
-        std::string fol_a = translate_expr(it_ph->second, 0, thm_info);
-        std::string fol_b = translate_expr(it_ps->second, 0, thm_info);
-        std::string fol_c = translate_expr(it_ch->second, 0, thm_info);
-        std::string h = inline_ax2(fol_a, fol_b, fol_c, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- ax-3: inline ND proof ---
-    if (step_label == "ax-3") {
-        auto it_ph = subst.find("ph");
-        auto it_ps = subst.find("ps");
-        if (it_ph == subst.end() || it_ps == subst.end()) {
-            if (error) *error = "ax-3: missing substitution variables";
-            return false;
-        }
-        std::string fol_a = translate_expr(it_ph->second, 0, thm_info);
-        std::string fol_b = translate_expr(it_ps->second, 0, thm_info);
-        std::string h = inline_ax3(fol_a, fol_b, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- Definition axioms: df-bi, df-an, df-or ---
-    if (step_label == "df-bi" || step_label == "df-an" ||
-        step_label == "df-or") {
-        auto it_ph = subst.find("ph");
-        auto it_ps = subst.find("ps");
-        if (it_ph == subst.end() || it_ps == subst.end()) {
-            if (error) *error = step_label + ": missing substitution";
-            return false;
-        }
-        std::string a = translate_expr(it_ph->second, 0, thm_info);
-        std::string b = translate_expr(it_ps->second, 0, thm_info);
-        std::string h;
-        if (step_label == "df-bi") h = inline_df_bi(a, b, state);
-        else if (step_label == "df-an") h = inline_df_an(a, b, state);
-        else h = inline_df_or(a, b, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- Identity-biconditional definitions ---
-    // Both sides desugar to the same FOL formula via parse_wff
-    {
-        static const std::unordered_set<std::string> identity_defs = {
-            // Propositional connective definitions
-            "df-3an", "df-3or", "df-xor", "df-nan", "df-nor",
-            "df-fal", "df-ifp", "df-cad", "df-had", "df-nf",
-            "df-tru",
-            // Restricted quantifier / predicate abbreviation definitions
-            "df-ral", "df-rex", "df-rab",
-            "df-sbc", "df-clab",
-            // Set operation membership definitions
-            "df-pr", "df-sn", "df-tp", "df-un", "df-in",
-            // Negated predicate definitions (no new quantifiers)
-            "df-ne", "df-nel",
-        };
-        if (identity_defs.count(step_label)) {
-            // Find <-> in substituted result at depth 0 (skip leading |- and ()
-            size_t bic_pos = 2; // skip |- (
-            int depth = 0;
-            while (bic_pos < result.size()) {
-                if (result[bic_pos] == "(") depth++;
-                else if (result[bic_pos] == ")") {
-                    if (depth == 0) break;
-                    depth--;
-                } else if (depth == 0 && result[bic_pos] == "<->") break;
-                bic_pos++;
-            }
-            // Translate LHS: result[2..bic_pos)
-            Expression lhs_expr(result.begin() + 2, result.begin() + bic_pos);
-            std::string formula = translate_expr(lhs_expr, 0, thm_info);
-            std::string h = emit_identity_bic(formula, state);
-            state.stack.push_back({result, h});
-            return true;
-        }
-    }
-
-    // --- Predicate logic axiom handlers ---
-
-    // ax-5: Vacuous quantification: ph -> A. x ph
-    // With setvar quantifier stripping, A. x ph = ph, so this is ph -> ph (identity)
-    if (step_label == "ax-5") {
-        auto it_ph = subst.find("ph");
-        if (it_ph == subst.end()) {
-            if (error) *error = "ax-5: missing ph substitution";
-            return false;
-        }
-        std::string phi_fol = translate_expr(it_ph->second, 0, thm_info);
-        // Generate identity: assume phi, implies_intro → (phi -> phi)
-        std::string h_assume = state.fresh();
-        state.emit(h_assume + " = assume " + phi_fol);
-        std::string h_id = state.fresh();
-        state.emit(h_id + " = implies_intro " + h_assume);
-        state.stack.push_back({result, h_id});
-        return true;
-    }
-
-    // ax-gen: Generalization rule
-    // From |- ph, derive |- A. x ph
-    // In set encoding, A. x ph = ph (vacuous setvar quantifier) — identity.
-    // For non-setvar quantifiers, use fix/forall_intro.
-    if (step_label == "ax-gen") {
-        if (ess_handles.empty() || ess_handles[0].empty()) {
-            if (error) *error = "ax-gen: missing essential hyp handle";
-            return false;
-        }
-        auto it_x = subst.find("x");
-        bool is_setvar = it_x != subst.end() && !it_x->second.empty() &&
-            std::find(thm_info.setvars.begin(), thm_info.setvars.end(),
-                      it_x->second[0]) != thm_info.setvars.end();
-        if (is_setvar) {
-            // Vacuous quantifier: result = essential hyp
-            state.stack.push_back({result, ess_handles[0]});
-            return true;
-        }
-        // Non-setvar quantifier: fix fresh var, transport, forall_intro
-        auto it_ph = subst.find("ph");
-        if (it_ph == subst.end()) {
-            if (error) *error = "ax-gen: missing ph substitution";
-            return false;
-        }
-        std::string phi_fol = translate_expr(it_ph->second, 0, thm_info);
-        std::string gen_var = "_genv" + std::to_string(state.counter);
-        state.emit("fix " + gen_var);
-        std::string h_assume = state.fresh();
-        state.emit(h_assume + " = assume " + phi_fol);
-        std::string h_id = state.fresh();
-        state.emit(h_id + " = implies_intro " + h_assume);
-        std::string h_local = state.fresh();
-        state.emit(h_local + " = implies_elim " + h_id + ", " + ess_handles[0]);
-        std::string h_result = state.fresh();
-        state.emit(h_result + " = forall_intro " + h_local);
-        state.stack.push_back({result, h_result});
-        return true;
-    }
-
-    // ax-4: Quantifier distribution: A. x (ph -> ps) -> (A. x ph -> A. x ps)
-    // With setvar quantifier stripping, this is (ph -> ps) -> (ph -> ps) — identity
-    if (step_label == "ax-4") {
-        auto it_ph = subst.find("ph"), it_ps = subst.find("ps"),
-             it_x = subst.find("x");
-        if (it_ph == subst.end() || it_ps == subst.end() ||
-            it_x == subst.end()) {
-            if (error) *error = "ax-4: missing substitution variables";
-            return false;
-        }
-        std::string ph = translate_expr(it_ph->second, 0, thm_info);
-        std::string ps = translate_expr(it_ps->second, 0, thm_info);
-
-        // Identity: (ph -> ps) -> (ph -> ps)
-        std::string formula = "(" + ph + " -> " + ps + ")";
-        std::string h1 = state.fresh();
-        state.emit(h1 + " = assume " + formula);
-        std::string h2 = state.fresh();
-        state.emit(h2 + " = implies_intro " + h1);
-        state.stack.push_back({result, h2});
-        return true;
-    }
-
-    // ax-6: Existence of equal elements (via bridge)
-    if (step_label == "ax-6") {
-        std::string y = subst.at("y")[0];
-        std::string h = emit_bridge_use("ax_6", {y}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // ax-7: Equality is right-Euclidean (via bridge)
-    if (step_label == "ax-7") {
-        std::string h = emit_bridge_use("ax_7",
-            {subst.at("x")[0], subst.at("y")[0], subst.at("z")[0]}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // ax-8: Left substitution into membership (via bridge)
-    if (step_label == "ax-8") {
-        std::string h = emit_bridge_use("ax_8",
-            {subst.at("x")[0], subst.at("y")[0], subst.at("z")[0]}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // ax-9: Right substitution into membership (via bridge)
-    if (step_label == "ax-9") {
-        std::string h = emit_bridge_use("ax_9",
-            {subst.at("x")[0], subst.at("y")[0], subst.at("z")[0]}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // ax-10: Quantifier negation (via bridge)
-    if (step_label == "ax-10") {
-        auto it_ph = subst.find("ph");
-        if (it_ph == subst.end()) {
-            if (error) *error = "ax-10: missing ph substitution";
-            return false;
-        }
-        std::string S_ph = get_wff_set(it_ph->second, thm_info, state);
-        if (S_ph.empty()) {
-            if (error) *error = "ax-10: cannot resolve wff to set";
-            return false;
-        }
-        std::string h = emit_bridge_use("ax_10", {S_ph}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // ax-11: Quantifier commutation (via bridge)
-    if (step_label == "ax-11") {
-        // ax_11 bridge is for elem(x,y), but mm ax-11 is about wff ph
-        // with two setvars. The bridge is specialized; skip for now.
-        if (error) *error = "unsupported proof step: " + step_label;
-        return false;
-    }
-
-    // ax-ext: Extensionality (via bridge)
-    if (step_label == "ax-ext") {
-        auto ix = subst.find("x"), iy = subst.find("y");
-        if (ix == subst.end() || iy == subst.end()) {
-            if (error) *error = "ax-ext: missing x/y substitution";
-            return false;
-        }
-        std::string h = emit_bridge_use("ax_ext",
-            {ix->second[0], iy->second[0]}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // df-cleq: Class equality definition (via axextb_bridge)
-    // For setvars: eq(A,B) <-> forall x. (elem(x,A) <-> elem(x,B))
-    if (step_label == "df-cleq") {
-        auto ia = subst.find("A"), ib = subst.find("B");
-        if (ia == subst.end() || ib == subst.end()) {
-            if (error) *error = "df-cleq: missing A/B substitution";
-            return false;
-        }
-        if (ia->second.size() != 1 || ib->second.size() != 1) {
-            if (error) *error = "df-cleq: compound class expression";
-            return false;
-        }
-        std::string h = emit_bridge_use("axextb_bridge",
-            {ia->second[0], ib->second[0]}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // df-ex: Existential definition (via bridge)
-    if (step_label == "df-ex") {
-        auto it_ph = subst.find("ph");
-        if (it_ph == subst.end()) {
-            if (error) *error = "df-ex: missing ph substitution";
-            return false;
-        }
-        std::string S_ph = get_wff_set(it_ph->second, thm_info, state);
-        if (S_ph.empty()) {
-            if (error) *error = "df-ex: cannot resolve wff to set";
-            return false;
-        }
-        std::string h = emit_bridge_use("df_ex", {S_ph, thm_info.dummy_var}, state);
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- Theorem reference: hybrid approach ---
-    if (assertion->kind == Assertion::Kind::Theorem) {
-        // Check if the referenced theorem has been translated
-        if (translated_set_.find(step_label) == translated_set_.end()) {
-            if (error) *error = "theorem not yet translated: " + step_label;
-            return false;
-        }
-
-        // Get/build frame info for the referenced theorem (cached)
-        const FrameInfo* ref_info = get_frame_info(step_label, *assertion, error);
-        if (!ref_info) return false;
-
-        // SIMPLE PATH: all wff vars map to single wff vars
-        if (is_simple_substitution(*assertion, subst, thm_info)) {
-            std::string h = emit_simple_use(step_label, *assertion, *ref_info,
-                                             thm_info, subst, ess_handles, state);
-            if (h.empty()) {
-                // Fall through to compound path
-            } else {
-                state.stack.push_back({result, h});
-                return true;
-            }
-        }
-
-        // COMPOUND PATH: comprehension-based use
-        std::string h = emit_comprehension_use(
-            step_label, *assertion, *ref_info, thm_info,
-            subst, ess_handles, state, error);
-        if (h.empty()) return false;
-        state.stack.push_back({result, h});
-        return true;
-    }
-
-    // --- Unsupported step ---
-    if (error)
-        *error = "unsupported proof step: " + step_label;
-    return false;
-}
-
-bool MmTranslator::simulate_proof(const Assertion& thm,
-                                    const FrameInfo& info_in,
-                                    ProofState& state,
-                                    std::string* error) {
-    // info_in already has dummy wff vars from pre-scan in translate()
-    const FrameInfo& info = info_in;
-    const DecodedProof& proof = thm.proof;
-
-    // Helper: push a hypothesis by label
-    auto push_hyp = [&](const std::string& hyp_label) -> bool {
-        const FloatingHyp* fh = db_.get_float_hyp(hyp_label);
-        if (fh) {
-            state.stack.push_back({{fh->typecode, fh->variable}, ""});
-            return true;
-        }
-        const EssentialHyp* eh = db_.get_ess_hyp(hyp_label);
-        if (eh) {
-            std::string handle;
-            for (const auto& hyp : info.ess_hyps) {
-                if (hyp.mm_label == hyp_label) {
-                    handle = "hyp_" + sanitize_label(hyp_label);
-                    break;
-                }
-            }
-            state.stack.push_back({eh->expression, handle});
-            return true;
-        }
-        return false;
+void MmTranslator::init_identity_defs() {
+    // These definitions desugar to identity biconditionals (LHS == RHS)
+    // in our wff-as-set encoding via SyntaxToWff class expansion.
+    static const char* labels[] = {
+        // Propositional connective definitions
+        "df-3an", "df-3or", "df-xor", "df-nan", "df-nor",
+        "df-fal", "df-ifp", "df-cad", "df-had", "df-nf",
+        "df-tru",
+        // Restricted quantifier / predicate abbreviation definitions
+        "df-ral", "df-rex", "df-rab",
+        "df-sbc", "df-clab",
+        // Set operation membership definitions
+        "df-pr", "df-sn", "df-tp", "df-un", "df-in",
+        // Negated predicate definitions (no new quantifiers)
+        "df-ne", "df-nel",
     };
-
-    auto process_label = [&](const std::string& step_label) -> bool {
-        if (push_hyp(step_label)) return true;
-        return apply_step(step_label, info, state, error);
-    };
-
-    if (proof.compressed) {
-        size_t mandhypt = thm.frame.hyp_labels.size();
-        size_t labelt = mandhypt + proof.paren_labels.size();
-
-        for (size_t num : proof.numbers) {
-            if (num == 0) {
-                if (state.stack.empty()) {
-                    if (error) *error = "save on empty stack";
-                    return false;
-                }
-                state.saved.push_back(state.stack.back());
-            } else if (num <= mandhypt) {
-                if (!push_hyp(thm.frame.hyp_labels[num - 1])) {
-                    if (error)
-                        *error = "mandatory hyp not found: " +
-                                 thm.frame.hyp_labels[num - 1];
-                    return false;
-                }
-            } else if (num <= labelt) {
-                if (!process_label(proof.paren_labels[num - mandhypt - 1]))
-                    return false;
-            } else {
-                size_t idx = num - labelt - 1;
-                if (idx >= state.saved.size()) {
-                    if (error)
-                        *error = "saved index " + std::to_string(idx) +
-                                 " out of range";
-                    return false;
-                }
-                state.stack.push_back(state.saved[idx]);
-            }
-        }
-    } else {
-        for (const auto& step_label : proof.labels) {
-            if (!process_label(step_label)) return false;
-        }
+    for (const char* l : labels) {
+        wff_identity_defs_.insert(l);
     }
-
-    return true;
 }
 
 // ===================================================================
@@ -1043,18 +549,14 @@ bool MmTranslator::is_skipped(const std::string& label) {
         "tbtru", "truan", "trud", "trujust", "trut",
         // hadd/cadd structural conversion
         "cadnot", "hadnot",
-        // Quantifier bridge mismatch after vacuous stripping
-        "eximal", "ax6ev", "speimfw", "speimfwALT", "spimfw", "2exnaln",
+        // Non-vacuous E./A. in result — verified to need skipping
+        "eximal", "ax6evr", "spimedv", "spimfv",
+        "speimfw", "speimfwALT", "spimfw", "2exnaln",
         "spimw", "spimew", "equs4v", "alequexv", "equsv",
-        // Non-vacuous quantifier encoding mismatch
-        "nf2", "nfi", "nfri", "nfd", "nfrd",
-        "ala1", "alex", "exa1", "nfbii", "nfbiit",
-        "imnang", "exanali", "2exanali", "exancom", "exan",
-        "nexdh", "albidh", "exsimpl", "exsimpr",
-        "19.33b", "19.40b", "albiim", "exintrbi", "exintr",
-        "alsyl", "nfbidv", "3exdistr", "ax12i", "ax6v",
         // Comprehension proof bug with class-var quantifier encoding
         "sbtlem",
+        // Essential hyp has A.x wff — comprehension can't generalize back to forall
+        "eqriv", "eqrdv", "eqrd",
         // Comprehension mismatch: eq/class formula vs elem encoding
         "ax13w", "ax13dgen4", "drnf1v",
         "rabidim1", "dfv2", "elv", "elvd", "el2v", "el3v", "elinel2",
@@ -1064,7 +566,7 @@ bool MmTranslator::is_skipped(const std::string& label) {
         // df-clel expansion introduces inner forall with fresh var
         "dfrab3", "dfnul4",
         // verification failure: implies_elim mismatch
-        "equeuclr", "elequ2g",
+        "elequ2g",
         // verification failure: implies_elim antecedent mismatch
         "stdpc6", "ax8v1", "ax8v2", "elequ12",
         "ax13dgen1", "ax13dgen2", "ax13dgen3",
@@ -1074,8 +576,6 @@ bool MmTranslator::is_skipped(const std::string& label) {
         "darapti", "daraptiALT", "felapton",
         // verification failure: implies_elim antecedent mismatch
         "axexte",
-        // verification failure: formula mismatch (extensionality encoding)
-        "axextb",
         // verification failure: implies_elim antecedent mismatch (distributing rnf)
         "drnf1",
         // forall_intro scope mismatch (class var expansion)
@@ -1090,7 +590,7 @@ bool MmTranslator::is_skipped(const std::string& label) {
         "necon1bbid", "mteqand", "neor", "neanior", "neorian",
         "nemtbir", "nelcon3d", "nnel", "pm2.24nel", "pm2.61danel",
         // restricted quantifier (ral*/rex*) encoding mismatch
-        "rgenw", "ralimia", "reximia", "ralimiaa",
+        "ralel", "rgenw", "ralimia", "reximia", "ralimiaa",
         "ralimi", "reximi", "ralbiia", "rexbiia",
         "ralbii", "rexbii", "ralanid", "rexanid", "ralcom3",
         "ralrimiva", "rexlimiv", "ralrimivw", "rexlimivw",
@@ -1140,6 +640,12 @@ bool MmTranslator::try_bridge_equiv(const std::string& label,
         {"elequ1",   {"elequ1_bridge",  {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
         {"equcoms",  {"equcoms_bridge", {{S::Setvar,0},{S::Setvar,1},{S::WffSet,0},{S::Dummy,0}}}},
         {"equcomd",  {"equcomd_bridge", {{S::Setvar,0},{S::Setvar,1},{S::WffSet,0},{S::Dummy,0}}}},
+        {"axextb",   {"axextb_bridge",  {{S::Setvar,0},{S::Setvar,1}}}},
+        {"equeuclr", {"equeuclr_bridge", {{S::Setvar,0},{S::Setvar,1},{S::Setvar,2}}}},
+        {"eqid",     {"eqid_bridge",    {{S::Setvar,0},{S::Dummy,0}}}},
+        {"eqcom",    {"eqcom_bridge",   {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
+        {"ax6v",     {"ax6v_bridge",    {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
+        {"ax6ev",    {"ax6ev_bridge",   {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
     };
     auto it = bridge_equiv.find(label);
     if (it == bridge_equiv.end()) return false;
@@ -1186,13 +692,52 @@ bool MmTranslator::try_trivial_claim(const FrameInfo& info,
                                       const WffPtr& claim_ast,
                                       int num_foralls, bool needs_dummy,
                                       TranslatedTheorem& result) {
+    // Count outer fix scopes (used_setvars + set_var_order + dummy)
+    int outer_scopes = static_cast<int>(info.used_setvars.size());
+    if (needs_dummy)
+        outer_scopes += static_cast<int>(info.set_var_order.size()) + 1;
+
     // Strip outer forall quantifiers
     const WffNode* body = claim_ast.get();
-    while (body && body->kind == WffNode::Kind::Forall)
+    for (int i = 0; i < outer_scopes && body &&
+             body->kind == WffNode::Kind::Forall; ++i)
         body = body->left.get();
+
+    // Strip inner foralls, recording bound variable names for substitution
+    std::vector<std::string> inner_vars;
+    while (body && body->kind == WffNode::Kind::Forall) {
+        inner_vars.push_back(body->name);
+        body = body->left.get();
+    }
 
     bool is_trivial_iff = false, is_trivial_impl = false;
     std::string trivial_sub;
+
+    // Build renderer: uses claim_renderer but substitutes inner-forall-bound
+    // variables with fresh _triv names in both Var and Pred nodes
+    auto renderer = make_claim_renderer(info);
+    auto subst_name = [&](const std::string& name) -> std::string {
+        for (size_t j = 0; j < inner_vars.size(); ++j)
+            if (name == inner_vars[j])
+                return "_triv" + std::to_string(j);
+        return name;
+    };
+    LeafRenderer inner_renderer = [&](const WffNode& n) -> std::string {
+        if (n.kind == WffNode::Kind::Var) {
+            std::string mapped = subst_name(n.name);
+            if (mapped != n.name) return mapped;
+        }
+        if (n.kind == WffNode::Kind::Pred) {
+            std::string result = n.name + "(";
+            for (size_t i = 0; i < n.args.size(); ++i) {
+                if (i > 0) result += ", ";
+                result += subst_name(n.args[i]);
+            }
+            result += ")";
+            return result;
+        }
+        return renderer(n);
+    };
 
     // Verum body: renders to (elem(d,s) -> elem(d,s))
     if (body && body->kind == WffNode::Kind::Verum) {
@@ -1203,9 +748,8 @@ bool MmTranslator::try_trivial_claim(const FrameInfo& info,
     }
 
     if (body && body->kind == WffNode::Kind::Binary) {
-        auto renderer = make_claim_renderer(info);
-        std::string lhs_str = emit_fol(*body->left, renderer);
-        std::string rhs_str = emit_fol(*body->right, renderer);
+        std::string lhs_str = emit_fol(*body->left, inner_renderer);
+        std::string rhs_str = emit_fol(*body->right, inner_renderer);
         if (body->op == WffNode::Op::Iff && lhs_str == rhs_str) {
             is_trivial_iff = true;
             trivial_sub = std::move(lhs_str);
@@ -1225,6 +769,8 @@ bool MmTranslator::try_trivial_claim(const FrameInfo& info,
             tstate.emit("fix " + sv);
         tstate.emit("fix " + info.dummy_var);
     }
+    for (size_t i = 0; i < inner_vars.size(); ++i)
+        tstate.emit("fix _triv" + std::to_string(i));
 
     std::string h1 = tstate.fresh();
     tstate.emit(h1 + " = assume " + trivial_sub);
@@ -1277,19 +823,30 @@ bool MmTranslator::translate(const std::string& label,
         return false;
     }
 
-    // Pre-scan: allocate set variables for optional (dummy) wff hypotheses.
-    // Added to wff_to_set AND set_var_order — they must be fixed and quantified
-    // because intermediate proof steps reference them.
+    // Pre-scan: allocate variables for optional (dummy) hypotheses.
+    // Optional wff vars get wff_to_set entries; optional setvars/class vars
+    // get added to setvars.  All are fixed and quantified because
+    // intermediate proof steps (forall_elim, comprehension) reference them.
     {
         const auto& proof = thm->proof;
         auto scan_labels = proof.compressed ? proof.paren_labels : proof.labels;
+        std::unordered_set<std::string> seen_setvars(info.setvars.begin(),
+                                                      info.setvars.end());
         for (const auto& lbl : scan_labels) {
             const FloatingHyp* fh = db_.get_float_hyp(lbl);
-            if (!fh || fh->typecode != "wff") continue;
-            if (info.wff_to_set.count(fh->variable)) continue;
-            std::string set_var = "S_" + fh->variable;
-            info.wff_to_set[fh->variable] = set_var;
-            info.set_var_order.push_back(set_var);
+            if (!fh) continue;
+            if (fh->typecode == "wff") {
+                if (info.wff_to_set.count(fh->variable)) continue;
+                std::string set_var = "S_" + fh->variable;
+                info.wff_to_set[fh->variable] = set_var;
+                info.set_var_order.push_back(set_var);
+            } else if (fh->typecode == "setvar" || fh->typecode == "class") {
+                if (seen_setvars.count(fh->variable)) continue;
+                seen_setvars.insert(fh->variable);
+                info.setvars.push_back(fh->variable);
+                if (fh->typecode == "class")
+                    info.class_vars.insert(fh->variable);
+            }
         }
     }
 
@@ -1355,8 +912,10 @@ bool MmTranslator::translate(const std::string& label,
     result.claim_formula = formula;
 
     // Bridge-equivalent theorems (direct bridge proofs)
-    if (try_bridge_equiv(label, info, claim_ast, result))
+    if (try_bridge_equiv(label, info, claim_ast, result)) {
+        frame_cache_.emplace(label, std::move(info));
         return true;
+    }
 
     // Trivial claims: A <-> A, A -> A, Verum
     {
@@ -1393,24 +952,15 @@ bool MmTranslator::translate(const std::string& label,
         state.emit(handle + " = assume " + hyp.fol_formula);
     }
 
-    // Simulate the proof
-    if (!simulate_proof(*thm, info, state, error)) {
+    // Build proof tree and emit FOL proof
+    ProofTree tree;
+    if (!build_proof_tree(db_, *thm, tree, error)) {
         ++skipped_;
         return false;
     }
 
-    // The stack should have exactly one item
-    if (state.stack.size() != 1) {
-        if (error)
-            *error = "proof stack has " + std::to_string(state.stack.size()) +
-                     " items, expected 1";
-        ++skipped_;
-        return false;
-    }
-
-    std::string final_handle = state.stack[0].handle;
+    std::string final_handle = emit_proof_tree(tree, info, state, error);
     if (final_handle.empty()) {
-        if (error) *error = "final stack entry has no handle";
         ++skipped_;
         return false;
     }
@@ -1511,6 +1061,85 @@ std::string MmTranslator::emit_proof(
         oss << "\n";
     }
     return oss.str();
+}
+
+// ===================================================================
+// Definition classification
+// ===================================================================
+
+MmTranslator::DefClassification MmTranslator::classify_definitions() const {
+    DefClassification result;
+
+    for (const auto& label : db_.assertion_order()) {
+        if (label.substr(0, 3) != "df-") continue;
+
+        const Assertion* a = db_.get_assertion(label);
+        if (!a || a->kind != Assertion::Kind::Axiom) continue;
+
+        const auto& expr = a->expression;
+        size_t start = (!expr.empty() && expr[0] == "|-") ? 1 : 0;
+
+        // Build a minimal FrameInfo for parsing
+        FrameInfo info;
+        const MandatoryFrame& frame = a->frame;
+        for (size_t i = 0; i < frame.hyp_labels.size(); ++i) {
+            if (!frame.is_floating[i]) continue;
+            const FloatingHyp* fh = db_.get_float_hyp(frame.hyp_labels[i]);
+            if (!fh) continue;
+            if (fh->typecode == "wff") {
+                info.wff_to_set[fh->variable] = "S_" + fh->variable;
+                info.set_var_order.push_back("S_" + fh->variable);
+            } else if (fh->typecode == "setvar" || fh->typecode == "class") {
+                info.setvars.push_back(fh->variable);
+            }
+        }
+        info.dummy_var = "u0";
+
+        WffPtr ast = parse_mm_wff(expr, start, info);
+        if (!ast || ast->kind == WffNode::Kind::Literal) {
+            result.parse_fail.push_back(label);
+            continue;
+        }
+
+        // Strip outer forall/exists quantifiers
+        const WffNode* body = ast.get();
+        while (body && (body->kind == WffNode::Kind::Forall ||
+                        body->kind == WffNode::Kind::Exists)) {
+            body = body->left.get();
+        }
+
+        // Check for biconditional
+        if (!body || body->kind != WffNode::Kind::Binary ||
+            body->op != WffNode::Op::Iff) {
+            std::string kind_str;
+            if (body) {
+                switch (body->kind) {
+                    case WffNode::Kind::Binary:
+                        switch (body->op) {
+                            case WffNode::Op::Implies: kind_str = "implies"; break;
+                            case WffNode::Op::And:     kind_str = "and"; break;
+                            case WffNode::Op::Or:      kind_str = "or"; break;
+                            default: kind_str = "binary"; break;
+                        }
+                        break;
+                    default: kind_str = "other"; break;
+                }
+            } else {
+                kind_str = "null";
+            }
+            result.not_bic.push_back({label, kind_str});
+            continue;
+        }
+
+        // Compare both sides
+        if (*body->left == *body->right) {
+            result.identity.push_back(label);
+        } else {
+            result.non_identity.push_back(label);
+        }
+    }
+
+    return result;
 }
 
 }  // namespace metamath
