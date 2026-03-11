@@ -12,17 +12,15 @@ using FrameInfo = MmTranslator::FrameInfo;
 using ProofState = MmTranslator::ProofState;
 
 struct WffAtom {
-    std::string witness_set;
     std::string iff_handle;
     std::string compound_str;
     std::string elem_str;
 };
 
 struct CompResult {
-    std::string set_var;       // witness set name or caller's S_var
+    std::string set_var;       // witness set name (iota term) or caller's S_var
     std::string iff_handle;    // fully expanded iff, empty if identity
     std::string compound_str;  // FOL string of fully expanded compound form
-    int exists_opened = 0;     // number of exists scopes opened
 };
 
 // Leaf renderer using WffAtom compound_str for Var nodes.

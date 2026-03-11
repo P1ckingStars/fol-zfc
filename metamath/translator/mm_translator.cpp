@@ -35,8 +35,6 @@ bool MmTranslator::is_syntax_builder(const Assertion* a) const {
 // Expression translation
 // ===================================================================
 
-// make_claim_renderer is defined in proof_emit.h/cpp
-
 // ===================================================================
 // Comprehension helpers (member wrappers)
 // ===================================================================
@@ -74,7 +72,6 @@ std::string MmTranslator::emit_comprehension_use(
         std::string iff_handle;   // non-empty if compound
     };
     std::vector<Binding> bindings;
-    int exists_count = 0;  // number of exists scopes opened
 
     for (const auto& ref_set : ref_info.set_var_order) {
         std::string wff_var;
@@ -104,7 +101,6 @@ std::string MmTranslator::emit_comprehension_use(
                 return "";
             }
             bindings.push_back({wff_var, cr.set_var, cr.iff_handle});
-            exists_count += cr.exists_opened;
         }
     }
 
@@ -112,7 +108,6 @@ std::string MmTranslator::emit_comprehension_use(
     std::unordered_map<std::string, WffAtom> atom_map;
     for (const auto& b : bindings) {
         WffAtom wa;
-        wa.witness_set = b.target_set;
         wa.iff_handle = b.iff_handle;
         wa.elem_str = "elem(" + caller_info.dummy_var + ", " + b.target_set + ")";
         // Compute compound form
@@ -146,7 +141,6 @@ std::string MmTranslator::emit_comprehension_use(
             if (tf_set.empty()) tf_set = caller_info.dummy_var;
 
             WffAtom wa;
-            wa.witness_set = tf_set;
             wa.iff_handle = "";
             wa.elem_str = "elem(" + caller_info.dummy_var + ", " + tf_set + ")";
             std::string taut = "(elem(" + caller_info.dummy_var + ", " + tf_set +
@@ -213,13 +207,6 @@ std::string MmTranslator::emit_comprehension_use(
     std::string h_compound = convert_proof(
         *ref_info.conclusion_ast, h,
         atom_map, /*forward=*/true, state);
-
-    // Close exists scopes
-    for (int i = 0; i < exists_count; ++i) {
-        std::string h_next = state.fresh();
-        state.emit(h_next + " = exists_intro " + h_compound);
-        h_compound = h_next;
-    }
 
     return h_compound;
 }
@@ -343,7 +330,10 @@ bool MmTranslator::build_frame_info(const Assertion& thm, FrameInfo& info,
         info.ess_hyps.push_back({frame.hyp_labels[i], fol, ast});
     }
 
-    // Parse conclusion AST
+    // Parse conclusion AST.
+    // For the theorem being translated, translate() re-parses this after the
+    // pre-scan discovers optional variables. For referenced theorems (via
+    // get_frame_info), this is the only parse and is used by comprehension.
     {
         size_t cstart = (!thm.expression.empty() && thm.expression[0] == "|-")
                             ? 1 : 0;
