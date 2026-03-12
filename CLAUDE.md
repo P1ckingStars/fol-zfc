@@ -120,6 +120,7 @@ Negation:    ~A, !A, not A
 Binary:      A & B, A | B, A -> B, A <-> B
              and, or, implies, iff (keyword alternatives)
 Quantified:  forall x. P(x), exists x. P(x)
+Iota terms:  P((iota x. Q(x)))  — definite description as predicate argument
 Statements:  axiom name: φ, claim name: φ, @def(P) axiom name: φ
 ```
 
@@ -339,6 +340,10 @@ eq_subst h_eq, h_phi    # eq(a,b), φ(a) ⊢ φ(b) (replaces all a with b)
 # Classical
 double_neg_elim h       # ¬¬A ⊢ A
 excluded_middle h       # ⊢ A ∨ ¬A
+
+# Definite descriptions (Hilbert ε)
+iota_elim h             # ∃x.φ(x) ⊢ φ(ιx.φ(x))
+iota_elim h, t          # same, but names the iota term t for use in forall_elim
 ```
 
 ### eq_subst Details

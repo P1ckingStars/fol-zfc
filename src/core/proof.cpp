@@ -49,6 +49,8 @@ ScopeDeps ProofStack::compute_var_deps(FormulaHandle const& h) const {
             if (t.is_fixed()) {
                 int scope = find_scope_for_term(t);
                 if (scope >= 0) deps |= scope_dep(scope);
+            } else if (t.is_description()) {
+                deps |= compute_var_deps(t.as_description().body);
             }
         }
         return deps;
@@ -115,6 +117,10 @@ int ProofStack::find_scope_for_term(Term const& t) const {
     if (t.is_generalized()) {
         return -1;
     }
+    // Description terms don't have a single introducing scope
+    if (t.is_description()) {
+        return -1;
+    }
     // Fixed vars: find the FixVarScope that introduced it
     var_index var_idx = t.as_variable();
     for (size_t i = 0; i < scopes.size(); ++i) {
@@ -133,6 +139,10 @@ bool ProofStack::is_term_accessible(Term const& t) const {
     if (t.is_generalized()) {
         return false;
     }
+    // Description terms: all free fixed vars in the body must be in live scopes
+    if (t.is_description()) {
+        return description_body_accessible(t.as_description().body);
+    }
     // Fixed vars must be introduced by an enclosing FixVarScope
     return find_scope_for_term(t) >= 0;
 }
@@ -144,6 +154,9 @@ bool ProofStack::formula_contains_fixed_var(FormulaHandle const& h, var_index va
         const PredicateInstance& p = f.as_predicate();
         for (const Term& t : p.args()) {
             if (t.is_fixed() && t.as_variable() == var_idx) {
+                return true;
+            }
+            if (t.is_description() && formula_contains_fixed_var(t.as_description().body, var_idx)) {
                 return true;
             }
         }
@@ -706,6 +719,49 @@ FormulaResult ClassicalProofStack::peirce(FormulaHandle const &a, FormulaHandle 
     FormulaHandle peirce_formula = builder().make_implies(inner, a);
     derive_with_deps(peirce_formula, {});
     return peirce_formula;
+}
+
+// ========== Definite Descriptions ==========
+
+bool ProofStack::description_body_accessible(FormulaHandle const& h) const {
+    const Formula& f = h.get();
+
+    if (f.is_predicate()) {
+        for (const Term& t : f.as_predicate().args()) {
+            if (t.is_fixed() && find_scope_for_term(t) < 0) return false;
+            if (t.is_description() && !description_body_accessible(t.as_description().body)) return false;
+            // Generalized vars are bound — skip
+        }
+        return true;
+    }
+    else if (f.is_compound()) {
+        const Compound& c = f.as_compound();
+        if (c.left.valid() && !description_body_accessible(c.left)) return false;
+        if (c.right.valid() && !description_body_accessible(c.right)) return false;
+        return true;
+    }
+    else if (f.is_quantified()) {
+        return description_body_accessible(f.as_quantified().body);
+    }
+    return true;  // Sentences are closed
+}
+
+FormulaResult ClassicalProofStack::iota_elim(FormulaHandle const &exists_formula) {
+    if (!is_derived(exists_formula)) {
+        return MAKE_ERROR << "iota_elim: formula not derived: " << exists_formula.get();
+    }
+    if (!exists_formula->is_quantified() || exists_formula->as_quantified().op != Op::Exists) {
+        return MAKE_ERROR << "iota_elim: expected existential (∃x.φ(x)), got: " << exists_formula.get();
+    }
+    const Quantified& q = exists_formula->as_quantified();
+    if (!description_body_accessible(q.body)) {
+        return MAKE_ERROR << "iota_elim: existential body contains fixed variables from closed scopes";
+    }
+    Term iota_term = Term::description(q.var, q.body);
+    auto result = formula_builder_.translate_term(q.body, q.get_var_term(), iota_term);
+    last_iota_term_ = iota_term;
+    derive_with_deps(result, deps_of(exists_formula));
+    return result;
 }
 
 }  // namespace logic

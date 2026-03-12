@@ -121,6 +121,19 @@ public:
 
 private:
     Term convert_term(const ASTNode* node) {
+        if (node->type == ASTNode::DescriptionTerm) {
+            // Build description term using DescriptionBuilder
+            Term result;
+            {
+                DescriptionBuilder db(builder_, result);
+                var_scopes_.push_back({node->name, db.var()});
+                FormulaHandle body = convert(node->body);
+                db.set_body(body);
+                var_scopes_.pop_back();
+            }
+            return result;
+        }
+
         if (node->type != ASTNode::Term) {
             throw std::runtime_error("Expected term node");
         }

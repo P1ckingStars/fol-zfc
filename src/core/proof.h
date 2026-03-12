@@ -139,6 +139,9 @@ protected:
     // Helper to check if a formula contains a specific fixed variable
     bool formula_contains_fixed_var(FormulaHandle const& f, var_index var_idx) const;
 
+    // Helper to check if all fixed vars in a description body are in live scopes
+    bool description_body_accessible(FormulaHandle const& body) const;
+
     // Helper to create existential by generalizing a witness term in a formula
     FormulaHandle make_exists_from_witness(FormulaHandle const& body, Term const& witness);
 
@@ -224,6 +227,8 @@ public:
 // They can be added to ProofStack or used via ClassicalProofStack.
 
 class ClassicalProofStack : public ProofStack {
+    std::optional<Term> last_iota_term_;
+
 public:
     using ProofStack::ProofStack;  // Inherit constructor
 
@@ -243,6 +248,12 @@ public:
     // ========== Peirce's Law ==========
     // Derive ((A → B) → A) → A (equivalent to LEM)
     FormulaResult peirce(FormulaHandle const &a, FormulaHandle const &b);
+
+    // ========== Definite Descriptions (Hilbert ε) ==========
+    // From ∃x.φ(x), derive φ(ιx.φ(x)) where ιx.φ(x) is the description term
+    FormulaResult iota_elim(FormulaHandle const &exists_formula);
+    // Returns the iota term from the last iota_elim call
+    std::optional<Term> last_iota_term() const { return last_iota_term_; }
 };
 
 }

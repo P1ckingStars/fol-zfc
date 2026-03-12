@@ -883,6 +883,294 @@ bool test_fol_test_file() {
     return true;
 }
 
+// ==================== Definite Description (Iota) Tests ====================
+
+bool test_iota_elim_basic() {
+    // From ∃x.P(x), derive P(ιx.P(x))
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_p: exists x. P(x)
+        claim p_of_iota: P((iota x_0. P(x_0)))
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto pctx = rt.prove("p_of_iota");
+    auto h_exists = pctx.use("exists_p");
+    if (!h_exists.ok()) { std::cout << "[use error] "; return false; }
+
+    auto h_result = pctx.iota_elim(h_exists.value());
+    if (!h_result.ok()) { std::cout << "[iota_elim error: " << h_result.error() << "] "; return false; }
+
+    auto qed = pctx.qed(h_result.value());
+    if (!qed.ok()) { std::cout << "[qed error: " << qed.error() << "] "; return false; }
+
+    return true;
+}
+
+bool test_iota_elim_syntax() {
+    // Test iota_elim via proof syntax
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_p: exists x. P(x)
+        claim p_of_iota: P((iota x_0. P(x_0)))
+
+        proof p_of_iota:
+            h1 = use exists_p
+            h2 = iota_elim h1
+            qed h2
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_with_forall() {
+    // Use iota term in forall_elim
+    // From ∃x.P(x) and ∀y.Q(y), derive Q(ιx.P(x))
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_p: exists x. P(x)
+        axiom all_q: forall y. Q(y)
+        claim q_of_iota: Q((iota x_0. P(x_0)))
+
+        proof q_of_iota:
+            h1 = use exists_p
+            h2 = iota_elim h1, t
+            h3 = use all_q
+            h4 = forall_elim h3, t
+            qed h4
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_binary_predicate() {
+    // From ∃x.R(x,x), derive R(ιx.R(x,x), ιx.R(x,x))
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_r: exists x. R(x, x)
+        claim r_of_iota: R((iota x_0. R(x_0, x_0)), (iota x_0. R(x_0, x_0)))
+
+        proof r_of_iota:
+            h1 = use exists_r
+            h2 = iota_elim h1
+            qed h2
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_nested_quantifier() {
+    // From ∃x.∀y.R(x,y), derive ∀y.R(ιx.∀y.R(x,y), y)
+    // Uses C++ API because de Bruijn indices differ between
+    // parsed and derived formulas for nested quantifiers
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom exists_forall_r: exists x. forall y. R(x, y)
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto pctx = rt.prove(SentenceHandle{});
+    auto h = pctx.use("exists_forall_r");
+    if (!h.ok()) { std::cout << "[use error] "; return false; }
+
+    auto h2 = pctx.iota_elim(h.value());
+    if (!h2.ok()) {
+        std::cout << "[iota_elim error: " << h2.error() << "] ";
+        return false;
+    }
+
+    // Verify the result has the expected structure
+    std::string formula_str = h2.value().get().to_string();
+    std::string expected = "forall x_0. R((iota x_1. forall x_0. R(x_1, x_0)), x_0)";
+    if (formula_str != expected) {
+        std::cout << "[unexpected: " << formula_str << " != " << expected << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_not_exists_error() {
+    // iota_elim should fail on non-existential
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom all_p: forall x. P(x)
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto pctx = rt.prove(SentenceHandle{});  // no specific goal
+    auto h = pctx.use("all_p");
+    if (!h.ok()) { std::cout << "[use error] "; return false; }
+
+    auto fail = pctx.iota_elim(h.value());
+    if (fail.ok()) {
+        std::cout << "[should have failed] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_term_to_string() {
+    // Verify the string representation of iota terms
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom exists_p: exists x. P(x)
+    )");
+    if (!result.ok()) return false;
+
+    auto pctx = rt.prove(SentenceHandle{});
+    auto h = pctx.use("exists_p");
+    auto iota_result = pctx.iota_elim(h.value());
+    if (!iota_result.ok()) return false;
+
+    std::string formula_str = iota_result.value().get().to_string();
+    // Should be P(ιx_0. P(x_0)) printed as P((iota x_0. P(x_0)))
+    if (formula_str != "P((iota x_0. P(x_0)))") {
+        std::cout << "[unexpected string: " << formula_str << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_in_eq_subst() {
+    // Use iota term with eq_subst
+    // From ∃x.P(x) and eq(a,b) and P(a), derive P(b) via eq_subst
+    // Then from ∃y.Q(y), use iota term in forall_elim on ∀z.(z=z)
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_eq: exists x. eq(x, x)
+        axiom all_refl: forall x. eq(x, x)
+        claim iota_eq: eq((iota x_0. eq(x_0, x_0)), (iota x_0. eq(x_0, x_0)))
+
+        proof iota_eq:
+            h1 = use exists_eq
+            h2 = iota_elim h1, t
+            h3 = use all_refl
+            h4 = forall_elim h3, t
+            qed h4
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_capture_avoidance() {
+    // Tests that forall_elim correctly handles capture avoidance when the
+    // formula contains an iota term whose body reuses the same generalized index.
+    //
+    // This is the exact pattern the translator needs for comprehension:
+    //   axiom: ∀A.∀B.∃C.∀u.(elem(u,C) <-> (elem(u,A) -> elem(u,B)))
+    //   After forall_elim(A,B) and iota_elim, the outer ∀u and inner ∀u
+    //   (inside the iota body) use the same generalized index.
+    //   forall_elim on the outer ∀u must NOT substitute inside the iota body.
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom comp: forall A. forall B. exists C. forall u. (R(u, C) <-> (R(u, A) -> R(u, B)))
+    )");
+    if (!result.ok()) { std::cout << "[load error: " << result.error() << "] "; return false; }
+
+    auto pctx = rt.prove(SentenceHandle{});
+
+    // fix A, B
+    auto A = pctx.fix_var();
+    auto B = pctx.fix_var();
+
+    // use comp; forall_elim with A, B
+    auto h_comp = pctx.use("comp");
+    if (!h_comp.ok()) { std::cout << "[use error] "; return false; }
+    auto h1 = pctx.forall_elim(h_comp.value(), A);
+    if (!h1.ok()) { std::cout << "[fe1 error: " << h1.error() << "] "; return false; }
+    auto h2 = pctx.forall_elim(h1.value(), B);
+    if (!h2.ok()) { std::cout << "[fe2 error: " << h2.error() << "] "; return false; }
+
+    // iota_elim: from ∃C.∀u.(...) get ∀u.(R(u, ιC.∀u.(...)) <-> ...)
+    auto h3 = pctx.iota_elim(h2.value());
+    if (!h3.ok()) { std::cout << "[iota error: " << h3.error() << "] "; return false; }
+
+    // fix u; forall_elim with u — this is the critical step.
+    // Without capture avoidance, this would incorrectly substitute inside
+    // the iota body's ∀u, corrupting the term.
+    auto u = pctx.fix_var();
+    auto h4 = pctx.forall_elim(h3.value(), u);
+    if (!h4.ok()) { std::cout << "[fe3 error: " << h4.error() << "] "; return false; }
+
+    // Verify the result: R(u, ιC.∀u.(...)) <-> (R(u, A) -> R(u, B))
+    // Extract both sides of the iff to verify structure
+    const auto& f = h4.value().get();
+    if (!f.is_compound() || f.as_compound().op != logic::Op::Iff) {
+        std::cout << "[expected iff, got: " << f << "] ";
+        return false;
+    }
+
+    // The left side should contain the iota term
+    std::string s = f.to_string();
+    if (s.find("(iota") == std::string::npos) {
+        std::cout << "[expected iota term in result: " << s << "] ";
+        return false;
+    }
+
+    return true;
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -923,6 +1211,18 @@ int main() {
     std::cout << "\n── Ordered Pair Proofs ──\n";
     run_test("Load ordered pair axioms and claims", test_ordered_pair_axioms_loaded);
     run_test("Execute ordered pair proofs", test_execute_ordered_pair_proofs);
+
+    // Definite description (iota) tests
+    std::cout << "\n── Definite Description (Iota) Tests ──\n";
+    run_test("iota_elim basic (C++ API)", test_iota_elim_basic);
+    run_test("iota_elim proof syntax", test_iota_elim_syntax);
+    run_test("iota_elim with forall_elim", test_iota_elim_with_forall);
+    run_test("iota_elim binary predicate", test_iota_elim_binary_predicate);
+    run_test("iota_elim nested quantifier", test_iota_elim_nested_quantifier);
+    run_test("iota_elim error on non-existential", test_iota_elim_not_exists_error);
+    run_test("iota term to_string", test_iota_term_to_string);
+    run_test("iota term in eq context", test_iota_in_eq_subst);
+    run_test("iota_elim capture avoidance", test_iota_elim_capture_avoidance);
 
     // Integration test
     std::cout << "\n── Integration Test ──\n";

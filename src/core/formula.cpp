@@ -30,6 +30,10 @@ std::string term_to_string(const Term& t) {
     if (t.is_generalized()) {
         // Generalized variables are bound by quantifiers - use same x_N format
         return "x_" + std::to_string(t.as_variable());
+    } else if (t.is_description()) {
+        const auto& d = t.as_description();
+        return "(iota x_" + std::to_string(d.bound_var) + ". " +
+               formula_to_string_impl(d.body.get(), 0) + ")";
     } else {
         // Fixed (instantiated) variables - use distinct f_N format
         return "f_" + std::to_string(t.as_variable());

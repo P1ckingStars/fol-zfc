@@ -111,7 +111,9 @@ typedef void* yyscan_t;
     DOUBLE_NEG_ELIM = 302,         /* DOUBLE_NEG_ELIM  */
     EXCLUDED_MIDDLE = 303,         /* EXCLUDED_MIDDLE  */
     EQ_SUBST = 304,                /* EQ_SUBST  */
-    UNPROVED = 305                 /* UNPROVED  */
+    IOTA_ELIM = 305,               /* IOTA_ELIM  */
+    IOTA = 306,                    /* IOTA  */
+    UNPROVED = 307                 /* UNPROVED  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -126,7 +128,7 @@ union YYSTYPE
     ASTNode* node;
     std::vector<ASTNode*>* node_list;
 
-#line 130 "formula_parser.tab.h"
+#line 132 "formula_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -170,6 +172,6 @@ void yypstate_delete (yypstate *ps);
 
 void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg);
 
-#line 174 "formula_parser.tab.h"
+#line 176 "formula_parser.tab.h"
 
 #endif /* !YY_YY_FORMULA_PARSER_TAB_H_INCLUDED  */

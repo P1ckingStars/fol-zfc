@@ -333,6 +333,9 @@ claim mm_nfsabg: forall x. forall y. forall z. forall S_ph. forall u0. ((elem(u0
 # dfcleq
 claim mm_dfcleq: forall x. forall A. forall B. forall y. forall z. forall v. forall u. forall t. forall u0. (eq(A, B) <-> (forall x. (elem(x, A) <-> elem(x, B))))
 
+# cvjust
+claim mm_cvjust: forall x. forall y. forall zz0. forall z. forall zz1. forall u0. (forall zz1. (elem(zz1, x) <-> elem(zz1, x)))
+
 # eqid
 claim mm_eqid: forall A. forall x. forall u0. eq(A, A)
 
@@ -360,6 +363,12 @@ claim mm_clelsb1: forall x. forall y. forall A. forall w. forall u0. (elem(y, A)
 # clelsb2
 claim mm_clelsb2: forall x. forall y. forall A. forall z. forall u0. (elem(A, y) <-> elem(A, y))
 
+# abid1
+claim mm_abid1: forall x. forall A. forall zz0. forall zz1. forall u0. (forall zz1. (elem(zz1, A) <-> elem(zz1, A)))
+
+# abid2
+claim mm_abid2: forall x. forall A. forall zz0. forall zz1. forall u0. (forall zz1. (elem(zz1, A) <-> elem(zz1, A)))
+
 # nfcv
 claim mm_nfcv: forall x. forall A. forall zz0. forall y. forall zz1. forall u0. (elem(zz1, A) -> elem(zz1, A))
 
@@ -385,28 +394,241 @@ claim mm_nfaba1OLD: forall x. forall y. forall zz0. forall zz1. forall S_ph. for
 claim mm_nfaba1g: forall x. forall y. forall zz0. forall zz1. forall S_ph. forall u0. (elem(u0, S_ph) -> elem(u0, S_ph))
 
 # neii
-claim mm_neii: forall A. forall B. forall u0. (~eq(A, B) -> ~eq(A, B))
+claim mm_neii: forall A. forall B. forall u0. (ne(A, B) -> ~eq(A, B))
 
 # neir
-claim mm_neir: forall A. forall B. forall u0. (~eq(A, B) -> ~eq(A, B))
+claim mm_neir: forall A. forall B. forall u0. (~eq(A, B) -> ne(A, B))
+
+# nne
+claim mm_nne: forall A. forall B. forall u0. (~ne(A, B) <-> eq(A, B))
 
 # neneqd
-claim mm_neneqd: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> ~eq(A, B)) -> (elem(u0, S_ph) -> ~eq(A, B)))
+claim mm_neneqd: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> ne(A, B)) -> (elem(u0, S_ph) -> ~eq(A, B)))
 
 # neneq
-claim mm_neneq: forall A. forall B. forall u0. (~eq(A, B) -> ~eq(A, B))
+claim mm_neneq: forall A. forall B. forall u0. (ne(A, B) -> ~eq(A, B))
 
 # neqned
-claim mm_neqned: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> ~eq(A, B)) -> (elem(u0, S_ph) -> ~eq(A, B)))
+claim mm_neqned: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> ~eq(A, B)) -> (elem(u0, S_ph) -> ne(A, B)))
 
 # neqne
-claim mm_neqne: forall A. forall B. forall u0. (~eq(A, B) -> ~eq(A, B))
+claim mm_neqne: forall A. forall B. forall u0. (~eq(A, B) -> ne(A, B))
+
+# neirr
+claim mm_neirr: forall A. forall u0. ~ne(A, A)
+
+# exmidne
+claim mm_exmidne: forall A. forall B. forall u0. (eq(A, B) | ne(A, B))
+
+# eqneqall
+claim mm_eqneqall: forall A. forall B. forall S_ph. forall u0. (eq(A, B) -> (ne(A, B) -> elem(u0, S_ph)))
+
+# nonconne
+claim mm_nonconne: forall A. forall B. forall u0. ~(eq(A, B) & ne(A, B))
+
+# necon3ad
+claim mm_necon3ad: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> eq(A, B))) -> (elem(u0, S_ph) -> (ne(A, B) -> ~elem(u0, S_ps))))
+
+# necon3bd
+claim mm_necon3bd: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (eq(A, B) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> (~elem(u0, S_ps) -> ne(A, B))))
+
+# necon2ad
+claim mm_necon2ad: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (eq(A, B) -> ~elem(u0, S_ps))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> ne(A, B))))
+
+# necon2bd
+claim mm_necon2bd: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) -> ne(A, B))) -> (elem(u0, S_ph) -> (eq(A, B) -> ~elem(u0, S_ps))))
+
+# necon1ad
+claim mm_necon1ad: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (~elem(u0, S_ps) -> eq(A, B))) -> (elem(u0, S_ph) -> (ne(A, B) -> elem(u0, S_ps))))
+
+# necon1bd
+claim mm_necon1bd: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (ne(A, B) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> (~elem(u0, S_ps) -> eq(A, B))))
+
+# necon4ad
+claim mm_necon4ad: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (ne(A, B) -> ~elem(u0, S_ps))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> eq(A, B))))
+
+# necon4bd
+claim mm_necon4bd: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (~elem(u0, S_ps) -> ne(A, B))) -> (elem(u0, S_ph) -> (eq(A, B) -> elem(u0, S_ps))))
+
+# necon3d
+claim mm_necon3d: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (eq(A, B) -> eq(C, D))) -> (elem(u0, S_ph) -> (ne(C, D) -> ne(A, B))))
+
+# necon1d
+claim mm_necon1d: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (ne(A, B) -> eq(C, D))) -> (elem(u0, S_ph) -> (ne(C, D) -> eq(A, B))))
+
+# necon2d
+claim mm_necon2d: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (eq(A, B) -> ne(C, D))) -> (elem(u0, S_ph) -> (eq(C, D) -> ne(A, B))))
+
+# necon4d
+claim mm_necon4d: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (ne(A, B) -> ne(C, D))) -> (elem(u0, S_ph) -> (eq(C, D) -> eq(A, B))))
+
+# necon3ai
+claim mm_necon3ai: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> eq(A, B)) -> (ne(A, B) -> ~elem(u0, S_ph)))
+
+# necon3bi
+claim mm_necon3bi: forall A. forall B. forall S_ph. forall u0. ((eq(A, B) -> elem(u0, S_ph)) -> (~elem(u0, S_ph) -> ne(A, B)))
+
+# necon1ai
+claim mm_necon1ai: forall A. forall B. forall S_ph. forall u0. ((~elem(u0, S_ph) -> eq(A, B)) -> (ne(A, B) -> elem(u0, S_ph)))
+
+# necon1bi
+claim mm_necon1bi: forall A. forall B. forall S_ph. forall u0. ((ne(A, B) -> elem(u0, S_ph)) -> (~elem(u0, S_ph) -> eq(A, B)))
+
+# necon2ai
+claim mm_necon2ai: forall A. forall B. forall S_ph. forall u0. ((eq(A, B) -> ~elem(u0, S_ph)) -> (elem(u0, S_ph) -> ne(A, B)))
+
+# necon2bi
+claim mm_necon2bi: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> ne(A, B)) -> (eq(A, B) -> ~elem(u0, S_ph)))
+
+# necon4ai
+claim mm_necon4ai: forall A. forall B. forall S_ph. forall u0. ((ne(A, B) -> ~elem(u0, S_ph)) -> (elem(u0, S_ph) -> eq(A, B)))
+
+# necon3i
+claim mm_necon3i: forall A. forall B. forall C. forall D. forall u0. ((eq(A, B) -> eq(C, D)) -> (ne(C, D) -> ne(A, B)))
+
+# necon1i
+claim mm_necon1i: forall A. forall B. forall C. forall D. forall u0. ((ne(A, B) -> eq(C, D)) -> (ne(C, D) -> eq(A, B)))
+
+# necon2i
+claim mm_necon2i: forall A. forall B. forall C. forall D. forall u0. ((eq(A, B) -> ne(C, D)) -> (eq(C, D) -> ne(A, B)))
+
+# necon4i
+claim mm_necon4i: forall A. forall B. forall C. forall D. forall u0. ((ne(A, B) -> ne(C, D)) -> (eq(C, D) -> eq(A, B)))
+
+# necon3abid
+claim mm_necon3abid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (eq(A, B) <-> elem(u0, S_ps))) -> (elem(u0, S_ph) -> (ne(A, B) <-> ~elem(u0, S_ps))))
+
+# necon3bbid
+claim mm_necon3bbid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> eq(A, B))) -> (elem(u0, S_ph) -> (~elem(u0, S_ps) <-> ne(A, B))))
+
+# necon1abid
+claim mm_necon1abid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (~elem(u0, S_ps) <-> eq(A, B))) -> (elem(u0, S_ph) -> (ne(A, B) <-> elem(u0, S_ps))))
+
+# necon1bbid
+claim mm_necon1bbid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (ne(A, B) <-> elem(u0, S_ps))) -> (elem(u0, S_ph) -> (~elem(u0, S_ps) <-> eq(A, B))))
+
+# necon4abid
+claim mm_necon4abid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (ne(A, B) <-> ~elem(u0, S_ps))) -> (elem(u0, S_ph) -> (eq(A, B) <-> elem(u0, S_ps))))
+
+# necon4bbid
+claim mm_necon4bbid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (~elem(u0, S_ps) <-> ne(A, B))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) <-> eq(A, B))))
+
+# necon2abid
+claim mm_necon2abid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (eq(A, B) <-> ~elem(u0, S_ps))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) <-> ne(A, B))))
+
+# necon2bbid
+claim mm_necon2bbid: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> ne(A, B))) -> (elem(u0, S_ph) -> (eq(A, B) <-> ~elem(u0, S_ps))))
+
+# necon3bid
+claim mm_necon3bid: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (eq(A, B) <-> eq(C, D))) -> (elem(u0, S_ph) -> (ne(A, B) <-> ne(C, D))))
+
+# necon4bid
+claim mm_necon4bid: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (ne(A, B) <-> ne(C, D))) -> (elem(u0, S_ph) -> (eq(A, B) <-> eq(C, D))))
+
+# necon3abii
+claim mm_necon3abii: forall A. forall B. forall S_ph. forall u0. ((eq(A, B) <-> elem(u0, S_ph)) -> (ne(A, B) <-> ~elem(u0, S_ph)))
+
+# necon3bbii
+claim mm_necon3bbii: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) <-> eq(A, B)) -> (~elem(u0, S_ph) <-> ne(A, B)))
+
+# necon1abii
+claim mm_necon1abii: forall A. forall B. forall S_ph. forall u0. ((~elem(u0, S_ph) <-> eq(A, B)) -> (ne(A, B) <-> elem(u0, S_ph)))
+
+# necon1bbii
+claim mm_necon1bbii: forall A. forall B. forall S_ph. forall u0. ((ne(A, B) <-> elem(u0, S_ph)) -> (~elem(u0, S_ph) <-> eq(A, B)))
+
+# necon2abii
+claim mm_necon2abii: forall A. forall B. forall S_ph. forall u0. ((eq(A, B) <-> ~elem(u0, S_ph)) -> (elem(u0, S_ph) <-> ne(A, B)))
+
+# necon2bbii
+claim mm_necon2bbii: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) <-> ne(A, B)) -> (eq(A, B) <-> ~elem(u0, S_ph)))
+
+# necon3bii
+claim mm_necon3bii: forall A. forall B. forall C. forall D. forall u0. ((eq(A, B) <-> eq(C, D)) -> (ne(A, B) <-> ne(C, D)))
+
+# necom
+claim mm_necom: forall A. forall B. forall u0. (ne(A, B) <-> ne(B, A))
+
+# necomi
+claim mm_necomi: forall A. forall B. forall u0. (ne(A, B) -> ne(B, A))
+
+# necomd
+claim mm_necomd: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> ne(A, B)) -> (elem(u0, S_ph) -> ne(B, A)))
+
+# nesym
+claim mm_nesym: forall A. forall B. forall u0. (ne(A, B) <-> ~eq(B, A))
+
+# nesymi
+claim mm_nesymi: forall A. forall B. forall u0. (ne(A, B) -> ~eq(B, A))
+
+# nesymir
+claim mm_nesymir: forall A. forall B. forall u0. (~eq(A, B) -> ne(B, A))
+
+# nebi
+claim mm_nebi: forall A. forall B. forall C. forall D. forall u0. ((eq(A, B) <-> eq(C, D)) <-> (ne(A, B) <-> ne(C, D)))
+
+# pm2.61ine
+claim mm_pm2_61ine: forall A. forall B. forall S_ph. forall u0. ((eq(A, B) -> elem(u0, S_ph)) -> ((ne(A, B) -> elem(u0, S_ph)) -> elem(u0, S_ph)))
+
+# pm2.21ddne
+claim mm_pm2_21ddne: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> eq(A, B)) -> ((elem(u0, S_ph) -> ne(A, B)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+
+# pm2.61ne
+claim mm_pm2_61ne: forall A. forall B. forall S_ph. forall S_ps. forall S_ch. forall u0. ((eq(A, B) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> (((elem(u0, S_ph) & ne(A, B)) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> elem(u0, S_ch)) -> (elem(u0, S_ph) -> elem(u0, S_ps)))))
+
+# pm2.61dne
+claim mm_pm2_61dne: forall A. forall B. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> (eq(A, B) -> elem(u0, S_ps))) -> ((elem(u0, S_ph) -> (ne(A, B) -> elem(u0, S_ps))) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+
+# pm2.61dane
+claim mm_pm2_61dane: forall A. forall B. forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) & eq(A, B)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & ne(A, B)) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+
+# pm2.61da2ne
+claim mm_pm2_61da2ne: forall A. forall B. forall C. forall D. forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) & eq(A, B)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & eq(C, D)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & (ne(A, B) & ne(C, D))) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps)))))
+
+# pm2.61da3ne
+claim mm_pm2_61da3ne: forall A. forall B. forall C. forall D. forall E. forall F. forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) & eq(A, B)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & eq(C, D)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & eq(E, F)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & ((ne(A, B) & ne(C, D)) & ne(E, F))) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))))
+
+# pm2.61iine
+claim mm_pm2_61iine: forall A. forall B. forall C. forall D. forall S_ph. forall u0. (((ne(A, C) & ne(B, D)) -> elem(u0, S_ph)) -> ((eq(A, C) -> elem(u0, S_ph)) -> ((eq(B, D) -> elem(u0, S_ph)) -> elem(u0, S_ph))))
+
+# mteqand
+claim mm_mteqand: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> ne(C, D)) -> (((elem(u0, S_ph) & eq(A, B)) -> eq(C, D)) -> (elem(u0, S_ph) -> ne(A, B))))
+
+# neor
+claim mm_neor: forall A. forall B. forall S_ps. forall u0. ((eq(A, B) | elem(u0, S_ps)) <-> (ne(A, B) -> elem(u0, S_ps)))
+
+# neanior
+claim mm_neanior: forall A. forall B. forall C. forall D. forall u0. ((ne(A, B) & ne(C, D)) <-> ~(eq(A, B) | eq(C, D)))
+
+# ne3anior
+claim mm_ne3anior: forall A. forall B. forall C. forall D. forall E. forall F. forall u0. (((ne(A, B) & ne(C, D)) & ne(E, F)) <-> ~((eq(A, B) | eq(C, D)) | eq(E, F)))
+
+# neorian
+claim mm_neorian: forall A. forall B. forall C. forall D. forall u0. ((ne(A, B) | ne(C, D)) <-> ~(eq(A, B) & eq(C, D)))
+
+# nemtbir
+claim mm_nemtbir: forall A. forall B. forall S_ph. forall u0. (ne(A, B) -> ((elem(u0, S_ph) <-> eq(A, B)) -> ~elem(u0, S_ph)))
 
 # neli
-claim mm_neli: forall A. forall B. forall u0. (~elem(A, B) -> ~elem(A, B))
+claim mm_neli: forall A. forall B. forall u0. (nel(A, B) -> ~elem(A, B))
 
 # nelir
-claim mm_nelir: forall A. forall B. forall u0. (~elem(A, B) -> ~elem(A, B))
+claim mm_nelir: forall A. forall B. forall u0. (~elem(A, B) -> nel(A, B))
+
+# nelcon3d
+claim mm_nelcon3d: forall A. forall B. forall C. forall D. forall S_ph. forall u0. ((elem(u0, S_ph) -> (elem(A, B) -> elem(C, D))) -> (elem(u0, S_ph) -> (nel(C, D) -> nel(A, B))))
+
+# nnel
+claim mm_nnel: forall A. forall B. forall u0. (~nel(A, B) <-> elem(A, B))
+
+# pm2.24nel
+claim mm_pm2_24nel: forall A. forall B. forall S_ph. forall u0. (elem(A, B) -> (nel(A, B) -> elem(u0, S_ph)))
+
+# pm2.61danel
+claim mm_pm2_61danel: forall A. forall B. forall S_ph. forall S_ps. forall u0. (((elem(u0, S_ph) & elem(A, B)) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & nel(A, B)) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+
+# ralel
+claim mm_ralel: forall x. forall A. forall u0. (forall x. (elem(x, A) -> elem(x, A)))
 
 # nfra1
 claim mm_nfra1: forall x. forall A. forall S_ph. forall u0. ((forall x. (elem(x, A) -> elem(u0, S_ph))) -> (forall x. (elem(x, A) -> elem(u0, S_ph))))
@@ -447,6 +669,9 @@ claim mm_nfrab1: forall x. forall A. forall zz0. forall zz1. forall S_ph. forall
 # rabid
 claim mm_rabid: forall x. forall A. forall S_ph. forall u0. ((elem(x, A) & elem(u0, S_ph)) <-> (elem(x, A) & elem(u0, S_ph)))
 
+# vjust
+claim mm_vjust: forall x. forall y. forall zz0. forall z. forall zz1. forall u0. (forall zz1. (eq(zz1, zz1) <-> eq(zz1, zz1)))
+
 # vex
 claim mm_vex: forall x. forall u0. (elem(u0, u0) -> elem(u0, u0))
 
@@ -456,11 +681,20 @@ claim mm_cdeqi: forall x. forall y. forall S_ph. forall u0. ((eq(x, y) -> elem(u
 # cdeqri
 claim mm_cdeqri: forall x. forall y. forall S_ph. forall u0. ((eq(x, y) -> elem(u0, S_ph)) -> (eq(x, y) -> elem(u0, S_ph)))
 
+# cdeqth
+claim mm_cdeqth: forall x. forall y. forall S_ph. forall u0. (elem(u0, S_ph) -> (eq(x, y) -> elem(u0, S_ph)))
+
+# cdeqnot
+claim mm_cdeqnot: forall x. forall y. forall S_ph. forall S_ps. forall u0. ((eq(x, y) -> (elem(u0, S_ph) <-> elem(u0, S_ps))) -> (eq(x, y) -> (~elem(u0, S_ph) <-> ~elem(u0, S_ps))))
+
 # cdeqal
 claim mm_cdeqal: forall x. forall y. forall z. forall S_ph. forall S_ps. forall u0. ((eq(x, y) -> (elem(u0, S_ph) <-> elem(u0, S_ps))) -> (eq(x, y) -> (elem(u0, S_ph) <-> elem(u0, S_ps))))
 
 # cdeqal1
 claim mm_cdeqal1: forall x. forall y. forall S_ph. forall S_ps. forall u0. ((eq(x, y) -> (elem(u0, S_ph) <-> elem(u0, S_ps))) -> (eq(x, y) -> (elem(u0, S_ph) <-> elem(u0, S_ps))))
+
+# cdeqim
+claim mm_cdeqim: forall x. forall y. forall S_ph. forall S_ps. forall S_ch. forall S_th. forall u0. ((eq(x, y) -> (elem(u0, S_ph) <-> elem(u0, S_ps))) -> ((eq(x, y) -> (elem(u0, S_ch) <-> elem(u0, S_th))) -> (eq(x, y) -> ((elem(u0, S_ph) -> elem(u0, S_ch)) <-> (elem(u0, S_ps) -> elem(u0, S_th))))))
 
 # cdeqcv
 claim mm_cdeqcv: forall x. forall y. forall u0. (eq(x, y) -> eq(x, y))
@@ -540,8 +774,32 @@ claim mm_spesbc: forall x. forall A. forall S_ph. forall u0. (elem(u0, S_ph) -> 
 # spesbcd
 claim mm_spesbcd: forall x. forall A. forall S_ph. forall S_ps. forall u0. ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
 
+# csbid
+claim mm_csbid: forall x. forall A. forall zz0. forall y. forall zz1. forall u0. (forall zz1. (elem(zz1, A) <-> elem(zz1, A)))
+
+# csbcow
+claim mm_csbcow: forall x. forall y. forall A. forall B. forall zz0. forall z. forall zz1. forall u0. (forall zz1. (elem(zz1, B) <-> elem(zz1, B)))
+
+# csbco
+claim mm_csbco: forall x. forall y. forall A. forall B. forall zz0. forall z. forall zz1. forall u0. (forall zz1. (elem(zz1, B) <-> elem(zz1, B)))
+
 # nfcsb1v
 claim mm_nfcsb1v: forall x. forall A. forall B. forall zz0. forall zz1. forall u0. (elem(zz1, B) -> elem(zz1, B))
+
+# difjust
+claim mm_difjust: forall x. forall y. forall A. forall B. forall zz0. forall z. forall zz1. forall u0. (forall zz1. ((elem(zz1, A) & ~elem(zz1, B)) <-> (elem(zz1, A) & ~elem(zz1, B))))
+
+# unjust
+claim mm_unjust: forall x. forall y. forall A. forall B. forall zz0. forall z. forall zz1. forall u0. (forall zz1. ((elem(zz1, A) | elem(zz1, B)) <-> (elem(zz1, A) | elem(zz1, B))))
+
+# injust
+claim mm_injust: forall x. forall y. forall A. forall B. forall zz0. forall z. forall zz1. forall u0. (forall zz1. ((elem(zz1, A) & elem(zz1, B)) <-> (elem(zz1, A) & elem(zz1, B))))
+
+# dfin5
+claim mm_dfin5: forall x. forall A. forall B. forall zz0. forall zz1. forall u0. (forall zz1. ((elem(zz1, A) & elem(zz1, B)) <-> (elem(zz1, A) & elem(zz1, B))))
+
+# dfdif2
+claim mm_dfdif2: forall x. forall A. forall B. forall zz0. forall zz1. forall u0. (forall zz1. ((elem(zz1, A) & ~elem(zz1, B)) <-> (elem(zz1, A) & ~elem(zz1, B))))
 
 # eldif
 claim mm_eldif: forall A. forall B. forall C. forall x. forall u0. ((elem(A, B) & ~elem(A, C)) <-> (elem(A, B) & ~elem(A, C)))
@@ -549,11 +807,38 @@ claim mm_eldif: forall A. forall B. forall C. forall x. forall u0. ((elem(A, B) 
 # elin
 claim mm_elin: forall A. forall B. forall C. forall x. forall u0. ((elem(A, B) & elem(A, C)) <-> (elem(A, B) & elem(A, C)))
 
+# ssid
+claim mm_ssid: forall A. forall zz0. forall x. forall zz1. forall u0. (forall zz1. (elem(zz1, A) -> elem(zz1, A)))
+
 # elun
 claim mm_elun: forall A. forall B. forall C. forall x. forall u0. ((elem(A, B) | elem(A, C)) <-> (elem(A, B) | elem(A, C)))
 
+# unab
+claim mm_unab: forall x. forall zz0. forall y. forall zz1. forall S_ph. forall S_ps. forall u0. (forall zz1. ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+
+# inab
+claim mm_inab: forall x. forall zz0. forall y. forall zz1. forall S_ph. forall S_ps. forall u0. (forall zz1. ((elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ps))))
+
+# difab
+claim mm_difab: forall x. forall zz0. forall y. forall zz1. forall S_ph. forall S_ps. forall u0. (forall zz1. ((elem(u0, S_ph) & ~elem(u0, S_ps)) <-> (elem(u0, S_ph) & ~elem(u0, S_ps))))
+
+# dfrab3
+claim mm_dfrab3: forall x. forall A. forall zz0. forall zz1. forall S_ph. forall u0. (forall zz1. ((elem(zz1, A) & elem(u0, S_ph)) <-> (elem(zz1, A) & elem(u0, S_ph))))
+
+# dfnul4
+claim mm_dfnul4: forall x. forall zz0. forall zz1. forall u0. (forall zz1. (~(elem(u0, u0) -> elem(u0, u0)) <-> ~(elem(u0, u0) -> elem(u0, u0))))
+
+# csb0
+claim mm_csb0: forall x. forall A. forall zz0. forall zz1. forall u0. (forall zz1. (~(elem(u0, u0) -> elem(u0, u0)) <-> ~(elem(u0, u0) -> elem(u0, u0))))
+
 # sbcel2
 claim mm_sbcel2: forall x. forall A. forall B. forall C. forall u0. (elem(B, C) <-> elem(B, C))
+
+# csbcom
+claim mm_csbcom: forall x. forall y. forall A. forall B. forall C. forall zz0. forall z. forall zz1. forall u0. (forall zz1. (elem(zz1, C) <-> elem(zz1, C)))
+
+# csbidm
+claim mm_csbidm: forall x. forall A. forall B. forall zz0. forall zz1. forall u0. (forall zz1. (elem(zz1, B) <-> elem(zz1, B)))
 
 # sbccsb
 claim mm_sbccsb: forall x. forall y. forall A. forall S_ph. forall u0. (elem(u0, S_ph) <-> elem(u0, S_ph))
@@ -561,8 +846,26 @@ claim mm_sbccsb: forall x. forall y. forall A. forall S_ph. forall u0. (elem(u0,
 # sbccsb2
 claim mm_sbccsb2: forall x. forall A. forall S_ph. forall u0. (elem(u0, S_ph) <-> elem(u0, S_ph))
 
+# csbab
+claim mm_csbab: forall x. forall y. forall A. forall zz0. forall z. forall zz1. forall S_ph. forall u0. (forall zz1. (elem(u0, S_ph) <-> elem(u0, S_ph)))
+
+# csbun
+claim mm_csbun: forall x. forall A. forall B. forall C. forall zz0. forall y. forall zz1. forall u0. (forall zz1. ((elem(zz1, B) | elem(zz1, C)) <-> (elem(zz1, B) | elem(zz1, C))))
+
+# csbin
+claim mm_csbin: forall x. forall A. forall B. forall C. forall zz0. forall y. forall zz1. forall u0. (forall zz1. ((elem(zz1, B) & elem(zz1, C)) <-> (elem(zz1, B) & elem(zz1, C))))
+
+# csbdif
+claim mm_csbdif: forall x. forall A. forall B. forall C. forall zz0. forall y. forall zz1. forall u0. (forall zz1. ((elem(zz1, B) & ~elem(zz1, C)) <-> (elem(zz1, B) & ~elem(zz1, C))))
+
 # dfif6
 claim mm_dfif6: forall x. forall A. forall B. forall zz0. forall y. forall zz1. forall S_ph. forall u0. (forall zz1. (((elem(zz1, A) & elem(u0, S_ph)) | (elem(zz1, B) & ~elem(u0, S_ph))) <-> ((elem(zz1, A) & elem(u0, S_ph)) | (elem(zz1, B) & ~elem(u0, S_ph)))))
+
+# csbif
+claim mm_csbif: forall x. forall A. forall B. forall C. forall zz0. forall y. forall zz1. forall S_ph. forall u0. (forall zz1. (((elem(zz1, B) & elem(u0, S_ph)) | (elem(zz1, C) & ~elem(u0, S_ph))) <-> ((elem(zz1, B) & elem(u0, S_ph)) | (elem(zz1, C) & ~elem(u0, S_ph)))))
+
+# snjust
+claim mm_snjust: forall x. forall y. forall A. forall zz0. forall z. forall zz1. forall u0. (forall zz1. (eq(zz1, A) <-> eq(zz1, A)))
 
 # velsn
 claim mm_velsn: forall x. forall A. forall u0. (eq(x, A) <-> eq(x, A))
@@ -573,17 +876,17 @@ claim mm_elsni: forall A. forall B. forall u0. (eq(A, B) -> eq(A, B))
 # elsnd
 claim mm_elsnd: forall A. forall B. forall S_ph. forall u0. ((elem(u0, S_ph) -> eq(A, B)) -> (elem(u0, S_ph) -> eq(A, B)))
 
+# dfpr2
+claim mm_dfpr2: forall x. forall A. forall B. forall zz0. forall zz1. forall u0. (forall zz1. ((eq(zz1, A) | eq(zz1, B)) <-> (eq(zz1, A) | eq(zz1, B))))
+
 # elpri
 claim mm_elpri: forall A. forall B. forall C. forall u0. ((eq(A, B) | eq(A, C)) -> (eq(A, B) | eq(A, C)))
-
-# nelsn
-claim mm_nelsn: forall A. forall B. forall u0. (~eq(A, B) -> ~eq(A, B))
 
 # eltpi
 claim mm_eltpi: forall A. forall B. forall C. forall D. forall u0. (((eq(A, B) | eq(A, C)) | eq(A, D)) -> ((eq(A, B) | eq(A, C)) | eq(A, D)))
 
-# eldifsn
-claim mm_eldifsn: forall A. forall B. forall C. forall u0. ((elem(A, B) & ~eq(A, C)) <-> (elem(A, B) & ~eq(A, C)))
+# dftp2
+claim mm_dftp2: forall x. forall A. forall B. forall C. forall zz0. forall zz1. forall u0. (forall zz1. (((eq(zz1, A) | eq(zz1, B)) | eq(zz1, C)) <-> ((eq(zz1, A) | eq(zz1, B)) | eq(zz1, C))))
 
 # eliun
 claim mm_eliun: forall x. forall A. forall B. forall C. forall y. forall u0. ((exists x. (elem(x, B) & elem(A, C))) <-> (exists x. (elem(x, B) & elem(A, C))))
@@ -614,4 +917,7 @@ claim mm_iinab: forall x. forall y. forall A. forall zz0. forall zz1. forall S_p
 
 # elriin
 claim mm_elriin: forall x. forall A. forall B. forall S. forall X. forall u0. ((elem(B, A) & (forall x. (elem(x, X) -> elem(B, S)))) <-> (elem(B, A) & (forall x. (elem(x, X) -> elem(B, S)))))
+
+# axreplem
+claim mm_axreplem: forall x. forall y. forall z. forall w. forall v. forall u. forall S_ph. forall S_ps. forall S_ch. forall u0. (eq(x, y) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))) <-> (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch))))))
 

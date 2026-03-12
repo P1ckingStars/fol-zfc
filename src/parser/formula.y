@@ -45,6 +45,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %token IFF_INTRO IFF_ELIM_L IFF_ELIM_R
 %token FORALL_INTRO FORALL_ELIM EXISTS_INTRO EXISTS_ELIM
 %token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE EQ_SUBST
+%token IOTA_ELIM IOTA
 %token UNPROVED
 
 %type <node> formula iff_formula implies_formula or_formula and_formula
@@ -190,6 +191,11 @@ term
     : IDENTIFIER {
         $$ = new ASTNode(ASTNode::Term, *$1);
         delete $1;
+    }
+    | LPAREN IOTA IDENTIFIER DOT formula RPAREN {
+        /* Parenthesized iota term: (iota x. φ) */
+        $$ = new ASTNode(ASTNode::DescriptionTerm, *$3, $5);
+        delete $3;
     }
     ;
 
@@ -338,6 +344,9 @@ rule_call
     }
     | EQ_SUBST id_list {
         $$ = ASTNode::make_rule_step("eq_subst", $2);
+    }
+    | IOTA_ELIM id_list {
+        $$ = ASTNode::make_rule_step("iota_elim", $2);
     }
     ;
 

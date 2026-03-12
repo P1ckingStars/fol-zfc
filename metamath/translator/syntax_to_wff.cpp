@@ -74,14 +74,19 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     if (L == "wal" && C.size() == 2) {
         std::string var = C[0].token;  // setvar
         WffPtr body = convert_wff(C[1]);
-        // Setvar quantifier: vacuous in wff-as-set encoding → strip
-        if (setvars_.count(var)) return body;
+        // Setvar quantifier: vacuous in wff-as-set encoding → strip,
+        // BUT only if the body doesn't actually use the variable as a term.
+        // E.g. A.x ph → strip (ph doesn't contain x).
+        //      A.x (x e. A -> x e. B) → keep (body uses x concretely).
+        if (setvars_.count(var) && !has_free_term_var(*body, var))
+            return body;
         return wff_forall(var, std::move(body));
     }
     if (L == "wex" && C.size() == 2) {
         std::string var = C[0].token;
         WffPtr body = convert_wff(C[1]);
-        if (setvars_.count(var)) return body;
+        if (setvars_.count(var) && !has_free_term_var(*body, var))
+            return body;
         return wff_exists(var, std::move(body));
     }
 
@@ -95,8 +100,9 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     if (L == "wnf" && C.size() == 2) {
         std::string var = C[0].token;
         WffPtr body = convert_wff(C[1]);
-        // Setvar quantifiers are vacuous in wff-as-set encoding
-        if (setvars_.count(var))
+        // Setvar quantifiers are vacuous in wff-as-set encoding,
+        // but only if body doesn't actually use the variable as a term.
+        if (setvars_.count(var) && !has_free_term_var(*body, var))
             return wff_binary(WffNode::Op::Implies, body, body);
         return wff_binary(WffNode::Op::Implies,
                           wff_exists(var, body),
@@ -110,13 +116,13 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         WffPtr body = convert_wff(C[1]);
         std::string y = fresh_var();
         extra_vars_.push_back(y);
-        // Strip outer ∃x if x is a setvar (vacuous)
         auto inner = wff_binary(WffNode::Op::And, body,
             wff_forall(y,
                 wff_binary(WffNode::Op::Implies,
                     wff_subst(body, x, y),
                     wff_pred("eq", {y, x}))));
-        if (setvars_.count(x)) return inner;
+        // Strip outer ∃x only if the expansion doesn't use x as a term.
+        // inner always contains x (in eq(y, x)), so never strip.
         return wff_exists(x, std::move(inner));
     }
 
@@ -127,17 +133,19 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         WffPtr body = convert_wff(C[1]);
         std::string y = fresh_var();
         extra_vars_.push_back(y);
-        // Strip ∀x if x is a setvar (vacuous)
+        // inner always contains x (in eq(x, y)), so never strip ∀x.
         auto inner = wff_binary(WffNode::Op::Implies,
             std::move(body), wff_pred("eq", {x, y}));
-        if (setvars_.count(x))
-            return wff_exists(y, std::move(inner));
         return wff_exists(y, wff_forall(x, std::move(inner)));
     }
 
-    // --- Not an element: A e/ B → ¬(A ∈ B) ---
+    // --- Not an element: A e/ B → nel(A, B) for setvars, ¬(A ∈ B) for compound ---
 
     if (L == "wnel" && C.size() == 2) {
+        std::string sv1 = class_to_setvar(C[0]);
+        std::string sv2 = class_to_setvar(C[1]);
+        if (!sv1.empty() && !sv2.empty())
+            return wff_pred("nel", {sv1, sv2});
         // Build wcel from children, then negate
         SyntaxNode wcel_node;
         wcel_node.label = "wcel";
@@ -164,8 +172,8 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         std::string y = fresh_var();
         extra_vars_.push_back(y);
         WffPtr mem = expand_membership(y, C[1]);
-        // Setvar quantifiers are vacuous in wff-as-set encoding
-        if (setvars_.count(x))
+        // Only simplify if the membership expansion doesn't use x as a term.
+        if (setvars_.count(x) && !has_free_term_var(*mem, x))
             return wff_binary(WffNode::Op::Implies, mem, mem);
         return wff_binary(WffNode::Op::Implies,
             wff_exists(x, mem),
@@ -220,10 +228,15 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
                 expand_membership(x, C[1])));
     }
 
-    // --- Inequality: A ≠ B → ¬(A = B) ---
+    // --- Inequality: A ≠ B → ne(A, B) for setvars, ¬(A = B) for compound ---
 
-    if (L == "wne" && C.size() == 2)
+    if (L == "wne" && C.size() == 2) {
+        std::string sv1 = class_to_setvar(C[0]);
+        std::string sv2 = class_to_setvar(C[1]);
+        if (!sv1.empty() && !sv2.empty())
+            return wff_pred("ne", {sv1, sv2});
         return wff_neg(expand_class_eq(C[0], C[1]));
+    }
 
     // --- Subset: A ⊆ B → ∀x(x ∈ A → x ∈ B) ---
 
@@ -256,13 +269,14 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     if (L == "wral" && C.size() == 3) {
         std::string var = C[0].token;
         WffPtr body = convert_wff(C[2]);
-        if (setvars_.count(var)) {
-            return wff_binary(WffNode::Op::Implies,
-                expand_membership(var, C[1]), std::move(body));
-        }
-        return wff_forall(var,
-            wff_binary(WffNode::Op::Implies,
-                expand_membership(var, C[1]), std::move(body)));
+        WffPtr full = wff_binary(WffNode::Op::Implies,
+            expand_membership(var, C[1]), std::move(body));
+        // Strip forall if var is setvar and body doesn't use var as a term.
+        // Note: membership expansion always introduces var, but the body (C[2])
+        // may not. We check the full expression for consistency with wal.
+        if (setvars_.count(var) && !has_free_term_var(*full, var))
+            return full;
+        return wff_forall(var, std::move(full));
     }
 
     // wrex: E. x e. A ph → children: [setvar x, class A, wff ph]
@@ -270,13 +284,11 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     if (L == "wrex" && C.size() == 3) {
         std::string var = C[0].token;
         WffPtr body = convert_wff(C[2]);
-        if (setvars_.count(var)) {
-            return wff_binary(WffNode::Op::And,
-                expand_membership(var, C[1]), std::move(body));
-        }
-        return wff_exists(var,
-            wff_binary(WffNode::Op::And,
-                expand_membership(var, C[1]), std::move(body)));
+        WffPtr full = wff_binary(WffNode::Op::And,
+            expand_membership(var, C[1]), std::move(body));
+        if (setvars_.count(var) && !has_free_term_var(*full, var))
+            return full;
+        return wff_exists(var, std::move(full));
     }
 
     // wreu: E! x e. A ph → children: [setvar x, class A, wff ph]
@@ -470,12 +482,13 @@ WffPtr SyntaxToWff::expand_membership(const std::string& t,
                 expand_membership(t, C[2])));
     }
 
-    // cif(φ, A, B): t ∈ if(φ,A,B) → (φ ∧ t∈A) ∨ (¬φ ∧ t∈B)
+    // cif(φ, A, B): t ∈ if(φ,A,B) → (t∈A ∧ φ) ∨ (t∈B ∧ ¬φ)
+    // Operand order matches df-if: { x | ((x e. A /\ ph) \/ (x e. B /\ -. ph)) }
     if (L == "cif" && C.size() == 3) {
         auto ph = convert_wff(C[0]);
         return wff_binary(WffNode::Op::Or,
-            wff_binary(WffNode::Op::And, ph, expand_membership(t, C[1])),
-            wff_binary(WffNode::Op::And, wff_neg(ph), expand_membership(t, C[2])));
+            wff_binary(WffNode::Op::And, expand_membership(t, C[1]), ph),
+            wff_binary(WffNode::Op::And, expand_membership(t, C[2]), wff_neg(ph)));
     }
 
     // cop(A, B): t ∈ ⟨A,B⟩ → Kuratowski: t ∈ {{A}, {A,B}}
@@ -512,15 +525,16 @@ WffPtr SyntaxToWff::expand_membership(const std::string& t,
         return expand_membership(t, outer);
     }
 
-    // csymdif(A, B): t ∈ A △ B → (t∈A ∧ ¬t∈B) ∨ (¬t∈A ∧ t∈B)
+    // csymdif(A, B): t ∈ A △ B → (t∈A ∧ ¬t∈B) ∨ (t∈B ∧ ¬t∈A)
+    // Operand order matches df-symdif: (A \ B) ∪ (B \ A) where cdif gives (mem ∧ ¬mem)
     if (L == "csymdif" && C.size() == 2)
         return wff_binary(WffNode::Op::Or,
             wff_binary(WffNode::Op::And,
                 expand_membership(t, C[0]),
                 wff_neg(expand_membership(t, C[1]))),
             wff_binary(WffNode::Op::And,
-                wff_neg(expand_membership(t, C[0])),
-                expand_membership(t, C[1])));
+                expand_membership(t, C[1]),
+                wff_neg(expand_membership(t, C[0]))));
 
     // csb(A, x, B): t ∈ [_A/x]_B → [.A/x].t∈B (class substitution)
     // children: [class A, setvar x, class B]

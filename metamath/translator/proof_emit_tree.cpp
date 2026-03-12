@@ -7,6 +7,15 @@
 
 namespace metamath {
 
+// Extract setvar name from a class substitution expression.
+// Returns the setvar name if the expression is a simple setvar
+// (either bare ["x"] or cv-wrapped ["cv", "x"]), or empty string otherwise.
+static std::string class_subst_to_setvar(const Expression& expr) {
+    if (expr.size() == 1) return expr[0];           // bare setvar
+    if (expr.size() == 2 && expr[0] == "cv") return expr[1]; // cv-wrapped
+    return "";
+}
+
 // ===================================================================
 // Tree-based proof emission
 // ===================================================================
@@ -126,6 +135,42 @@ std::string MmTranslator::emit_node(
         else h = inline_df_or(a, b, state);
         handles[idx] = h;
         return h;
+    }
+
+    // =================================================================
+    // df-ne: Not-equal definition bridge (simple setvars only)
+    // Compound class cases fall through to identity bic handler below.
+    // =================================================================
+    if (label == "df-ne") {
+        auto a = subst.find("A"), b = subst.find("B");
+        if (a != subst.end() && b != subst.end()) {
+            std::string sv_a = class_subst_to_setvar(a->second);
+            std::string sv_b = class_subst_to_setvar(b->second);
+            if (!sv_a.empty() && !sv_b.empty()) {
+                h = emit_bridge_use("ne_def", {sv_a, sv_b}, state);
+                handles[idx] = h;
+                return h;
+            }
+        }
+        // Compound: fall through to identity bic handler below
+    }
+
+    // =================================================================
+    // df-nel: Not-element definition bridge (simple setvars only)
+    // Compound class cases fall through to identity bic handler below.
+    // =================================================================
+    if (label == "df-nel") {
+        auto a = subst.find("A"), b = subst.find("B");
+        if (a != subst.end() && b != subst.end()) {
+            std::string sv_a = class_subst_to_setvar(a->second);
+            std::string sv_b = class_subst_to_setvar(b->second);
+            if (!sv_a.empty() && !sv_b.empty()) {
+                h = emit_bridge_use("nel_def", {sv_a, sv_b}, state);
+                handles[idx] = h;
+                return h;
+            }
+        }
+        // Compound: fall through to identity bic handler below
     }
 
     // =================================================================
@@ -372,12 +417,13 @@ std::string MmTranslator::emit_node(
             if (error) *error = "df-cleq: missing A/B";
             return "";
         }
-        if (a->second.size() != 1 || b->second.size() != 1) {
+        std::string sv_a = class_subst_to_setvar(a->second);
+        std::string sv_b = class_subst_to_setvar(b->second);
+        if (sv_a.empty() || sv_b.empty()) {
             if (error) *error = "df-cleq: compound class expression";
             return "";
         }
-        h = emit_bridge_use("axextb_bridge",
-                             {a->second[0], b->second[0]}, state);
+        h = emit_bridge_use("axextb_bridge", {sv_a, sv_b}, state);
         handles[idx] = h;
         return h;
     }
@@ -391,12 +437,13 @@ std::string MmTranslator::emit_node(
             if (error) *error = "df-clel: missing A/B";
             return "";
         }
-        if (a->second.size() != 1 || b->second.size() != 1) {
+        std::string sv_a = class_subst_to_setvar(a->second);
+        std::string sv_b = class_subst_to_setvar(b->second);
+        if (sv_a.empty() || sv_b.empty()) {
             if (error) *error = "df-clel: compound class expression";
             return "";
         }
-        h = emit_bridge_use("df_clel",
-                             {a->second[0], b->second[0]}, state);
+        h = emit_bridge_use("df_clel", {sv_a, sv_b}, state);
         handles[idx] = h;
         return h;
     }

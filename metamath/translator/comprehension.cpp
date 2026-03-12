@@ -273,6 +273,13 @@ CompResult build_comp_impl(
         return {witness, axiom_iff, compound};
     }
 
+    // Class membership: VAR e. _V → T. (everything is in the universal class)
+    if (pos + 2 < mm_tokens.size() && mm_tokens[pos + 1] == "e." &&
+        mm_tokens[pos + 2] == "_V") {
+        Expression t_expr = {"T."};
+        return build_comp_impl(t_expr, 0, caller_info, state);
+    }
+
     // Quantifier normalization: A., E., F/
     if (tok == "A." || tok == "E.") {
         pos++;
@@ -285,6 +292,105 @@ CompResult build_comp_impl(
             mm_tokens[pos + 2] == bound) {
             Expression t_expr = {"T."};
             return build_comp_impl(t_expr, 0, caller_info, state);
+        }
+        // Detect A. x -. x = VAR → F. (always false: contradicts eq_refl).
+        // Covers A. x -. x = y and A. x -. y = x.
+        if (tok == "A." && pos + 3 <= mm_tokens.size() &&
+            mm_tokens[pos + 0] == "-.") {
+            size_t end = mm_tokens.size();
+            bool is_neg_eq =
+                (end - pos == 4) &&
+                mm_tokens[pos + 2] == "=" &&
+                (mm_tokens[pos + 1] == bound || mm_tokens[pos + 3] == bound);
+            if (is_neg_eq) {
+                Expression f_expr = {"F."};
+                return build_comp_impl(f_expr, 0, caller_info, state);
+            }
+        }
+        // Detect E. x x = VAR → T. (always true: take x = VAR, eq_refl)
+        // Covers both "E. x x = y" and "E. x y = x" (order doesn't matter).
+        if (tok == "E." && pos + 2 <= mm_tokens.size()) {
+            size_t end = mm_tokens.size();
+            bool is_eq_pair =
+                (end - pos == 3) &&
+                mm_tokens[pos + 1] == "=" &&
+                (mm_tokens[pos] == bound || mm_tokens[pos + 2] == bound);
+            if (is_eq_pair) {
+                Expression t_expr = {"T."};
+                return build_comp_impl(t_expr, 0, caller_info, state);
+            }
+        }
+        // Detect A. x ( x = VAR -> body ) → body
+        // when bound var doesn't appear in body (equsv equivalence).
+        // Pattern: A. x ( x = VAR -> ... ) or A. x ( VAR = x -> ... )
+        if (tok == "A." && pos + 3 < mm_tokens.size() &&
+            mm_tokens[pos] == "(") {
+            // Check for "( x = VAR ->" or "( VAR = x ->"
+            bool fwd = (mm_tokens[pos + 1] == bound &&
+                        mm_tokens[pos + 2] == "=" &&
+                        mm_tokens[pos + 4] == "->");
+            bool rev = (mm_tokens[pos + 2] == "=" &&
+                        mm_tokens[pos + 3] == bound &&
+                        mm_tokens[pos + 4] == "->");
+            if ((fwd || rev) && pos + 5 < mm_tokens.size()) {
+                // Extract body: tokens after "->" up to matching ")"
+                size_t body_start = pos + 5;
+                // Find matching close paren (skip the outer "(")
+                int depth = 1;
+                size_t body_end = body_start;
+                for (size_t i = body_start; i < mm_tokens.size(); ++i) {
+                    if (mm_tokens[i] == "(") ++depth;
+                    else if (mm_tokens[i] == ")") {
+                        --depth;
+                        if (depth == 0) { body_end = i; break; }
+                    }
+                }
+                // Check bound var doesn't appear in body
+                bool bound_in_body = false;
+                for (size_t i = body_start; i < body_end; ++i) {
+                    if (mm_tokens[i] == bound) { bound_in_body = true; break; }
+                }
+                if (!bound_in_body) {
+                    Expression body(mm_tokens.begin() + body_start,
+                                    mm_tokens.begin() + body_end);
+                    return build_comp_impl(body, 0, caller_info, state);
+                }
+            }
+        }
+        // Detect E. x ( x = VAR /\ body ) → body[x:=VAR]
+        // exists x. (eq(x, y) & P(x)) <-> P(y) by substitution (eq(y,y) + eq_subst).
+        // Handles both "x = VAR" and "VAR = x" orders.
+        if (tok == "E." && pos + 3 < mm_tokens.size() &&
+            mm_tokens[pos] == "(") {
+            // Pattern: ( x = VAR /\ body ) or ( VAR = x /\ body )
+            bool fwd = (pos + 4 < mm_tokens.size() &&
+                        mm_tokens[pos + 1] == bound &&
+                        mm_tokens[pos + 2] == "=" &&
+                        mm_tokens[pos + 4] == "/\\");
+            bool rev = (pos + 4 < mm_tokens.size() &&
+                        mm_tokens[pos + 2] == "=" &&
+                        mm_tokens[pos + 3] == bound &&
+                        mm_tokens[pos + 4] == "/\\");
+            if ((fwd || rev) && pos + 5 < mm_tokens.size()) {
+                std::string target = fwd ? mm_tokens[pos + 3]
+                                         : mm_tokens[pos + 1];
+                size_t body_start = pos + 5;
+                int depth = 1;
+                size_t body_end = body_start;
+                for (size_t i = body_start; i < mm_tokens.size(); ++i) {
+                    if (mm_tokens[i] == "(") ++depth;
+                    else if (mm_tokens[i] == ")") {
+                        --depth;
+                        if (depth == 0) { body_end = i; break; }
+                    }
+                }
+                // Substitute bound→target in body tokens
+                Expression body;
+                for (size_t i = body_start; i < body_end; ++i) {
+                    body.push_back(mm_tokens[i] == bound ? target : mm_tokens[i]);
+                }
+                return build_comp_impl(body, 0, caller_info, state);
+            }
         }
         // Non-vacuous quantifier: if the bound variable appears in the body
         // tokens, the quantifier can't be stripped (comprehension axioms only
@@ -913,6 +1019,70 @@ CompResult build_comp_impl(
 
         std::string h_ax = state.fresh();
         state.emit(h_ax + " = use wff_eq");
+        std::string h1 = state.fresh();
+        state.emit(h1 + " = forall_elim " + h_ax + ", " + sv_x);
+        std::string h2 = state.fresh();
+        state.emit(h2 + " = forall_elim " + h1 + ", " + sv_y);
+        std::string witness = state.fresh() + "_w";
+        std::string h3 = state.fresh();
+        state.emit(h3 + " = iota_elim " + h2 + ", " + witness);
+        std::string h_iff = state.fresh();
+        state.emit(h_iff + " = forall_elim " + h3 + ", " +
+                   caller_info.dummy_var);
+        return {witness, h_iff, compound};
+    }
+
+    // Inequality pattern: x =/= y (setvar not-equal)
+    // Produces a witness set C where elem(u, C) <-> ne(x, y).
+    if (pos + 2 < mm_tokens.size() && mm_tokens[pos + 1] == "=/=" &&
+        pos + 2 == mm_tokens.size() - 1) {
+        const std::string& sv_x = tok;
+        const std::string& sv_y = mm_tokens[pos + 2];
+        bool x_ok = (sv_x == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_x) !=
+                         caller_info.setvars.end());
+        bool y_ok = (sv_y == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_y) !=
+                         caller_info.setvars.end());
+        if (!x_ok || !y_ok) return {};
+        std::string compound = "ne(" + sv_x + ", " + sv_y + ")";
+
+        std::string h_ax = state.fresh();
+        state.emit(h_ax + " = use wff_ne");
+        std::string h1 = state.fresh();
+        state.emit(h1 + " = forall_elim " + h_ax + ", " + sv_x);
+        std::string h2 = state.fresh();
+        state.emit(h2 + " = forall_elim " + h1 + ", " + sv_y);
+        std::string witness = state.fresh() + "_w";
+        std::string h3 = state.fresh();
+        state.emit(h3 + " = iota_elim " + h2 + ", " + witness);
+        std::string h_iff = state.fresh();
+        state.emit(h_iff + " = forall_elim " + h3 + ", " +
+                   caller_info.dummy_var);
+        return {witness, h_iff, compound};
+    }
+
+    // Not-element pattern: x e/ y (setvar not-element)
+    // Produces a witness set C where elem(u, C) <-> nel(x, y).
+    if (pos + 2 < mm_tokens.size() && mm_tokens[pos + 1] == "e/" &&
+        pos + 2 == mm_tokens.size() - 1) {
+        const std::string& sv_x = tok;
+        const std::string& sv_y = mm_tokens[pos + 2];
+        bool x_ok = (sv_x == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_x) !=
+                         caller_info.setvars.end());
+        bool y_ok = (sv_y == caller_info.dummy_var ||
+                     std::find(caller_info.setvars.begin(),
+                               caller_info.setvars.end(), sv_y) !=
+                         caller_info.setvars.end());
+        if (!x_ok || !y_ok) return {};
+        std::string compound = "nel(" + sv_x + ", " + sv_y + ")";
+
+        std::string h_ax = state.fresh();
+        state.emit(h_ax + " = use wff_nel");
         std::string h1 = state.fresh();
         state.emit(h1 + " = forall_elim " + h_ax + ", " + sv_x);
         std::string h2 = state.fresh();

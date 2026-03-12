@@ -37,6 +37,17 @@ cc_library(
 )
 
 cc_library(
+    name = "proof_tree",
+    srcs = ["proof_tree.cpp"],
+    hdrs = ["proof_tree.h"],
+    deps = [
+        "//metamath/parser:mm_database",
+        "//metamath/verifier:mm_verifier",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "mm_translator_base",
     hdrs = ["mm_translator.h"],
     deps = [
@@ -50,12 +61,13 @@ cc_library(
 
 cc_library(
     name = "mm_translator",
-    srcs = ["mm_translator.cpp"],
+    srcs = ["mm_translator.cpp", "proof_emit_tree.cpp"],
     hdrs = ["mm_translator.h"],
     deps = [
         ":comprehension",
         ":mm_translator_base",
         ":proof_emit",
+        ":proof_tree",
         ":syntax_parser",
         ":syntax_to_wff",
         ":wff_ast",
@@ -100,6 +112,7 @@ cc_binary(
     srcs = ["mm_to_fol.cpp"],
     deps = [
         ":mm_translator",
+        ":proof_tree",
         "//metamath/parser:mm_database",
     ],
 )

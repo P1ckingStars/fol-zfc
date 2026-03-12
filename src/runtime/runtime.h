@@ -136,6 +136,10 @@ public:
     FormulaResult classical_absurd(FormulaHandle const& bottom);
     FormulaResult peirce(FormulaHandle const& a, FormulaHandle const& b);
 
+    // ========== Definite Descriptions ==========
+    FormulaResult iota_elim(FormulaHandle const& exists_formula);
+    std::optional<Term> last_iota_term() const { return stack_.last_iota_term(); }
+
     // ========== Proof Completion ==========
     // Complete the proof - verifies goal is derived and registers theorem
     util::ResultStatus qed(FormulaHandle const& derived);

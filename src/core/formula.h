@@ -60,20 +60,35 @@ public:
 struct FixedVarTag { var_index idx; bool operator==(const FixedVarTag&) const = default; };
 struct GeneralizedVarTag { var_index idx; bool operator==(const GeneralizedVarTag&) const = default; };
 
-// A term is a generalized var or fixed var
+// Definite description: ιx.φ(x) — "the x such that φ(x)"
+// A term-forming operator that produces a term from a formula.
+struct DescriptionTag {
+    var_index bound_var;
+    FormulaHandle body;
+    bool operator==(const DescriptionTag&) const = default;
+};
+
+// A term is a generalized var, fixed var, or definite description
 struct Term {
-    std::variant<GeneralizedVarTag, FixedVarTag> data;
+    std::variant<GeneralizedVarTag, FixedVarTag, DescriptionTag> data;
 
     static Term generalized(var_index idx) { return Term{GeneralizedVarTag{idx}}; }
     static Term fixed(var_index idx) { return Term{FixedVarTag{idx}}; }
+    static Term description(var_index bound_var, FormulaHandle body) {
+        return Term{DescriptionTag{bound_var, body}};
+    }
 
     bool is_generalized() const { return std::holds_alternative<GeneralizedVarTag>(data); }
     bool is_fixed() const { return std::holds_alternative<FixedVarTag>(data); }
+    bool is_description() const { return std::holds_alternative<DescriptionTag>(data); }
 
+    // Only valid for generalized and fixed vars (not descriptions)
     var_index as_variable() const {
         if (is_generalized()) return std::get<GeneralizedVarTag>(data).idx;
         return std::get<FixedVarTag>(data).idx;
     }
+
+    const DescriptionTag& as_description() const { return std::get<DescriptionTag>(data); }
 
     bool operator==(const Term& other) const { return data == other.data; }
 };
@@ -148,6 +163,7 @@ struct Quantified {
 class Formula {
     friend class FormulaBuilder;
     friend class QuantifierBuilder;
+    friend class DescriptionBuilder;
     friend class Sentence;
 
     // next_gen_var_idx_ declared first for correct initialization order
@@ -160,7 +176,23 @@ class Formula {
         return std::max(left_idx, right_idx);
     }
 
-    explicit Formula(PredicateInstance p) : next_gen_var_idx_(0), data_(std::move(p)) {}
+    // Compute next_gen_var_idx_ for predicates containing DescriptionTag args
+    // Only descriptions need handling: they bind variables without a wrapping Quantified node.
+    // Generalized vars in predicate args are always inside a Quantified that already
+    // increments next_gen_var_idx_, so they don't need to be counted here.
+    static var_index compute_pred_next_gen(const PredicateInstance& p) {
+        var_index max_idx = 0;
+        for (const auto& t : p.args()) {
+            if (t.is_description()) {
+                const auto& d = t.as_description();
+                var_index body_idx = d.body.get().next_gen_var_idx_;
+                max_idx = std::max(max_idx, std::max(body_idx, d.bound_var + 1));
+            }
+        }
+        return max_idx;
+    }
+
+    explicit Formula(PredicateInstance p) : next_gen_var_idx_(compute_pred_next_gen(p)), data_(std::move(p)) {}
     explicit Formula(Compound c) :
         next_gen_var_idx_(compute_compound_next_gen(c)),
         data_(std::move(c)) {}
@@ -398,8 +430,10 @@ public:
 
     FormulaHandle predicate(PredicateHandle pred, std::vector<Term> args) {
         for (const auto& t : args) {
-            // All terms are variables now (generalized or fixed)
-            use_var(t.as_variable());
+            if (!t.is_description()) {
+                use_var(t.as_variable());
+            }
+            // Description terms: body vars already tracked during body construction
         }
         return add_formula(Formula(PredicateInstance(pred, std::move(args))));
     }
@@ -417,6 +451,20 @@ public:
         return s.get().root();
     }
 
+    // Translate within a term: handles DescriptionTag recursion with capture avoidance
+    Term translate_in_term(const Term& t, const Term& old_term, const Term& new_term) {
+        if (t == old_term) return new_term;
+        if (!t.is_description()) return t;
+        const auto& d = t.as_description();
+        // Capture avoidance: if substituting generalized(k) and this description binds k,
+        // skip — k is locally bound here, not free. Fixed-var substitutions never need
+        // this guard because FixedVarTag and GeneralizedVarTag are distinct types.
+        if (old_term.is_generalized() && old_term.as_variable() == d.bound_var) return t;
+        FormulaHandle new_body = translate_term(d.body, old_term, new_term);
+        if (new_body != d.body) return Term::description(d.bound_var, new_body);
+        return t;
+    }
+
     // Generalize a fixed variable: replace Term::fixed(var_idx) with Term::generalized(var_idx)
     // Returns a new formula handle with the transformation applied
     FormulaHandle translate_term(FormulaHandle const &h, Term const &old_term, Term const &new_term) {
@@ -427,12 +475,9 @@ public:
             std::vector<Term> new_args;
             bool changed = false;
             for (const Term& t : p.args()) {
-                if (t == old_term) {
-                    new_args.push_back(new_term);
-                    changed = true;
-                } else {
-                    new_args.push_back(t);
-                }
+                Term new_t = translate_in_term(t, old_term, new_term);
+                new_args.push_back(new_t);
+                if (!(new_t == t)) changed = true;
             }
             if (changed) {
                 return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
@@ -450,6 +495,10 @@ public:
         }
         else if (f.is_quantified()) {
             const Quantified& q = f.as_quantified();
+            // Capture avoidance: if substituting generalized(k) and this quantifier
+            // binds k, skip — k is locally bound here. This matters when description
+            // bodies contain quantifiers that reuse the same generalized index.
+            if (old_term.is_generalized() && old_term.as_variable() == q.var) return h;
             FormulaHandle new_body = translate_term(q.body, old_term, new_term);
             if (new_body != q.body) {
                 return add_formula(Formula(Quantified{q.op, q.var, new_body}));
@@ -513,6 +562,46 @@ public:
 
     QuantifierBuilder(const QuantifierBuilder&) = delete;
     QuantifierBuilder& operator=(const QuantifierBuilder&) = delete;
+};
+
+// RAII scope for definite descriptions. Creates bound variable on construction,
+// builds DescriptionTag term on destruction.
+// Usage:
+//   Term result;
+//   {
+//       DescriptionBuilder db(builder, result);
+//       FormulaHandle body = builder.predicate(P, {db.var()});
+//       db.set_body(body);
+//   }
+//   // result is now Term::description(gen_idx, generalized_body)
+class DescriptionBuilder {
+    FormulaBuilder& builder_;
+    var_index var_;
+    FormulaHandle body_;
+    Term& result_;
+public:
+    DescriptionBuilder(FormulaBuilder& builder, Term& result)
+        : builder_(builder), result_(result)
+    {
+        var_ = builder_.enter_scope();
+    }
+
+    ~DescriptionBuilder() {
+        builder_.exit_scope();
+        if (body_.valid()) {
+            var_index gen_idx = body_.get().next_gen_var_idx_;
+            FormulaHandle gen_body = builder_.translate_term(body_, var(), Term::generalized(gen_idx));
+            result_ = Term::description(gen_idx, gen_body);
+        }
+    }
+
+    Term var() const { return Term::fixed(var_); }
+    var_index var_idx() const { return var_; }
+
+    void set_body(FormulaHandle body) { body_ = body; }
+
+    DescriptionBuilder(const DescriptionBuilder&) = delete;
+    DescriptionBuilder& operator=(const DescriptionBuilder&) = delete;
 };
 
 } // end logic

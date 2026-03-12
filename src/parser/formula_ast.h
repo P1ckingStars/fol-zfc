@@ -34,7 +34,9 @@ struct ASTNode {
         ProofStepRule,   // h = rule args
         ProofStepQed,    // qed h
         // Include
-        IncludeStmt      // include "path"
+        IncludeStmt,     // include "path"
+        // Definite description term
+        DescriptionTerm  // (iota x. φ) - term with bound variable and body formula
     };
 
     Type type;

@@ -294,6 +294,14 @@ static FormulaResult execute_rule(
         return ctx.eq_subst(eq, target);
     }
 
+    // Definite descriptions
+    if (rule == "iota_elim") {
+        if (args.size() < 1 || args.size() > 2)
+            return MAKE_ERROR << "iota_elim requires 1-2 arguments";
+        TRY_ASSIGN(f, get_step(args[0]));
+        return ctx.iota_elim(f);
+    }
+
     return MAKE_ERROR << "Unknown rule: " << rule;
 }
 
@@ -384,6 +392,13 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                     auto witness = pctx.last_witness();
                     if (witness.has_value()) {
                         fixed_vars[step.args[1]] = witness.value();
+                    }
+                }
+                // Store iota term for iota_elim with named term
+                if (step.rule_name == "iota_elim" && step.args.size() == 2) {
+                    auto iota_term = pctx.last_iota_term();
+                    if (iota_term.has_value()) {
+                        fixed_vars[step.args[1]] = iota_term.value();
                     }
                 }
                 break;
@@ -531,6 +546,11 @@ FormulaResult ProofContext::exists_elim(FormulaHandle const& f) {
 // Equality
 FormulaResult ProofContext::eq_subst(FormulaHandle const& eq, FormulaHandle const& target) {
     return stack_.eq_subst(eq, target);
+}
+
+// Definite descriptions
+FormulaResult ProofContext::iota_elim(FormulaHandle const& f) {
+    return stack_.iota_elim(f);
 }
 
 // Classical extensions
