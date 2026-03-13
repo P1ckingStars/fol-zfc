@@ -134,27 +134,19 @@ std::string MmTranslator::emit_comprehension_use(
     }
 
     // Add T./F. as atoms if they appear in the referenced expression.
+    // Build comprehension witness with proper iff_handle for conversion.
     for (const auto& tok : ref_thm.expression) {
         if ((tok == "T." || tok == "F.") && atom_map.find(tok) == atom_map.end()) {
-            std::string tf_set;
-            if (!ref_info.set_var_order.empty()) {
-                for (const auto& b : bindings) {
-                    std::string ref_wff;
-                    for (const auto& [wv, sv] : ref_info.wff_to_set) {
-                        if (sv == ref_info.set_var_order[0]) { ref_wff = wv; break; }
-                    }
-                    if (b.wff_var == ref_wff) { tf_set = b.target_set; break; }
-                }
+            Expression tf_expr = {tok};
+            auto cr = build_comp_impl(tf_expr, 0, caller_info, state);
+            if (!cr.set_var.empty()) {
+                WffAtom wa;
+                wa.iff_handle = cr.iff_handle;
+                wa.elem_str = "elem(" + caller_info.dummy_var + ", " +
+                              cr.set_var + ")";
+                wa.compound_str = cr.compound_str;
+                atom_map[tok] = wa;
             }
-            if (tf_set.empty()) tf_set = caller_info.dummy_var;
-
-            WffAtom wa;
-            wa.iff_handle = "";
-            wa.elem_str = "elem(" + caller_info.dummy_var + ", " + tf_set + ")";
-            std::string taut = "(elem(" + caller_info.dummy_var + ", " + tf_set +
-                               ") -> elem(" + caller_info.dummy_var + ", " + tf_set + "))";
-            wa.compound_str = (tok == "T.") ? taut : neg(taut);
-            atom_map[tok] = wa;
         }
     }
 
@@ -563,6 +555,8 @@ void MmTranslator::init_identity_defs() {
         // Negated predicate definitions (compound class fallback only;
         // simple setvar cases handled by bridge in proof_emit_tree)
         "df-ne", "df-nel",
+        // Subset definitions
+        "df-ss", "df-pss",
     };
     for (const char* l : labels) {
         wff_identity_defs_.insert(l);
@@ -575,20 +569,14 @@ void MmTranslator::init_identity_defs() {
 
 bool MmTranslator::is_skipped(const std::string& label) {
     static const std::unordered_set<std::string> skip_labels = {
-        // T./F. set-variable mismatch (Verum rendered as elem(u0,s)->elem(u0,s)
-        // in comprehension but as (forall x. eq(x,x))->(forall x. eq(x,x)) in
-        // compound form — syntactically different)
-        "alfal", "altru", "bifal", "bitru", "cadtru",
-        "dftru2", "dfnot", "falim", "mptru", "nbfal",
-        "tbtru", "truan", "trud", "trujust", "trut",
-        "cadnot", "hadnot",
-        // Comprehension proof bug with class-var quantifier encoding
-        "sbtlem",
         // Non-vacuous quantifier proof mismatch
+        // (bridge df_ex has quantifiers that translator strips as vacuous)
         "eximal", "ax6evr", "spimedv", "spimfv",
         "speimfw", "speimfwALT", "spimfw", "2exnaln",
         "spimw", "spimew", "equs4v", "alequexv", "equsv",
         "ax12i", "ax12dgen", "equsalhw", "equsalv",
+        // Comprehension proof bug with class-var quantifier encoding
+        "sbtlem",
         // Verification failure: implies_elim antecedent mismatch
         "elequ2g", "stdpc6", "ax8v1", "ax8v2", "elequ12",
         "ax13dgen1", "ax13dgen2", "ax13dgen3",
@@ -739,12 +727,10 @@ bool MmTranslator::try_trivial_claim(const FrameInfo& info,
         return renderer(n);
     };
 
-    // Verum body: renders to (elem(d,s) -> elem(d,s))
+    // Verum body: renders to (elem(d,d) -> elem(d,d))
     if (body && body->kind == WffNode::Kind::Verum) {
         is_trivial_impl = true;
-        std::string s = info.set_var_order.empty()
-            ? info.dummy_var : info.set_var_order[0];
-        trivial_sub = "elem(" + info.dummy_var + ", " + s + ")";
+        trivial_sub = "elem(" + info.dummy_var + ", " + info.dummy_var + ")";
     }
 
     if (body && body->kind == WffNode::Kind::Binary) {

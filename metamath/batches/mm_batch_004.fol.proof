@@ -1,5 +1,4030 @@
 # Translated from Metamath set.mm
 
+# nfnaew
+proof mm_nfnaew:
+    fix x
+    fix y
+    fix z
+    fix u0
+    h1 = assume ~(forall x. eq(x, y))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# nfe1
+proof mm_nfe1:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nfa1
+proof mm_nfa1:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nfna1
+proof mm_nfna1:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume ~elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nfia1
+proof mm_nfia1:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# nfnf1
+proof mm_nfnf1:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# modal5
+proof mm_modal5:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume ~ ~elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nfs1v
+proof mm_nfs1v:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# alcoms
+proof mm_alcoms:
+    fix x
+    fix y
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
+
+# alcom
+proof mm_alcom:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    qed h9
+
+# alrot3
+proof mm_alrot3:
+    fix x
+    fix y
+    fix z
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    qed h10
+
+# alrot4
+proof mm_alrot4:
+    fix x
+    fix y
+    fix z
+    fix w
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    h11 = forall_intro h10
+    qed h11
+
+# excom
+proof mm_excom:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    qed h9
+
+# excomim
+proof mm_excomim:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# excom13
+proof mm_excom13:
+    fix x
+    fix y
+    fix z
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    qed h10
+
+# exrot3
+proof mm_exrot3:
+    fix x
+    fix y
+    fix z
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    qed h10
+
+# exrot4
+proof mm_exrot4:
+    fix x
+    fix y
+    fix z
+    fix w
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    h11 = forall_intro h10
+    qed h11
+
+# hbal
+proof mm_hbal:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# sbal
+proof mm_sbal:
+    fix x
+    fix y
+    fix z
+    fix w
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    h11 = forall_intro h10
+    qed h11
+
+# sbalv
+proof mm_sbalv:
+    fix x
+    fix y
+    fix z
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) <-> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    qed h8
+
+# hbsbw
+proof mm_hbsbw:
+    fix x
+    fix y
+    fix z
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
+
+# hbsbwOLD
+proof mm_hbsbwOLD:
+    fix x
+    fix y
+    fix z
+    fix w
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    qed h8
+
+# sbcom2
+proof mm_sbcom2:
+    fix x
+    fix y
+    fix z
+    fix w
+    fix v
+    fix u
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    h11 = forall_intro h10
+    h12 = forall_intro h11
+    h13 = forall_intro h12
+    qed h13
+
+# sbco4lemOLD
+proof mm_sbco4lemOLD:
+    fix x
+    fix y
+    fix w
+    fix v
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    h11 = forall_intro h10
+    qed h11
+
+# sbco4OLD
+proof mm_sbco4OLD:
+    fix x
+    fix y
+    fix w
+    fix v
+    fix u
+    fix t
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    h10 = forall_intro h9
+    h11 = forall_intro h10
+    h12 = forall_intro h11
+    h13 = forall_intro h12
+    qed h13
+
+# nfa2
+proof mm_nfa2:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# nfexhe
+proof mm_nfexhe:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# nfexa2
+proof mm_nfexa2:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# 19.8a
+proof mm_19_8a:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# 19.8ad
+proof mm_19_8ad:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# sp
+proof mm_sp:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# spi
+proof mm_spi:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# sps
+proof mm_sps:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# 2sp
+proof mm_2sp:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# spsd
+proof mm_spsd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
+
+# 19.2g
+proof mm_19_2g:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# 19.21bi
+proof mm_19_21bi:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# 19.21bbi
+proof mm_19_21bbi:
+    fix x
+    fix y
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
+
+# 19.23bi
+proof mm_19_23bi:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# nexr
+proof mm_nexr:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume ~elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# qexmid
+proof mm_qexmid:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nf5r
+proof mm_nf5r:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nf5ri
+proof mm_nf5ri:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    qed h5
+
+# nf5rd
+proof mm_nf5rd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps)))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# nfim1
+proof mm_nfim1:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_nfim1_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_nfim1_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps)))
+    h1 = use mm_nf3
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = use wff_impl
+    h6 = forall_elim h5, S_ph
+    h7 = forall_elim h6, S_ph
+    h9 = iota_elim h7, h8_w
+    h10 = forall_elim h9, u0
+    h11 = use wff_neg
+    h12 = forall_elim h11, S_ph
+    h14 = iota_elim h12, h13_w
+    h15 = forall_elim h14, u0
+    h16 = use wff_or
+    h17 = forall_elim h16, S_ph
+    h18 = forall_elim h17, h13_w
+    h20 = iota_elim h18, h19_w
+    h21 = forall_elim h20, u0
+    h22 = assume elem(u0, h19_w)
+    h23 = iff_elim_l h21, h22
+    h24 = assume elem(u0, S_ph)
+    h25 = let ~elem(u0, S_ph)
+    h26 = or_intro_l h24, h25
+    h27 = implies_intro h26
+    h28 = assume elem(u0, h13_w)
+    h29 = iff_elim_l h15, h28
+    h30 = let elem(u0, S_ph)
+    h31 = or_intro_r h30, h29
+    h32 = implies_intro h31
+    h33 = or_elim h23, h27, h32
+    h34 = implies_intro h33
+    h35 = assume (elem(u0, S_ph) | ~elem(u0, S_ph))
+    h36 = assume elem(u0, S_ph)
+    h37 = let elem(u0, h13_w)
+    h38 = or_intro_l h36, h37
+    h39 = implies_intro h38
+    h40 = assume ~elem(u0, S_ph)
+    h41 = iff_elim_r h15, h40
+    h42 = let elem(u0, S_ph)
+    h43 = or_intro_r h42, h41
+    h44 = implies_intro h43
+    h45 = or_elim h35, h39, h44
+    h46 = iff_elim_r h21, h45
+    h47 = implies_intro h46
+    h48 = iff_intro h34, h47
+    h49 = use mm_mpbi
+    h50 = forall_elim h49, h8_w
+    h51 = forall_elim h50, h19_w
+    h52 = forall_elim h51, u0
+    h53 = iff_elim_r h10, hyp_mm_nfim1_1
+    h54 = implies_elim h52, h53
+    h55 = assume elem(u0, h8_w)
+    h56 = iff_elim_l h10, h55
+    h57 = iff_elim_l h4, h56
+    h58 = iff_elim_r h48, h57
+    h59 = implies_intro h58
+    h60 = assume elem(u0, h19_w)
+    h61 = iff_elim_l h48, h60
+    h62 = iff_elim_r h4, h61
+    h63 = iff_elim_r h10, h62
+    h64 = implies_intro h63
+    h65 = iff_intro h59, h64
+    h66 = implies_elim h54, h65
+    h67 = iff_elim_l h48, h66
+    h68 = use mm_nftht
+    h69 = forall_elim h68, x
+    h70 = forall_elim h69, S_ph
+    h71 = forall_elim h70, u0
+    h72 = use wff_impl
+    h73 = forall_elim h72, S_ps
+    h74 = forall_elim h73, S_ps
+    h76 = iota_elim h74, h75_w
+    h77 = forall_elim h76, u0
+    h78 = use mm_sps
+    h79 = forall_elim h78, x
+    h80 = forall_elim h79, S_ph
+    h81 = forall_elim h80, h75_w
+    h82 = forall_elim h81, u0
+    h83 = assume elem(u0, S_ph)
+    h84 = implies_elim hyp_mm_nfim1_2, h83
+    h85 = iff_elim_r h77, h84
+    h86 = implies_intro h85
+    h87 = implies_elim h82, h86
+    h88 = assume elem(u0, S_ph)
+    h89 = implies_elim h87, h88
+    h90 = iff_elim_l h77, h89
+    h91 = implies_intro h90
+    h92 = use mm_nfimd
+    h93 = forall_elim h92, x
+    h94 = forall_elim h93, S_ph
+    h95 = forall_elim h94, S_ph
+    h96 = forall_elim h95, S_ps
+    h97 = forall_elim h96, u0
+    h98 = implies_elim h97, h71
+    h99 = implies_elim h98, h91
+    h100 = use mm_pm2_21
+    h101 = forall_elim h100, S_ph
+    h102 = forall_elim h101, S_ps
+    h103 = forall_elim h102, u0
+    h104 = use wff_neg
+    h105 = forall_elim h104, S_ph
+    h107 = iota_elim h105, h106_w
+    h108 = forall_elim h107, u0
+    h109 = use wff_impl
+    h110 = forall_elim h109, S_ph
+    h111 = forall_elim h110, S_ps
+    h113 = iota_elim h111, h112_w
+    h114 = forall_elim h113, u0
+    h115 = use mm_alimi
+    h116 = forall_elim h115, x
+    h117 = forall_elim h116, h106_w
+    h118 = forall_elim h117, h112_w
+    h119 = forall_elim h118, u0
+    h120 = assume elem(u0, h106_w)
+    h121 = iff_elim_l h108, h120
+    h122 = implies_elim h103, h121
+    h123 = iff_elim_r h114, h122
+    h124 = implies_intro h123
+    h125 = implies_elim h119, h124
+    h126 = assume ~elem(u0, S_ph)
+    h127 = iff_elim_r h108, h126
+    h128 = implies_elim h125, h127
+    h129 = iff_elim_l h114, h128
+    h130 = implies_intro h129
+    h131 = use wff_impl
+    h132 = forall_elim h131, S_ph
+    h133 = forall_elim h132, S_ps
+    h135 = iota_elim h133, h134_w
+    h136 = forall_elim h135, u0
+    h137 = use mm_nftht
+    h138 = forall_elim h137, x
+    h139 = forall_elim h138, h134_w
+    h140 = forall_elim h139, u0
+    h141 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h142 = iff_elim_r h136, h141
+    h143 = implies_elim h140, h142
+    h144 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h145 = iff_elim_r h136, h144
+    h146 = implies_elim h143, h145
+    h147 = iff_elim_l h136, h146
+    h148 = implies_intro h147
+    h149 = implies_intro h148
+    h150 = use wff_neg
+    h151 = forall_elim h150, S_ph
+    h153 = iota_elim h151, h152_w
+    h154 = forall_elim h153, u0
+    h155 = use wff_impl
+    h156 = forall_elim h155, S_ph
+    h157 = forall_elim h156, S_ps
+    h159 = iota_elim h157, h158_w
+    h160 = forall_elim h159, u0
+    h161 = use wff_impl
+    h162 = forall_elim h161, S_ph
+    h163 = forall_elim h162, S_ps
+    h165 = iota_elim h163, h164_w
+    h166 = forall_elim h165, u0
+    h167 = use wff_impl
+    h168 = forall_elim h167, S_ph
+    h169 = forall_elim h168, S_ps
+    h171 = iota_elim h169, h170_w
+    h172 = forall_elim h171, u0
+    h173 = use wff_impl
+    h174 = forall_elim h173, h164_w
+    h175 = forall_elim h174, h170_w
+    h177 = iota_elim h175, h176_w
+    h178 = forall_elim h177, u0
+    h179 = assume elem(u0, h176_w)
+    h180 = iff_elim_l h178, h179
+    h181 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h182 = iff_elim_r h166, h181
+    h183 = implies_elim h180, h182
+    h184 = iff_elim_l h172, h183
+    h185 = implies_intro h184
+    h186 = implies_intro h185
+    h187 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
+    h188 = assume elem(u0, h164_w)
+    h189 = iff_elim_l h166, h188
+    h190 = implies_elim h187, h189
+    h191 = iff_elim_r h172, h190
+    h192 = implies_intro h191
+    h193 = iff_elim_r h178, h192
+    h194 = implies_intro h193
+    h195 = iff_intro h186, h194
+    h196 = use mm_syl
+    h197 = forall_elim h196, h152_w
+    h198 = forall_elim h197, h158_w
+    h199 = forall_elim h198, h176_w
+    h200 = forall_elim h199, u0
+    h201 = assume elem(u0, h152_w)
+    h202 = iff_elim_l h154, h201
+    h203 = implies_elim h130, h202
+    h204 = iff_elim_r h160, h203
+    h205 = implies_intro h204
+    h206 = implies_elim h200, h205
+    h207 = assume elem(u0, h158_w)
+    h208 = iff_elim_l h160, h207
+    h209 = implies_elim h149, h208
+    h210 = iff_elim_r h195, h209
+    h211 = implies_intro h210
+    h212 = implies_elim h206, h211
+    h213 = assume ~elem(u0, S_ph)
+    h214 = iff_elim_r h154, h213
+    h215 = implies_elim h212, h214
+    h216 = iff_elim_l h195, h215
+    h217 = implies_intro h216
+    h218 = use wff_impl
+    h219 = forall_elim h218, S_ph
+    h220 = forall_elim h219, S_ps
+    h222 = iota_elim h220, h221_w
+    h223 = forall_elim h222, u0
+    h224 = use wff_impl
+    h225 = forall_elim h224, S_ph
+    h226 = forall_elim h225, S_ps
+    h228 = iota_elim h226, h227_w
+    h229 = forall_elim h228, u0
+    h230 = use wff_impl
+    h231 = forall_elim h230, h221_w
+    h232 = forall_elim h231, h227_w
+    h234 = iota_elim h232, h233_w
+    h235 = forall_elim h234, u0
+    h236 = assume elem(u0, h233_w)
+    h237 = iff_elim_l h235, h236
+    h238 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h239 = iff_elim_r h223, h238
+    h240 = implies_elim h237, h239
+    h241 = iff_elim_l h229, h240
+    h242 = implies_intro h241
+    h243 = implies_intro h242
+    h244 = assume ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps)))
+    h245 = assume elem(u0, h221_w)
+    h246 = iff_elim_l h223, h245
+    h247 = implies_elim h244, h246
+    h248 = iff_elim_r h229, h247
+    h249 = implies_intro h248
+    h250 = iff_elim_r h235, h249
+    h251 = implies_intro h250
+    h252 = iff_intro h243, h251
+    h253 = use wff_neg
+    h254 = forall_elim h253, S_ph
+    h256 = iota_elim h254, h255_w
+    h257 = forall_elim h256, u0
+    h258 = use mm_jaoi
+    h259 = forall_elim h258, S_ph
+    h260 = forall_elim h259, h233_w
+    h261 = forall_elim h260, h255_w
+    h262 = forall_elim h261, u0
+    h263 = assume elem(u0, S_ph)
+    h264 = implies_elim h99, h263
+    h265 = iff_elim_r h252, h264
+    h266 = implies_intro h265
+    h267 = implies_elim h262, h266
+    h268 = assume elem(u0, h255_w)
+    h269 = iff_elim_l h257, h268
+    h270 = implies_elim h217, h269
+    h271 = iff_elim_r h252, h270
+    h272 = implies_intro h271
+    h273 = implies_elim h267, h272
+    h274 = assume (elem(u0, S_ph) | ~elem(u0, S_ph))
+    h275 = assume elem(u0, S_ph)
+    h276 = let elem(u0, h255_w)
+    h277 = or_intro_l h275, h276
+    h278 = implies_intro h277
+    h279 = assume ~elem(u0, S_ph)
+    h280 = iff_elim_r h257, h279
+    h281 = let elem(u0, S_ph)
+    h282 = or_intro_r h281, h280
+    h283 = implies_intro h282
+    h284 = or_elim h274, h278, h283
+    h285 = implies_elim h273, h284
+    h286 = iff_elim_l h252, h285
+    h287 = implies_intro h286
+    h288 = implies_elim h287, h67
+    h289 = and_intro hyp_mm_nfim1_2, h288
+    h290 = and_elim_r h289
+    h291 = implies_intro h290
+    h292 = and_intro hyp_mm_nfim1_1, h291
+    h293 = and_elim_r h292
+    h294 = implies_intro h293
+    h295 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps))) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps)))))
+    h296 = implies_intro h295
+    h297 = implies_elim h296, h294
+    h298 = forall_intro h297
+    h299 = forall_intro h298
+    h300 = forall_intro h299
+    h301 = forall_intro h300
+    qed h301
+
+# nfan1
+proof mm_nfan1:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_nfim1_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_nfim1_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps)))
+    h1 = assume elem(u0, S_ph) & elem(u0, S_ps)
+    h2 = and_elim_l h1
+    h3 = and_elim_r h1
+    h4 = assume elem(u0, S_ph) -> ~elem(u0, S_ps)
+    h5 = implies_elim h4, h2
+    h6 = not_elim h5, h3
+    h7 = not_intro h6
+    h8 = implies_intro h7
+    h9 = assume ~(elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h10 = assume ~elem(u0, S_ph)
+    h11 = assume elem(u0, S_ph)
+    h12 = not_elim h10, h11
+    h13 = let ~elem(u0, S_ps)
+    h14 = bottom_elim h12, h13
+    h15 = implies_intro h14
+    h16 = not_elim h9, h15
+    h17 = not_intro h16
+    h18 = double_neg_elim h17
+    h19 = assume ~elem(u0, S_ps)
+    h20 = assume elem(u0, S_ph)
+    h21 = and_intro h20, h19
+    h22 = and_elim_r h21
+    h23 = implies_intro h22
+    h24 = not_elim h9, h23
+    h25 = not_intro h24
+    h26 = double_neg_elim h25
+    h27 = and_intro h18, h26
+    h28 = implies_intro h27
+    h29 = iff_intro h8, h28
+    h30 = use mm_nfnd
+    h31 = forall_elim h30, x
+    h32 = forall_elim h31, S_ph
+    h33 = forall_elim h32, S_ps
+    h34 = forall_elim h33, u0
+    h35 = implies_elim h34, hyp_mm_nfim1_2
+    h36 = use wff_neg
+    h37 = forall_elim h36, S_ps
+    h39 = iota_elim h37, h38_w
+    h40 = forall_elim h39, u0
+    h41 = use mm_nfim1
+    h42 = forall_elim h41, x
+    h43 = forall_elim h42, S_ph
+    h44 = forall_elim h43, h38_w
+    h45 = forall_elim h44, u0
+    h46 = implies_elim h45, hyp_mm_nfim1_1
+    h47 = assume elem(u0, S_ph)
+    h48 = implies_elim h35, h47
+    h49 = assume elem(u0, h38_w)
+    h50 = iff_elim_l h40, h49
+    h51 = implies_elim h48, h50
+    h52 = iff_elim_r h40, h51
+    h53 = implies_intro h52
+    h54 = implies_intro h53
+    h55 = implies_elim h46, h54
+    h56 = assume (elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h57 = assume elem(u0, S_ph)
+    h58 = implies_elim h56, h57
+    h59 = iff_elim_r h40, h58
+    h60 = implies_intro h59
+    h61 = implies_elim h55, h60
+    h62 = assume elem(u0, S_ph)
+    h63 = implies_elim h61, h62
+    h64 = iff_elim_l h40, h63
+    h65 = implies_intro h64
+    h66 = implies_intro h65
+    h67 = use wff_neg
+    h68 = forall_elim h67, S_ps
+    h70 = iota_elim h68, h69_w
+    h71 = forall_elim h70, u0
+    h72 = use wff_impl
+    h73 = forall_elim h72, S_ph
+    h74 = forall_elim h73, h69_w
+    h76 = iota_elim h74, h75_w
+    h77 = forall_elim h76, u0
+    h78 = assume elem(u0, h75_w)
+    h79 = iff_elim_l h77, h78
+    h80 = assume elem(u0, S_ph)
+    h81 = implies_elim h79, h80
+    h82 = iff_elim_l h71, h81
+    h83 = implies_intro h82
+    h84 = implies_intro h83
+    h85 = assume (elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h86 = assume elem(u0, S_ph)
+    h87 = implies_elim h85, h86
+    h88 = iff_elim_r h71, h87
+    h89 = implies_intro h88
+    h90 = iff_elim_r h77, h89
+    h91 = implies_intro h90
+    h92 = iff_intro h84, h91
+    h93 = use mm_nfn
+    h94 = forall_elim h93, x
+    h95 = forall_elim h94, h75_w
+    h96 = forall_elim h95, u0
+    h97 = assume elem(u0, h75_w)
+    h98 = iff_elim_l h92, h97
+    h99 = implies_elim h66, h98
+    h100 = iff_elim_r h92, h99
+    h101 = implies_intro h100
+    h102 = implies_elim h96, h101
+    h103 = assume ~(elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h104 = assume elem(u0, h75_w)
+    h105 = iff_elim_l h92, h104
+    h106 = not_elim h103, h105
+    h107 = not_intro h106
+    h108 = implies_elim h102, h107
+    h109 = assume (elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h110 = iff_elim_r h92, h109
+    h111 = not_elim h108, h110
+    h112 = not_intro h111
+    h113 = implies_intro h112
+    h114 = use wff_and
+    h115 = forall_elim h114, S_ph
+    h116 = forall_elim h115, S_ps
+    h118 = iota_elim h116, h117_w
+    h119 = forall_elim h118, u0
+    h120 = use wff_neg
+    h121 = forall_elim h120, S_ps
+    h123 = iota_elim h121, h122_w
+    h124 = forall_elim h123, u0
+    h125 = use wff_impl
+    h126 = forall_elim h125, S_ph
+    h127 = forall_elim h126, h122_w
+    h129 = iota_elim h127, h128_w
+    h130 = forall_elim h129, u0
+    h131 = assume elem(u0, h128_w)
+    h132 = iff_elim_l h130, h131
+    h133 = assume elem(u0, S_ph)
+    h134 = implies_elim h132, h133
+    h135 = iff_elim_l h124, h134
+    h136 = implies_intro h135
+    h137 = implies_intro h136
+    h138 = assume (elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h139 = assume elem(u0, S_ph)
+    h140 = implies_elim h138, h139
+    h141 = iff_elim_r h124, h140
+    h142 = implies_intro h141
+    h143 = iff_elim_r h130, h142
+    h144 = implies_intro h143
+    h145 = iff_intro h137, h144
+    h146 = use wff_neg
+    h147 = forall_elim h146, h128_w
+    h149 = iota_elim h147, h148_w
+    h150 = forall_elim h149, u0
+    h151 = assume elem(u0, h148_w)
+    h152 = iff_elim_l h150, h151
+    h153 = assume (elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h154 = iff_elim_r h145, h153
+    h155 = not_elim h152, h154
+    h156 = not_intro h155
+    h157 = implies_intro h156
+    h158 = assume ~(elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h159 = assume elem(u0, h128_w)
+    h160 = iff_elim_l h145, h159
+    h161 = not_elim h158, h160
+    h162 = not_intro h161
+    h163 = iff_elim_r h150, h162
+    h164 = implies_intro h163
+    h165 = iff_intro h157, h164
+    h166 = use mm_nfxfr
+    h167 = forall_elim h166, x
+    h168 = forall_elim h167, h117_w
+    h169 = forall_elim h168, h148_w
+    h170 = forall_elim h169, u0
+    h171 = assume elem(u0, h117_w)
+    h172 = iff_elim_l h119, h171
+    h173 = iff_elim_l h29, h172
+    h174 = iff_elim_r h165, h173
+    h175 = implies_intro h174
+    h176 = assume elem(u0, h148_w)
+    h177 = iff_elim_l h165, h176
+    h178 = iff_elim_r h29, h177
+    h179 = iff_elim_r h119, h178
+    h180 = implies_intro h179
+    h181 = iff_intro h175, h180
+    h182 = implies_elim h170, h181
+    h183 = assume elem(u0, h148_w)
+    h184 = iff_elim_l h165, h183
+    h185 = implies_elim h113, h184
+    h186 = iff_elim_r h165, h185
+    h187 = implies_intro h186
+    h188 = implies_elim h182, h187
+    h189 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h190 = iff_elim_r h119, h189
+    h191 = implies_elim h188, h190
+    h192 = iff_elim_l h119, h191
+    h193 = implies_intro h192
+    h194 = and_intro hyp_mm_nfim1_2, h193
+    h195 = and_elim_r h194
+    h196 = implies_intro h195
+    h197 = and_intro hyp_mm_nfim1_1, h196
+    h198 = and_elim_r h197
+    h199 = implies_intro h198
+    h200 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps))) -> ((elem(u0, S_ph) & elem(u0, S_ps)) -> (elem(u0, S_ph) & elem(u0, S_ps)))))
+    h201 = implies_intro h200
+    h202 = implies_elim h201, h199
+    h203 = forall_intro h202
+    h204 = forall_intro h203
+    h205 = forall_intro h204
+    h206 = forall_intro h205
+    qed h206
+
+# 19.3t
+proof mm_19_3t:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = use mm_sp
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = use mm_nf5r
+    h6 = forall_elim h5, x
+    h7 = forall_elim h6, S_ph
+    h8 = forall_elim h7, u0
+    h9 = use wff_impl
+    h10 = forall_elim h9, S_ph
+    h11 = forall_elim h10, S_ph
+    h13 = iota_elim h11, h12_w
+    h14 = forall_elim h13, u0
+    h15 = use mm_impbid2
+    h16 = forall_elim h15, h12_w
+    h17 = forall_elim h16, S_ph
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, u0
+    h20 = implies_elim h19, h4
+    h21 = assume elem(u0, h12_w)
+    h22 = iff_elim_l h14, h21
+    h23 = implies_elim h8, h22
+    h24 = implies_intro h23
+    h25 = implies_elim h20, h24
+    h26 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h27 = iff_elim_r h14, h26
+    h28 = implies_elim h25, h27
+    h29 = implies_intro h28
+    h30 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> (elem(u0, S_ph) <-> elem(u0, S_ph)))
+    h31 = implies_intro h30
+    h32 = implies_elim h31, h29
+    h33 = forall_intro h32
+    h34 = forall_intro h33
+    h35 = forall_intro h34
+    qed h35
+
+# 19.3
+proof mm_19_3:
+    fix x
+    fix S_ph
+    fix u0
+    hyp_mm_19_3_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_sp
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = use mm_nf5ri
+    h6 = forall_elim h5, x
+    h7 = forall_elim h6, S_ph
+    h8 = forall_elim h7, u0
+    h9 = implies_elim h8, hyp_mm_19_3_1
+    h10 = use mm_impbii
+    h11 = forall_elim h10, S_ph
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, u0
+    h14 = implies_elim h13, h4
+    h15 = implies_elim h14, h9
+    h16 = and_intro hyp_mm_19_3_1, h15
+    h17 = and_elim_r h16
+    h18 = implies_intro h17
+    h19 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> (elem(u0, S_ph) <-> elem(u0, S_ph)))
+    h20 = implies_intro h19
+    h21 = implies_elim h20, h18
+    h22 = forall_intro h21
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    qed h24
+
+# 19.9d
+proof mm_19_9d:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = assume (elem(u0, S_ps) -> (elem(u0, S_ph) -> elem(u0, S_ph)))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
+# 19.9t
+proof mm_19_9t:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = use wff_impl
+    h2 = forall_elim h1, S_ph
+    h3 = forall_elim h2, S_ph
+    h5 = iota_elim h3, h4_w
+    h6 = forall_elim h5, u0
+    h7 = use mm_id
+    h8 = forall_elim h7, h4_w
+    h9 = forall_elim h8, u0
+    h10 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h11 = iff_elim_r h6, h10
+    h12 = implies_elim h9, h11
+    h13 = iff_elim_l h6, h12
+    h14 = implies_intro h13
+    h15 = use wff_impl
+    h16 = forall_elim h15, S_ph
+    h17 = forall_elim h16, S_ph
+    h19 = iota_elim h17, h18_w
+    h20 = forall_elim h19, u0
+    h21 = use mm_19_9d
+    h22 = forall_elim h21, x
+    h23 = forall_elim h22, S_ph
+    h24 = forall_elim h23, h18_w
+    h25 = forall_elim h24, u0
+    h26 = assume elem(u0, h18_w)
+    h27 = iff_elim_l h20, h26
+    h28 = implies_elim h14, h27
+    h29 = implies_intro h28
+    h30 = implies_elim h25, h29
+    h31 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h32 = iff_elim_r h20, h31
+    h33 = implies_elim h30, h32
+    h34 = implies_intro h33
+    h35 = use mm_19_8a
+    h36 = forall_elim h35, x
+    h37 = forall_elim h36, u0
+    h38 = forall_elim h37, S_ph
+    h39 = forall_elim h38, u0
+    h40 = use wff_impl
+    h41 = forall_elim h40, S_ph
+    h42 = forall_elim h41, S_ph
+    h44 = iota_elim h42, h43_w
+    h45 = forall_elim h44, u0
+    h46 = use mm_impbid1
+    h47 = forall_elim h46, h43_w
+    h48 = forall_elim h47, S_ph
+    h49 = forall_elim h48, S_ph
+    h50 = forall_elim h49, u0
+    h51 = assume elem(u0, h43_w)
+    h52 = iff_elim_l h45, h51
+    h53 = implies_elim h34, h52
+    h54 = implies_intro h53
+    h55 = implies_elim h50, h54
+    h56 = implies_elim h55, h39
+    h57 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h58 = iff_elim_r h45, h57
+    h59 = implies_elim h56, h58
+    h60 = implies_intro h59
+    h61 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> (elem(u0, S_ph) <-> elem(u0, S_ph)))
+    h62 = implies_intro h61
+    h63 = implies_elim h62, h60
+    h64 = forall_intro h63
+    h65 = forall_intro h64
+    h66 = forall_intro h65
+    qed h66
+
+# 19.9
+proof mm_19_9:
+    fix x
+    fix S_ph
+    fix u0
+    hyp_mm_19_9_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_9t
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_19_9_1
+    h6 = and_intro hyp_mm_19_9_1, h5
+    h7 = and_elim_r h6
+    h8 = implies_intro h7
+    h9 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> (elem(u0, S_ph) <-> elem(u0, S_ph)))
+    h10 = implies_intro h9
+    h11 = implies_elim h10, h8
+    h12 = forall_intro h11
+    h13 = forall_intro h12
+    h14 = forall_intro h13
+    qed h14
+
+# 19.21t
+proof mm_19_21t:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = use mm_19_38a
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_9t
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, u0
+    h10 = use wff_impl
+    h11 = forall_elim h10, S_ph
+    h12 = forall_elim h11, S_ph
+    h14 = iota_elim h12, h13_w
+    h15 = forall_elim h14, u0
+    h16 = use mm_imbi1d
+    h17 = forall_elim h16, h13_w
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ph
+    h20 = forall_elim h19, S_ps
+    h21 = forall_elim h20, u0
+    h22 = assume elem(u0, h13_w)
+    h23 = iff_elim_l h15, h22
+    h24 = implies_elim h9, h23
+    h25 = implies_intro h24
+    h26 = implies_elim h21, h25
+    h27 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h28 = iff_elim_r h15, h27
+    h29 = implies_elim h26, h28
+    h30 = implies_intro h29
+    h31 = use wff_impl
+    h32 = forall_elim h31, S_ph
+    h33 = forall_elim h32, S_ph
+    h35 = iota_elim h33, h34_w
+    h36 = forall_elim h35, u0
+    h37 = use wff_impl
+    h38 = forall_elim h37, S_ph
+    h39 = forall_elim h38, S_ps
+    h41 = iota_elim h39, h40_w
+    h42 = forall_elim h41, u0
+    h43 = use wff_impl
+    h44 = forall_elim h43, S_ph
+    h45 = forall_elim h44, S_ps
+    h47 = iota_elim h45, h46_w
+    h48 = forall_elim h47, u0
+    h49 = use wff_impl
+    h50 = forall_elim h49, S_ph
+    h51 = forall_elim h50, S_ps
+    h53 = iota_elim h51, h52_w
+    h54 = forall_elim h53, u0
+    h55 = use mm_bitr3d
+    h56 = forall_elim h55, h34_w
+    h57 = forall_elim h56, h40_w
+    h58 = forall_elim h57, h46_w
+    h59 = forall_elim h58, h52_w
+    h60 = forall_elim h59, u0
+    h61 = assume elem(u0, h34_w)
+    h62 = iff_elim_l h36, h61
+    h63 = implies_elim h5, h62
+    h64 = assume elem(u0, h40_w)
+    h65 = iff_elim_l h42, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_r h48, h66
+    h68 = implies_intro h67
+    h69 = assume elem(u0, h46_w)
+    h70 = iff_elim_l h48, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_r h42, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = implies_intro h74
+    h76 = implies_elim h60, h75
+    h77 = assume elem(u0, h34_w)
+    h78 = iff_elim_l h36, h77
+    h79 = implies_elim h30, h78
+    h80 = assume elem(u0, h40_w)
+    h81 = iff_elim_l h42, h80
+    h82 = iff_elim_l h79, h81
+    h83 = iff_elim_r h54, h82
+    h84 = implies_intro h83
+    h85 = assume elem(u0, h52_w)
+    h86 = iff_elim_l h54, h85
+    h87 = iff_elim_r h79, h86
+    h88 = iff_elim_r h42, h87
+    h89 = implies_intro h88
+    h90 = iff_intro h84, h89
+    h91 = implies_intro h90
+    h92 = implies_elim h76, h91
+    h93 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h94 = iff_elim_r h36, h93
+    h95 = implies_elim h92, h94
+    h96 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h97 = iff_elim_r h48, h96
+    h98 = iff_elim_l h95, h97
+    h99 = iff_elim_l h54, h98
+    h100 = implies_intro h99
+    h101 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h102 = iff_elim_r h54, h101
+    h103 = iff_elim_r h95, h102
+    h104 = iff_elim_l h48, h103
+    h105 = implies_intro h104
+    h106 = iff_intro h100, h105
+    h107 = implies_intro h106
+    h108 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h109 = implies_intro h108
+    h110 = implies_elim h109, h107
+    h111 = forall_intro h110
+    h112 = forall_intro h111
+    h113 = forall_intro h112
+    h114 = forall_intro h113
+    qed h114
+
+# 19.21
+proof mm_19_21:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_21_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_21t
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_19_21_1
+    h7 = and_intro hyp_mm_19_21_1, h6
+    h8 = and_elim_r h7
+    h9 = implies_intro h8
+    h10 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h11 = implies_intro h10
+    h12 = implies_elim h11, h9
+    h13 = forall_intro h12
+    h14 = forall_intro h13
+    h15 = forall_intro h14
+    h16 = forall_intro h15
+    qed h16
+
+# stdpc5
+proof mm_stdpc5:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_stdpc5_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_21
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_stdpc5_1
+    h7 = use wff_impl
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h11 = iota_elim h9, h10_w
+    h12 = forall_elim h11, u0
+    h13 = use wff_impl
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, S_ps
+    h17 = iota_elim h15, h16_w
+    h18 = forall_elim h17, u0
+    h19 = use mm_biimpi
+    h20 = forall_elim h19, h10_w
+    h21 = forall_elim h20, h16_w
+    h22 = forall_elim h21, u0
+    h23 = assume elem(u0, h10_w)
+    h24 = iff_elim_l h12, h23
+    h25 = iff_elim_l h6, h24
+    h26 = iff_elim_r h18, h25
+    h27 = implies_intro h26
+    h28 = assume elem(u0, h16_w)
+    h29 = iff_elim_l h18, h28
+    h30 = iff_elim_r h6, h29
+    h31 = iff_elim_r h12, h30
+    h32 = implies_intro h31
+    h33 = iff_intro h27, h32
+    h34 = implies_elim h22, h33
+    h35 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h36 = iff_elim_r h12, h35
+    h37 = implies_elim h34, h36
+    h38 = iff_elim_l h18, h37
+    h39 = implies_intro h38
+    h40 = and_intro hyp_mm_stdpc5_1, h39
+    h41 = and_elim_r h40
+    h42 = implies_intro h41
+    h43 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h44 = implies_intro h43
+    h45 = implies_elim h44, h42
+    h46 = forall_intro h45
+    h47 = forall_intro h46
+    h48 = forall_intro h47
+    h49 = forall_intro h48
+    qed h49
+
+# 19.21-2
+proof mm_19_21_2:
+    fix x
+    fix y
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_21_2_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_19_21_2_2 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_21
+    h2 = forall_elim h1, y
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_19_21_2_2
+    h7 = use wff_impl
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h11 = iota_elim h9, h10_w
+    h12 = forall_elim h11, u0
+    h13 = use wff_impl
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, S_ps
+    h17 = iota_elim h15, h16_w
+    h18 = forall_elim h17, u0
+    h19 = use mm_albii
+    h20 = forall_elim h19, x
+    h21 = forall_elim h20, h10_w
+    h22 = forall_elim h21, h16_w
+    h23 = forall_elim h22, u0
+    h24 = assume elem(u0, h10_w)
+    h25 = iff_elim_l h12, h24
+    h26 = iff_elim_l h6, h25
+    h27 = iff_elim_r h18, h26
+    h28 = implies_intro h27
+    h29 = assume elem(u0, h16_w)
+    h30 = iff_elim_l h18, h29
+    h31 = iff_elim_r h6, h30
+    h32 = iff_elim_r h12, h31
+    h33 = implies_intro h32
+    h34 = iff_intro h28, h33
+    h35 = implies_elim h23, h34
+    h36 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h37 = iff_elim_r h12, h36
+    h38 = iff_elim_l h35, h37
+    h39 = iff_elim_l h18, h38
+    h40 = implies_intro h39
+    h41 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h42 = iff_elim_r h18, h41
+    h43 = iff_elim_r h35, h42
+    h44 = iff_elim_l h12, h43
+    h45 = implies_intro h44
+    h46 = iff_intro h40, h45
+    h47 = use mm_19_21
+    h48 = forall_elim h47, x
+    h49 = forall_elim h48, S_ph
+    h50 = forall_elim h49, S_ps
+    h51 = forall_elim h50, u0
+    h52 = implies_elim h51, hyp_mm_19_21_2_1
+    h53 = use wff_impl
+    h54 = forall_elim h53, S_ph
+    h55 = forall_elim h54, S_ps
+    h57 = iota_elim h55, h56_w
+    h58 = forall_elim h57, u0
+    h59 = use wff_impl
+    h60 = forall_elim h59, S_ph
+    h61 = forall_elim h60, S_ps
+    h63 = iota_elim h61, h62_w
+    h64 = forall_elim h63, u0
+    h65 = use wff_impl
+    h66 = forall_elim h65, S_ph
+    h67 = forall_elim h66, S_ps
+    h69 = iota_elim h67, h68_w
+    h70 = forall_elim h69, u0
+    h71 = use mm_bitri
+    h72 = forall_elim h71, h56_w
+    h73 = forall_elim h72, h62_w
+    h74 = forall_elim h73, h68_w
+    h75 = forall_elim h74, u0
+    h76 = assume elem(u0, h56_w)
+    h77 = iff_elim_l h58, h76
+    h78 = iff_elim_l h46, h77
+    h79 = iff_elim_r h64, h78
+    h80 = implies_intro h79
+    h81 = assume elem(u0, h62_w)
+    h82 = iff_elim_l h64, h81
+    h83 = iff_elim_r h46, h82
+    h84 = iff_elim_r h58, h83
+    h85 = implies_intro h84
+    h86 = iff_intro h80, h85
+    h87 = implies_elim h75, h86
+    h88 = assume elem(u0, h62_w)
+    h89 = iff_elim_l h64, h88
+    h90 = iff_elim_l h52, h89
+    h91 = iff_elim_r h70, h90
+    h92 = implies_intro h91
+    h93 = assume elem(u0, h68_w)
+    h94 = iff_elim_l h70, h93
+    h95 = iff_elim_r h52, h94
+    h96 = iff_elim_r h64, h95
+    h97 = implies_intro h96
+    h98 = iff_intro h92, h97
+    h99 = implies_elim h87, h98
+    h100 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h101 = iff_elim_r h58, h100
+    h102 = iff_elim_l h99, h101
+    h103 = iff_elim_l h70, h102
+    h104 = implies_intro h103
+    h105 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h106 = iff_elim_r h70, h105
+    h107 = iff_elim_r h99, h106
+    h108 = iff_elim_l h58, h107
+    h109 = implies_intro h108
+    h110 = iff_intro h104, h109
+    h111 = and_intro hyp_mm_19_21_2_2, h110
+    h112 = and_elim_r h111
+    h113 = implies_intro h112
+    h114 = and_intro hyp_mm_19_21_2_1, h113
+    h115 = and_elim_r h114
+    h116 = implies_intro h115
+    h117 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps)))))
+    h118 = implies_intro h117
+    h119 = implies_elim h118, h116
+    h120 = forall_intro h119
+    h121 = forall_intro h120
+    h122 = forall_intro h121
+    h123 = forall_intro h122
+    h124 = forall_intro h123
+    qed h124
+
+# 19.23t
+proof mm_19_23t:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    h1 = use mm_19_38b
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_3t
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ps
+    h9 = forall_elim h8, u0
+    h10 = use wff_impl
+    h11 = forall_elim h10, S_ps
+    h12 = forall_elim h11, S_ps
+    h14 = iota_elim h12, h13_w
+    h15 = forall_elim h14, u0
+    h16 = use mm_imbi2d
+    h17 = forall_elim h16, h13_w
+    h18 = forall_elim h17, S_ps
+    h19 = forall_elim h18, S_ps
+    h20 = forall_elim h19, S_ph
+    h21 = forall_elim h20, u0
+    h22 = assume elem(u0, h13_w)
+    h23 = iff_elim_l h15, h22
+    h24 = implies_elim h9, h23
+    h25 = implies_intro h24
+    h26 = implies_elim h21, h25
+    h27 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h28 = iff_elim_r h15, h27
+    h29 = implies_elim h26, h28
+    h30 = implies_intro h29
+    h31 = use wff_impl
+    h32 = forall_elim h31, S_ps
+    h33 = forall_elim h32, S_ps
+    h35 = iota_elim h33, h34_w
+    h36 = forall_elim h35, u0
+    h37 = use wff_impl
+    h38 = forall_elim h37, S_ph
+    h39 = forall_elim h38, S_ps
+    h41 = iota_elim h39, h40_w
+    h42 = forall_elim h41, u0
+    h43 = use wff_impl
+    h44 = forall_elim h43, S_ph
+    h45 = forall_elim h44, S_ps
+    h47 = iota_elim h45, h46_w
+    h48 = forall_elim h47, u0
+    h49 = use wff_impl
+    h50 = forall_elim h49, S_ph
+    h51 = forall_elim h50, S_ps
+    h53 = iota_elim h51, h52_w
+    h54 = forall_elim h53, u0
+    h55 = use mm_bitr3d
+    h56 = forall_elim h55, h34_w
+    h57 = forall_elim h56, h40_w
+    h58 = forall_elim h57, h46_w
+    h59 = forall_elim h58, h52_w
+    h60 = forall_elim h59, u0
+    h61 = assume elem(u0, h34_w)
+    h62 = iff_elim_l h36, h61
+    h63 = implies_elim h5, h62
+    h64 = assume elem(u0, h40_w)
+    h65 = iff_elim_l h42, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_r h48, h66
+    h68 = implies_intro h67
+    h69 = assume elem(u0, h46_w)
+    h70 = iff_elim_l h48, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_r h42, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = implies_intro h74
+    h76 = implies_elim h60, h75
+    h77 = assume elem(u0, h34_w)
+    h78 = iff_elim_l h36, h77
+    h79 = implies_elim h30, h78
+    h80 = assume elem(u0, h40_w)
+    h81 = iff_elim_l h42, h80
+    h82 = iff_elim_l h79, h81
+    h83 = iff_elim_r h54, h82
+    h84 = implies_intro h83
+    h85 = assume elem(u0, h52_w)
+    h86 = iff_elim_l h54, h85
+    h87 = iff_elim_r h79, h86
+    h88 = iff_elim_r h42, h87
+    h89 = implies_intro h88
+    h90 = iff_intro h84, h89
+    h91 = implies_intro h90
+    h92 = implies_elim h76, h91
+    h93 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h94 = iff_elim_r h36, h93
+    h95 = implies_elim h92, h94
+    h96 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h97 = iff_elim_r h48, h96
+    h98 = iff_elim_l h95, h97
+    h99 = iff_elim_l h54, h98
+    h100 = implies_intro h99
+    h101 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h102 = iff_elim_r h54, h101
+    h103 = iff_elim_r h95, h102
+    h104 = iff_elim_l h48, h103
+    h105 = implies_intro h104
+    h106 = iff_intro h100, h105
+    h107 = implies_intro h106
+    h108 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h109 = implies_intro h108
+    h110 = implies_elim h109, h107
+    h111 = forall_intro h110
+    h112 = forall_intro h111
+    h113 = forall_intro h112
+    h114 = forall_intro h113
+    qed h114
+
+# 19.23
+proof mm_19_23:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_23_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_19_23t
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_19_23_1
+    h7 = and_intro hyp_mm_19_23_1, h6
+    h8 = and_elim_r h7
+    h9 = implies_intro h8
+    h10 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h11 = implies_intro h10
+    h12 = implies_elim h11, h9
+    h13 = forall_intro h12
+    h14 = forall_intro h13
+    h15 = forall_intro h14
+    h16 = forall_intro h15
+    qed h16
+
+# alimd
+proof mm_alimd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_alimd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_alimd_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h1 = use mm_nf5ri
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_alimd_1
+    h6 = use mm_alimdh
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, S_ch
+    h11 = forall_elim h10, u0
+    h12 = implies_elim h11, h5
+    h13 = implies_elim h12, hyp_mm_alimd_2
+    h14 = and_intro hyp_mm_alimd_2, h13
+    h15 = and_elim_r h14
+    h16 = implies_intro h15
+    h17 = and_intro hyp_mm_alimd_1, h16
+    h18 = and_elim_r h17
+    h19 = implies_intro h18
+    h20 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))))
+    h21 = implies_intro h20
+    h22 = implies_elim h21, h19
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    h25 = forall_intro h24
+    h26 = forall_intro h25
+    h27 = forall_intro h26
+    qed h27
+
+# alrimi
+proof mm_alrimi:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_alrimi_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_alrimi_2 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h1 = use mm_nf5ri
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_alrimi_1
+    h6 = use mm_alrimih
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, u0
+    h11 = implies_elim h10, h5
+    h12 = implies_elim h11, hyp_mm_alrimi_2
+    h13 = and_intro hyp_mm_alrimi_2, h12
+    h14 = and_elim_r h13
+    h15 = implies_intro h14
+    h16 = and_intro hyp_mm_alrimi_1, h15
+    h17 = and_elim_r h16
+    h18 = implies_intro h17
+    h19 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h20 = implies_intro h19
+    h21 = implies_elim h20, h18
+    h22 = forall_intro h21
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    h25 = forall_intro h24
+    qed h25
+
+# alrimdd
+proof mm_alrimdd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_alrimdd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_alrimdd_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps)))
+    hyp_mm_alrimdd_3 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h1 = use mm_nf5rd
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_alrimdd_2
+    h7 = use mm_alimd
+    h8 = forall_elim h7, x
+    h9 = forall_elim h8, S_ph
+    h10 = forall_elim h9, S_ps
+    h11 = forall_elim h10, S_ch
+    h12 = forall_elim h11, u0
+    h13 = implies_elim h12, hyp_mm_alrimdd_1
+    h14 = implies_elim h13, hyp_mm_alrimdd_3
+    h15 = use mm_syld
+    h16 = forall_elim h15, S_ph
+    h17 = forall_elim h16, S_ps
+    h18 = forall_elim h17, S_ps
+    h19 = forall_elim h18, S_ch
+    h20 = forall_elim h19, u0
+    h21 = implies_elim h20, h6
+    h22 = implies_elim h21, h14
+    h23 = and_intro hyp_mm_alrimdd_3, h22
+    h24 = and_elim_r h23
+    h25 = implies_intro h24
+    h26 = and_intro hyp_mm_alrimdd_2, h25
+    h27 = and_elim_r h26
+    h28 = implies_intro h27
+    h29 = and_intro hyp_mm_alrimdd_1, h28
+    h30 = and_elim_r h29
+    h31 = implies_intro h30
+    h32 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ps))) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))))))
+    h33 = implies_intro h32
+    h34 = implies_elim h33, h31
+    h35 = forall_intro h34
+    h36 = forall_intro h35
+    h37 = forall_intro h36
+    h38 = forall_intro h37
+    h39 = forall_intro h38
+    qed h39
+
+# alrimd
+proof mm_alrimd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_alrimd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_alrimd_2 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    hyp_mm_alrimd_3 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h1 = use wff_impl
+    h2 = forall_elim h1, S_ps
+    h3 = forall_elim h2, S_ps
+    h5 = iota_elim h3, h4_w
+    h6 = forall_elim h5, u0
+    h7 = use mm_a1i
+    h8 = forall_elim h7, h4_w
+    h9 = forall_elim h8, S_ph
+    h10 = forall_elim h9, u0
+    h11 = iff_elim_r h6, hyp_mm_alrimd_2
+    h12 = implies_elim h10, h11
+    h13 = assume elem(u0, S_ph)
+    h14 = implies_elim h12, h13
+    h15 = iff_elim_l h6, h14
+    h16 = implies_intro h15
+    h17 = use mm_alrimdd
+    h18 = forall_elim h17, x
+    h19 = forall_elim h18, S_ph
+    h20 = forall_elim h19, S_ps
+    h21 = forall_elim h20, S_ch
+    h22 = forall_elim h21, u0
+    h23 = implies_elim h22, hyp_mm_alrimd_1
+    h24 = implies_elim h23, h16
+    h25 = implies_elim h24, hyp_mm_alrimd_3
+    h26 = and_intro hyp_mm_alrimd_3, h25
+    h27 = and_elim_r h26
+    h28 = implies_intro h27
+    h29 = and_intro hyp_mm_alrimd_2, h28
+    h30 = and_elim_r h29
+    h31 = implies_intro h30
+    h32 = and_intro hyp_mm_alrimd_1, h31
+    h33 = and_elim_r h32
+    h34 = implies_intro h33
+    h35 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))))))
+    h36 = implies_intro h35
+    h37 = implies_elim h36, h34
+    h38 = forall_intro h37
+    h39 = forall_intro h38
+    h40 = forall_intro h39
+    h41 = forall_intro h40
+    h42 = forall_intro h41
+    qed h42
+
+# eximd
+proof mm_eximd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_eximd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_eximd_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h1 = use mm_nf5ri
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_eximd_1
+    h6 = use mm_eximdh
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, S_ch
+    h11 = forall_elim h10, u0
+    h12 = implies_elim h11, h5
+    h13 = implies_elim h12, hyp_mm_eximd_2
+    h14 = and_intro hyp_mm_eximd_2, h13
+    h15 = and_elim_r h14
+    h16 = implies_intro h15
+    h17 = and_intro hyp_mm_eximd_1, h16
+    h18 = and_elim_r h17
+    h19 = implies_intro h18
+    h20 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))))
+    h21 = implies_intro h20
+    h22 = implies_elim h21, h19
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    h25 = forall_intro h24
+    h26 = forall_intro h25
+    h27 = forall_intro h26
+    qed h27
+
+# exlimi
+proof mm_exlimi:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_exlimi_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    hyp_mm_exlimi_2 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h1 = use mm_19_23
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_exlimi_1
+    h7 = use wff_impl
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h11 = iota_elim h9, h10_w
+    h12 = forall_elim h11, u0
+    h13 = use wff_impl
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, S_ps
+    h17 = iota_elim h15, h16_w
+    h18 = forall_elim h17, u0
+    h19 = use mm_mpgbi
+    h20 = forall_elim h19, x
+    h21 = forall_elim h20, h10_w
+    h22 = forall_elim h21, h16_w
+    h23 = forall_elim h22, u0
+    h24 = assume elem(u0, h10_w)
+    h25 = iff_elim_l h12, h24
+    h26 = iff_elim_l h6, h25
+    h27 = iff_elim_r h18, h26
+    h28 = implies_intro h27
+    h29 = assume elem(u0, h16_w)
+    h30 = iff_elim_l h18, h29
+    h31 = iff_elim_r h6, h30
+    h32 = iff_elim_r h12, h31
+    h33 = implies_intro h32
+    h34 = iff_intro h28, h33
+    h35 = implies_elim h23, h34
+    h36 = iff_elim_r h12, hyp_mm_exlimi_2
+    h37 = implies_elim h35, h36
+    h38 = iff_elim_l h18, h37
+    h39 = and_intro hyp_mm_exlimi_2, h38
+    h40 = and_elim_r h39
+    h41 = implies_intro h40
+    h42 = and_intro hyp_mm_exlimi_1, h41
+    h43 = and_elim_r h42
+    h44 = implies_intro h43
+    h45 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h46 = implies_intro h45
+    h47 = implies_elim h46, h44
+    h48 = forall_intro h47
+    h49 = forall_intro h48
+    h50 = forall_intro h49
+    h51 = forall_intro h50
+    qed h51
+
+# exlimd
+proof mm_exlimd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_exlimd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_exlimd_2 = assume (elem(u0, S_ch) -> elem(u0, S_ch))
+    hyp_mm_exlimd_3 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h1 = use mm_eximd
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, S_ch
+    h6 = forall_elim h5, u0
+    h7 = implies_elim h6, hyp_mm_exlimd_1
+    h8 = implies_elim h7, hyp_mm_exlimd_3
+    h9 = use mm_19_9
+    h10 = forall_elim h9, x
+    h11 = forall_elim h10, S_ch
+    h12 = forall_elim h11, u0
+    h13 = implies_elim h12, hyp_mm_exlimd_2
+    h14 = use mm_imbitrdi
+    h15 = forall_elim h14, S_ph
+    h16 = forall_elim h15, S_ps
+    h17 = forall_elim h16, S_ch
+    h18 = forall_elim h17, S_ch
+    h19 = forall_elim h18, u0
+    h20 = implies_elim h19, h8
+    h21 = implies_elim h20, h13
+    h22 = and_intro hyp_mm_exlimd_3, h21
+    h23 = and_elim_r h22
+    h24 = implies_intro h23
+    h25 = and_intro hyp_mm_exlimd_2, h24
+    h26 = and_elim_r h25
+    h27 = implies_intro h26
+    h28 = and_intro hyp_mm_exlimd_1, h27
+    h29 = and_elim_r h28
+    h30 = implies_intro h29
+    h31 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ch) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))))))
+    h32 = implies_intro h31
+    h33 = implies_elim h32, h30
+    h34 = forall_intro h33
+    h35 = forall_intro h34
+    h36 = forall_intro h35
+    h37 = forall_intro h36
+    h38 = forall_intro h37
+    qed h38
+
+# exlimimdd
+proof mm_exlimimdd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_exlimdd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_exlimdd_2 = assume (elem(u0, S_ch) -> elem(u0, S_ch))
+    hyp_mm_exlimdd_3 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    hyp_mm_exlimimdd_4 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch)))
+    h1 = use mm_exlimd
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, S_ch
+    h6 = forall_elim h5, u0
+    h7 = implies_elim h6, hyp_mm_exlimdd_1
+    h8 = implies_elim h7, hyp_mm_exlimdd_2
+    h9 = implies_elim h8, hyp_mm_exlimimdd_4
+    h10 = use mm_mpd
+    h11 = forall_elim h10, S_ph
+    h12 = forall_elim h11, S_ps
+    h13 = forall_elim h12, S_ch
+    h14 = forall_elim h13, u0
+    h15 = implies_elim h14, hyp_mm_exlimdd_3
+    h16 = implies_elim h15, h9
+    h17 = and_intro hyp_mm_exlimimdd_4, h16
+    h18 = and_elim_r h17
+    h19 = implies_intro h18
+    h20 = and_intro hyp_mm_exlimdd_3, h19
+    h21 = and_elim_r h20
+    h22 = implies_intro h21
+    h23 = and_intro hyp_mm_exlimdd_2, h22
+    h24 = and_elim_r h23
+    h25 = implies_intro h24
+    h26 = and_intro hyp_mm_exlimdd_1, h25
+    h27 = and_elim_r h26
+    h28 = implies_intro h27
+    h29 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ch) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) -> elem(u0, S_ch))) -> (elem(u0, S_ph) -> elem(u0, S_ch))))))
+    h30 = implies_intro h29
+    h31 = implies_elim h30, h28
+    h32 = forall_intro h31
+    h33 = forall_intro h32
+    h34 = forall_intro h33
+    h35 = forall_intro h34
+    h36 = forall_intro h35
+    qed h36
+
+# exlimdd
+proof mm_exlimdd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_exlimdd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_exlimdd_2 = assume (elem(u0, S_ch) -> elem(u0, S_ch))
+    hyp_mm_exlimdd_3 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    hyp_mm_exlimdd_4 = assume ((elem(u0, S_ph) & elem(u0, S_ps)) -> elem(u0, S_ch))
+    h1 = use mm_ex
+    h2 = forall_elim h1, S_ph
+    h3 = forall_elim h2, S_ps
+    h4 = forall_elim h3, S_ch
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_exlimdd_4
+    h7 = use mm_exlimimdd
+    h8 = forall_elim h7, x
+    h9 = forall_elim h8, S_ph
+    h10 = forall_elim h9, S_ps
+    h11 = forall_elim h10, S_ch
+    h12 = forall_elim h11, u0
+    h13 = implies_elim h12, hyp_mm_exlimdd_1
+    h14 = implies_elim h13, hyp_mm_exlimdd_2
+    h15 = implies_elim h14, hyp_mm_exlimdd_3
+    h16 = implies_elim h15, h6
+    h17 = and_intro hyp_mm_exlimdd_4, h16
+    h18 = and_elim_r h17
+    h19 = implies_intro h18
+    h20 = and_intro hyp_mm_exlimdd_3, h19
+    h21 = and_elim_r h20
+    h22 = implies_intro h21
+    h23 = and_intro hyp_mm_exlimdd_2, h22
+    h24 = and_elim_r h23
+    h25 = implies_intro h24
+    h26 = and_intro hyp_mm_exlimdd_1, h25
+    h27 = and_elim_r h26
+    h28 = implies_intro h27
+    h29 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ch) -> elem(u0, S_ch)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (((elem(u0, S_ph) & elem(u0, S_ps)) -> elem(u0, S_ch)) -> (elem(u0, S_ph) -> elem(u0, S_ch))))))
+    h30 = implies_intro h29
+    h31 = implies_elim h30, h28
+    h32 = forall_intro h31
+    h33 = forall_intro h32
+    h34 = forall_intro h33
+    h35 = forall_intro h34
+    h36 = forall_intro h35
+    qed h36
+
+# nexd
+proof mm_nexd:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_nexd_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_nexd_2 = assume (elem(u0, S_ph) -> ~elem(u0, S_ps))
+    h1 = use mm_nf5ri
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_nexd_1
+    h6 = use mm_nexdh
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, u0
+    h11 = implies_elim h10, h5
+    h12 = implies_elim h11, hyp_mm_nexd_2
+    h13 = and_intro hyp_mm_nexd_2, h12
+    h14 = and_elim_r h13
+    h15 = implies_intro h14
+    h16 = and_intro hyp_mm_nexd_1, h15
+    h17 = and_elim_r h16
+    h18 = implies_intro h17
+    h19 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> ~elem(u0, S_ps)) -> (elem(u0, S_ph) -> ~elem(u0, S_ps))))
+    h20 = implies_intro h19
+    h21 = implies_elim h20, h18
+    h22 = forall_intro h21
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    h25 = forall_intro h24
+    qed h25
+
+# albid
+proof mm_albid:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_albid_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_albid_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch)))
+    h1 = use mm_nf5ri
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_albid_1
+    h6 = use mm_albidh
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, S_ch
+    h11 = forall_elim h10, u0
+    h12 = implies_elim h11, h5
+    h13 = implies_elim h12, hyp_mm_albid_2
+    h14 = and_intro hyp_mm_albid_2, h13
+    h15 = and_elim_r h14
+    h16 = implies_intro h15
+    h17 = and_intro hyp_mm_albid_1, h16
+    h18 = and_elim_r h17
+    h19 = implies_intro h18
+    h20 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch)))))
+    h21 = implies_intro h20
+    h22 = implies_elim h21, h19
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    h25 = forall_intro h24
+    h26 = forall_intro h25
+    h27 = forall_intro h26
+    qed h27
+
+# exbid
+proof mm_exbid:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_albid_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_albid_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch)))
+    h1 = use mm_nf5ri
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_albid_1
+    h6 = use mm_exbidh
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, S_ch
+    h11 = forall_elim h10, u0
+    h12 = implies_elim h11, h5
+    h13 = implies_elim h12, hyp_mm_albid_2
+    h14 = and_intro hyp_mm_albid_2, h13
+    h15 = and_elim_r h14
+    h16 = implies_intro h15
+    h17 = and_intro hyp_mm_albid_1, h16
+    h18 = and_elim_r h17
+    h19 = implies_intro h18
+    h20 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> (elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch)))))
+    h21 = implies_intro h20
+    h22 = implies_elim h21, h19
+    h23 = forall_intro h22
+    h24 = forall_intro h23
+    h25 = forall_intro h24
+    h26 = forall_intro h25
+    h27 = forall_intro h26
+    qed h27
+
+# nfbidf
+proof mm_nfbidf:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix S_ch
+    fix u0
+    hyp_mm_albid_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    hyp_mm_albid_2 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch)))
+    h1 = use mm_exbid
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, S_ch
+    h6 = forall_elim h5, u0
+    h7 = implies_elim h6, hyp_mm_albid_1
+    h8 = implies_elim h7, hyp_mm_albid_2
+    h9 = use mm_albid
+    h10 = forall_elim h9, x
+    h11 = forall_elim h10, S_ph
+    h12 = forall_elim h11, S_ps
+    h13 = forall_elim h12, S_ch
+    h14 = forall_elim h13, u0
+    h15 = implies_elim h14, hyp_mm_albid_1
+    h16 = implies_elim h15, hyp_mm_albid_2
+    h17 = use mm_imbi12d
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h20 = forall_elim h19, S_ch
+    h21 = forall_elim h20, S_ps
+    h22 = forall_elim h21, S_ch
+    h23 = forall_elim h22, u0
+    h24 = implies_elim h23, h8
+    h25 = implies_elim h24, h16
+    h26 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h27 = implies_intro h26
+    h28 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h29 = implies_intro h28
+    h30 = iff_intro h27, h29
+    h31 = assume (elem(u0, S_ch) -> elem(u0, S_ch))
+    h32 = implies_intro h31
+    h33 = assume (elem(u0, S_ch) -> elem(u0, S_ch))
+    h34 = implies_intro h33
+    h35 = iff_intro h32, h34
+    h36 = use wff_impl
+    h37 = forall_elim h36, S_ps
+    h38 = forall_elim h37, S_ps
+    h40 = iota_elim h38, h39_w
+    h41 = forall_elim h40, u0
+    h42 = use wff_impl
+    h43 = forall_elim h42, S_ch
+    h44 = forall_elim h43, S_ch
+    h46 = iota_elim h44, h45_w
+    h47 = forall_elim h46, u0
+    h48 = use wff_impl
+    h49 = forall_elim h48, S_ps
+    h50 = forall_elim h49, S_ps
+    h52 = iota_elim h50, h51_w
+    h53 = forall_elim h52, u0
+    h54 = use wff_impl
+    h55 = forall_elim h54, S_ch
+    h56 = forall_elim h55, S_ch
+    h58 = iota_elim h56, h57_w
+    h59 = forall_elim h58, u0
+    h60 = use mm_3bitr4g
+    h61 = forall_elim h60, S_ph
+    h62 = forall_elim h61, h39_w
+    h63 = forall_elim h62, h45_w
+    h64 = forall_elim h63, h51_w
+    h65 = forall_elim h64, h57_w
+    h66 = forall_elim h65, u0
+    h67 = assume elem(u0, S_ph)
+    h68 = implies_elim h25, h67
+    h69 = assume elem(u0, h39_w)
+    h70 = iff_elim_l h41, h69
+    h71 = iff_elim_l h68, h70
+    h72 = iff_elim_r h47, h71
+    h73 = implies_intro h72
+    h74 = assume elem(u0, h45_w)
+    h75 = iff_elim_l h47, h74
+    h76 = iff_elim_r h68, h75
+    h77 = iff_elim_r h41, h76
+    h78 = implies_intro h77
+    h79 = iff_intro h73, h78
+    h80 = implies_intro h79
+    h81 = implies_elim h66, h80
+    h82 = assume elem(u0, h51_w)
+    h83 = iff_elim_l h53, h82
+    h84 = iff_elim_l h30, h83
+    h85 = iff_elim_r h41, h84
+    h86 = implies_intro h85
+    h87 = assume elem(u0, h39_w)
+    h88 = iff_elim_l h41, h87
+    h89 = iff_elim_r h30, h88
+    h90 = iff_elim_r h53, h89
+    h91 = implies_intro h90
+    h92 = iff_intro h86, h91
+    h93 = implies_elim h81, h92
+    h94 = assume elem(u0, h57_w)
+    h95 = iff_elim_l h59, h94
+    h96 = iff_elim_l h35, h95
+    h97 = iff_elim_r h47, h96
+    h98 = implies_intro h97
+    h99 = assume elem(u0, h45_w)
+    h100 = iff_elim_l h47, h99
+    h101 = iff_elim_r h35, h100
+    h102 = iff_elim_r h59, h101
+    h103 = implies_intro h102
+    h104 = iff_intro h98, h103
+    h105 = implies_elim h93, h104
+    h106 = assume elem(u0, S_ph)
+    h107 = implies_elim h105, h106
+    h108 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h109 = iff_elim_r h53, h108
+    h110 = iff_elim_l h107, h109
+    h111 = iff_elim_l h59, h110
+    h112 = implies_intro h111
+    h113 = assume (elem(u0, S_ch) -> elem(u0, S_ch))
+    h114 = iff_elim_r h59, h113
+    h115 = iff_elim_r h107, h114
+    h116 = iff_elim_l h53, h115
+    h117 = implies_intro h116
+    h118 = iff_intro h112, h117
+    h119 = implies_intro h118
+    h120 = and_intro hyp_mm_albid_2, h119
+    h121 = and_elim_r h120
+    h122 = implies_intro h121
+    h123 = and_intro hyp_mm_albid_1, h122
+    h124 = and_elim_r h123
+    h125 = implies_intro h124
+    h126 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> elem(u0, S_ch))) -> (elem(u0, S_ph) -> ((elem(u0, S_ps) -> elem(u0, S_ps)) <-> (elem(u0, S_ch) -> elem(u0, S_ch))))))
+    h127 = implies_intro h126
+    h128 = implies_elim h127, h125
+    h129 = forall_intro h128
+    h130 = forall_intro h129
+    h131 = forall_intro h130
+    h132 = forall_intro h131
+    h133 = forall_intro h132
+    qed h133
+
+# 19.16
+proof mm_19_16:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_16_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_3
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_19_16_1
+    h6 = use mm_albi
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, u0
+    h11 = use wff_bic
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ps
+    h15 = iota_elim h13, h14_w
+    h16 = forall_elim h15, u0
+    h17 = use mm_bitr3id
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ph
+    h20 = forall_elim h19, h14_w
+    h21 = forall_elim h20, S_ps
+    h22 = forall_elim h21, u0
+    h23 = implies_elim h22, h5
+    h24 = assume elem(u0, h14_w)
+    h25 = iff_elim_l h16, h24
+    h26 = implies_elim h10, h25
+    h27 = implies_intro h26
+    h28 = implies_elim h23, h27
+    h29 = assume (elem(u0, S_ph) <-> elem(u0, S_ps))
+    h30 = iff_elim_r h16, h29
+    h31 = implies_elim h28, h30
+    h32 = implies_intro h31
+    h33 = and_intro hyp_mm_19_16_1, h32
+    h34 = and_elim_r h33
+    h35 = implies_intro h34
+    h36 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> (elem(u0, S_ph) <-> elem(u0, S_ps))))
+    h37 = implies_intro h36
+    h38 = implies_elim h37, h35
+    h39 = forall_intro h38
+    h40 = forall_intro h39
+    h41 = forall_intro h40
+    h42 = forall_intro h41
+    qed h42
+
+# 19.17
+proof mm_19_17:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_17_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_albi
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_3
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ps
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_17_1
+    h11 = use wff_bic
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ps
+    h15 = iota_elim h13, h14_w
+    h16 = forall_elim h15, u0
+    h17 = use mm_bitrdi
+    h18 = forall_elim h17, h14_w
+    h19 = forall_elim h18, S_ph
+    h20 = forall_elim h19, S_ps
+    h21 = forall_elim h20, S_ps
+    h22 = forall_elim h21, u0
+    h23 = assume elem(u0, h14_w)
+    h24 = iff_elim_l h16, h23
+    h25 = implies_elim h5, h24
+    h26 = implies_intro h25
+    h27 = implies_elim h22, h26
+    h28 = implies_elim h27, h10
+    h29 = assume (elem(u0, S_ph) <-> elem(u0, S_ps))
+    h30 = iff_elim_r h16, h29
+    h31 = implies_elim h28, h30
+    h32 = implies_intro h31
+    h33 = and_intro hyp_mm_19_17_1, h32
+    h34 = and_elim_r h33
+    h35 = implies_intro h34
+    h36 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> (elem(u0, S_ph) <-> elem(u0, S_ps))))
+    h37 = implies_intro h36
+    h38 = implies_elim h37, h35
+    h39 = forall_intro h38
+    h40 = forall_intro h39
+    h41 = forall_intro h40
+    h42 = forall_intro h41
+    qed h42
+
+# 19.27
+proof mm_19_27:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_27_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_19_26
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_3
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ps
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_27_1
+    h11 = use mm_anbi2i
+    h12 = forall_elim h11, S_ps
+    h13 = forall_elim h12, S_ps
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, u0
+    h16 = implies_elim h15, h10
+    h17 = use wff_and
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use wff_and
+    h24 = forall_elim h23, S_ph
+    h25 = forall_elim h24, S_ps
+    h27 = iota_elim h25, h26_w
+    h28 = forall_elim h27, u0
+    h29 = use wff_and
+    h30 = forall_elim h29, S_ph
+    h31 = forall_elim h30, S_ps
+    h33 = iota_elim h31, h32_w
+    h34 = forall_elim h33, u0
+    h35 = use mm_bitri
+    h36 = forall_elim h35, h20_w
+    h37 = forall_elim h36, h26_w
+    h38 = forall_elim h37, h32_w
+    h39 = forall_elim h38, u0
+    h40 = assume elem(u0, h20_w)
+    h41 = iff_elim_l h22, h40
+    h42 = iff_elim_l h5, h41
+    h43 = iff_elim_r h28, h42
+    h44 = implies_intro h43
+    h45 = assume elem(u0, h26_w)
+    h46 = iff_elim_l h28, h45
+    h47 = iff_elim_r h5, h46
+    h48 = iff_elim_r h22, h47
+    h49 = implies_intro h48
+    h50 = iff_intro h44, h49
+    h51 = implies_elim h39, h50
+    h52 = assume elem(u0, h26_w)
+    h53 = iff_elim_l h28, h52
+    h54 = iff_elim_l h16, h53
+    h55 = iff_elim_r h34, h54
+    h56 = implies_intro h55
+    h57 = assume elem(u0, h32_w)
+    h58 = iff_elim_l h34, h57
+    h59 = iff_elim_r h16, h58
+    h60 = iff_elim_r h28, h59
+    h61 = implies_intro h60
+    h62 = iff_intro h56, h61
+    h63 = implies_elim h51, h62
+    h64 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h65 = iff_elim_r h22, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_l h34, h66
+    h68 = implies_intro h67
+    h69 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h70 = iff_elim_r h34, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_l h22, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = and_intro hyp_mm_19_27_1, h74
+    h76 = and_elim_r h75
+    h77 = implies_intro h76
+    h78 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ps))))
+    h79 = implies_intro h78
+    h80 = implies_elim h79, h77
+    h81 = forall_intro h80
+    h82 = forall_intro h81
+    h83 = forall_intro h82
+    h84 = forall_intro h83
+    qed h84
+
+# 19.28
+proof mm_19_28:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_28_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_26
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_3
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_28_1
+    h11 = use wff_and
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ps
+    h15 = iota_elim h13, h14_w
+    h16 = forall_elim h15, u0
+    h17 = use mm_bianbi
+    h18 = forall_elim h17, h14_w
+    h19 = forall_elim h18, S_ph
+    h20 = forall_elim h19, S_ps
+    h21 = forall_elim h20, S_ph
+    h22 = forall_elim h21, u0
+    h23 = assume elem(u0, h14_w)
+    h24 = iff_elim_l h16, h23
+    h25 = iff_elim_l h5, h24
+    h26 = implies_intro h25
+    h27 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h28 = iff_elim_r h5, h27
+    h29 = iff_elim_r h16, h28
+    h30 = implies_intro h29
+    h31 = iff_intro h26, h30
+    h32 = implies_elim h22, h31
+    h33 = implies_elim h32, h10
+    h34 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h35 = iff_elim_r h16, h34
+    h36 = iff_elim_l h33, h35
+    h37 = implies_intro h36
+    h38 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h39 = iff_elim_r h33, h38
+    h40 = iff_elim_l h16, h39
+    h41 = implies_intro h40
+    h42 = iff_intro h37, h41
+    h43 = and_intro hyp_mm_19_28_1, h42
+    h44 = and_elim_r h43
+    h45 = implies_intro h44
+    h46 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ps))))
+    h47 = implies_intro h46
+    h48 = implies_elim h47, h45
+    h49 = forall_intro h48
+    h50 = forall_intro h49
+    h51 = forall_intro h50
+    h52 = forall_intro h51
+    qed h52
+
+# 19.19
+proof mm_19_19:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_19_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_9
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_19_19_1
+    h6 = use mm_exbi
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, u0
+    h11 = use wff_bic
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ps
+    h15 = iota_elim h13, h14_w
+    h16 = forall_elim h15, u0
+    h17 = use mm_bitr3id
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ph
+    h20 = forall_elim h19, h14_w
+    h21 = forall_elim h20, S_ps
+    h22 = forall_elim h21, u0
+    h23 = implies_elim h22, h5
+    h24 = assume elem(u0, h14_w)
+    h25 = iff_elim_l h16, h24
+    h26 = implies_elim h10, h25
+    h27 = implies_intro h26
+    h28 = implies_elim h23, h27
+    h29 = assume (elem(u0, S_ph) <-> elem(u0, S_ps))
+    h30 = iff_elim_r h16, h29
+    h31 = implies_elim h28, h30
+    h32 = implies_intro h31
+    h33 = and_intro hyp_mm_19_19_1, h32
+    h34 = and_elim_r h33
+    h35 = implies_intro h34
+    h36 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) <-> elem(u0, S_ps)) -> (elem(u0, S_ph) <-> elem(u0, S_ps))))
+    h37 = implies_intro h36
+    h38 = implies_elim h37, h35
+    h39 = forall_intro h38
+    h40 = forall_intro h39
+    h41 = forall_intro h40
+    h42 = forall_intro h41
+    qed h42
+
+# 19.36
+proof mm_19_36:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_36_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_19_35
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_9
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ps
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_36_1
+    h11 = use mm_imbi2i
+    h12 = forall_elim h11, S_ps
+    h13 = forall_elim h12, S_ps
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, u0
+    h16 = implies_elim h15, h10
+    h17 = use wff_impl
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use wff_impl
+    h24 = forall_elim h23, S_ph
+    h25 = forall_elim h24, S_ps
+    h27 = iota_elim h25, h26_w
+    h28 = forall_elim h27, u0
+    h29 = use wff_impl
+    h30 = forall_elim h29, S_ph
+    h31 = forall_elim h30, S_ps
+    h33 = iota_elim h31, h32_w
+    h34 = forall_elim h33, u0
+    h35 = use mm_bitri
+    h36 = forall_elim h35, h20_w
+    h37 = forall_elim h36, h26_w
+    h38 = forall_elim h37, h32_w
+    h39 = forall_elim h38, u0
+    h40 = assume elem(u0, h20_w)
+    h41 = iff_elim_l h22, h40
+    h42 = iff_elim_l h5, h41
+    h43 = iff_elim_r h28, h42
+    h44 = implies_intro h43
+    h45 = assume elem(u0, h26_w)
+    h46 = iff_elim_l h28, h45
+    h47 = iff_elim_r h5, h46
+    h48 = iff_elim_r h22, h47
+    h49 = implies_intro h48
+    h50 = iff_intro h44, h49
+    h51 = implies_elim h39, h50
+    h52 = assume elem(u0, h26_w)
+    h53 = iff_elim_l h28, h52
+    h54 = iff_elim_l h16, h53
+    h55 = iff_elim_r h34, h54
+    h56 = implies_intro h55
+    h57 = assume elem(u0, h32_w)
+    h58 = iff_elim_l h34, h57
+    h59 = iff_elim_r h16, h58
+    h60 = iff_elim_r h28, h59
+    h61 = implies_intro h60
+    h62 = iff_intro h56, h61
+    h63 = implies_elim h51, h62
+    h64 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h65 = iff_elim_r h22, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_l h34, h66
+    h68 = implies_intro h67
+    h69 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h70 = iff_elim_r h34, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_l h22, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = and_intro hyp_mm_19_36_1, h74
+    h76 = and_elim_r h75
+    h77 = implies_intro h76
+    h78 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h79 = implies_intro h78
+    h80 = implies_elim h79, h77
+    h81 = forall_intro h80
+    h82 = forall_intro h81
+    h83 = forall_intro h82
+    h84 = forall_intro h83
+    qed h84
+
+# 19.36i
+proof mm_19_36i:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_36_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    hyp_mm_19_36i_2 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h1 = use mm_19_36
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_19_36_1
+    h7 = use wff_impl
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h11 = iota_elim h9, h10_w
+    h12 = forall_elim h11, u0
+    h13 = use wff_impl
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, S_ps
+    h17 = iota_elim h15, h16_w
+    h18 = forall_elim h17, u0
+    h19 = use mm_mpbi
+    h20 = forall_elim h19, h10_w
+    h21 = forall_elim h20, h16_w
+    h22 = forall_elim h21, u0
+    h23 = iff_elim_r h12, hyp_mm_19_36i_2
+    h24 = implies_elim h22, h23
+    h25 = assume elem(u0, h10_w)
+    h26 = iff_elim_l h12, h25
+    h27 = iff_elim_l h6, h26
+    h28 = iff_elim_r h18, h27
+    h29 = implies_intro h28
+    h30 = assume elem(u0, h16_w)
+    h31 = iff_elim_l h18, h30
+    h32 = iff_elim_r h6, h31
+    h33 = iff_elim_r h12, h32
+    h34 = implies_intro h33
+    h35 = iff_intro h29, h34
+    h36 = implies_elim h24, h35
+    h37 = iff_elim_l h18, h36
+    h38 = and_intro hyp_mm_19_36i_2, h37
+    h39 = and_elim_r h38
+    h40 = implies_intro h39
+    h41 = and_intro hyp_mm_19_36_1, h40
+    h42 = and_elim_r h41
+    h43 = implies_intro h42
+    h44 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) -> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h45 = implies_intro h44
+    h46 = implies_elim h45, h43
+    h47 = forall_intro h46
+    h48 = forall_intro h47
+    h49 = forall_intro h48
+    h50 = forall_intro h49
+    qed h50
+
+# 19.37
+proof mm_19_37:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_37_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_35
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_3
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_37_1
+    h11 = use mm_imbi1i
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ph
+    h14 = forall_elim h13, S_ps
+    h15 = forall_elim h14, u0
+    h16 = implies_elim h15, h10
+    h17 = use wff_impl
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use wff_impl
+    h24 = forall_elim h23, S_ph
+    h25 = forall_elim h24, S_ps
+    h27 = iota_elim h25, h26_w
+    h28 = forall_elim h27, u0
+    h29 = use wff_impl
+    h30 = forall_elim h29, S_ph
+    h31 = forall_elim h30, S_ps
+    h33 = iota_elim h31, h32_w
+    h34 = forall_elim h33, u0
+    h35 = use mm_bitri
+    h36 = forall_elim h35, h20_w
+    h37 = forall_elim h36, h26_w
+    h38 = forall_elim h37, h32_w
+    h39 = forall_elim h38, u0
+    h40 = assume elem(u0, h20_w)
+    h41 = iff_elim_l h22, h40
+    h42 = iff_elim_l h5, h41
+    h43 = iff_elim_r h28, h42
+    h44 = implies_intro h43
+    h45 = assume elem(u0, h26_w)
+    h46 = iff_elim_l h28, h45
+    h47 = iff_elim_r h5, h46
+    h48 = iff_elim_r h22, h47
+    h49 = implies_intro h48
+    h50 = iff_intro h44, h49
+    h51 = implies_elim h39, h50
+    h52 = assume elem(u0, h26_w)
+    h53 = iff_elim_l h28, h52
+    h54 = iff_elim_l h16, h53
+    h55 = iff_elim_r h34, h54
+    h56 = implies_intro h55
+    h57 = assume elem(u0, h32_w)
+    h58 = iff_elim_l h34, h57
+    h59 = iff_elim_r h16, h58
+    h60 = iff_elim_r h28, h59
+    h61 = implies_intro h60
+    h62 = iff_intro h56, h61
+    h63 = implies_elim h51, h62
+    h64 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h65 = iff_elim_r h22, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_l h34, h66
+    h68 = implies_intro h67
+    h69 = assume (elem(u0, S_ph) -> elem(u0, S_ps))
+    h70 = iff_elim_r h34, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_l h22, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = and_intro hyp_mm_19_37_1, h74
+    h76 = and_elim_r h75
+    h77 = implies_intro h76
+    h78 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) -> elem(u0, S_ps)) <-> (elem(u0, S_ph) -> elem(u0, S_ps))))
+    h79 = implies_intro h78
+    h80 = implies_elim h79, h77
+    h81 = forall_intro h80
+    h82 = forall_intro h81
+    h83 = forall_intro h82
+    h84 = forall_intro h83
+    qed h84
+
+# 19.32
+proof mm_19_32:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_32_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_nfn
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, u0
+    h5 = implies_elim h4, hyp_mm_19_32_1
+    h6 = use wff_neg
+    h7 = forall_elim h6, S_ph
+    h9 = iota_elim h7, h8_w
+    h10 = forall_elim h9, u0
+    h11 = use mm_19_21
+    h12 = forall_elim h11, x
+    h13 = forall_elim h12, h8_w
+    h14 = forall_elim h13, S_ps
+    h15 = forall_elim h14, u0
+    h16 = assume elem(u0, h8_w)
+    h17 = iff_elim_l h10, h16
+    h18 = implies_elim h5, h17
+    h19 = iff_elim_r h10, h18
+    h20 = implies_intro h19
+    h21 = implies_elim h15, h20
+    h22 = assume (~elem(u0, S_ph) -> elem(u0, S_ps))
+    h23 = assume elem(u0, h8_w)
+    h24 = iff_elim_l h10, h23
+    h25 = implies_elim h22, h24
+    h26 = implies_intro h25
+    h27 = iff_elim_l h21, h26
+    h28 = assume ~elem(u0, S_ph)
+    h29 = iff_elim_r h10, h28
+    h30 = implies_elim h27, h29
+    h31 = implies_intro h30
+    h32 = implies_intro h31
+    h33 = assume (~elem(u0, S_ph) -> elem(u0, S_ps))
+    h34 = assume elem(u0, h8_w)
+    h35 = iff_elim_l h10, h34
+    h36 = implies_elim h33, h35
+    h37 = implies_intro h36
+    h38 = iff_elim_r h21, h37
+    h39 = assume ~elem(u0, S_ph)
+    h40 = iff_elim_r h10, h39
+    h41 = implies_elim h38, h40
+    h42 = implies_intro h41
+    h43 = implies_intro h42
+    h44 = iff_intro h32, h43
+    h45 = assume elem(u0, S_ph) | elem(u0, S_ps)
+    h46 = assume ~elem(u0, S_ph)
+    h47 = assume elem(u0, S_ph)
+    h48 = not_elim h46, h47
+    h49 = let elem(u0, S_ps)
+    h50 = bottom_elim h48, h49
+    h51 = implies_intro h50
+    h52 = assume elem(u0, S_ps)
+    h53 = implies_intro h52
+    h54 = or_elim h45, h51, h53
+    h55 = implies_intro h54
+    h56 = implies_intro h55
+    h57 = assume ~elem(u0, S_ph) -> elem(u0, S_ps)
+    h58 = let elem(u0, S_ph)
+    h59 = excluded_middle h58
+    h60 = assume elem(u0, S_ph)
+    h61 = let elem(u0, S_ps)
+    h62 = or_intro_l h60, h61
+    h63 = implies_intro h62
+    h64 = assume ~elem(u0, S_ph)
+    h65 = implies_elim h57, h64
+    h66 = let elem(u0, S_ph)
+    h67 = or_intro_r h66, h65
+    h68 = implies_intro h67
+    h69 = or_elim h59, h63, h68
+    h70 = implies_intro h69
+    h71 = iff_intro h56, h70
+    h72 = use wff_or
+    h73 = forall_elim h72, S_ph
+    h74 = forall_elim h73, S_ps
+    h76 = iota_elim h74, h75_w
+    h77 = forall_elim h76, u0
+    h78 = use wff_neg
+    h79 = forall_elim h78, S_ph
+    h81 = iota_elim h79, h80_w
+    h82 = forall_elim h81, u0
+    h83 = use wff_impl
+    h84 = forall_elim h83, h80_w
+    h85 = forall_elim h84, S_ps
+    h87 = iota_elim h85, h86_w
+    h88 = forall_elim h87, u0
+    h89 = assume elem(u0, h86_w)
+    h90 = iff_elim_l h88, h89
+    h91 = assume ~elem(u0, S_ph)
+    h92 = iff_elim_r h82, h91
+    h93 = implies_elim h90, h92
+    h94 = implies_intro h93
+    h95 = implies_intro h94
+    h96 = assume (~elem(u0, S_ph) -> elem(u0, S_ps))
+    h97 = assume elem(u0, h80_w)
+    h98 = iff_elim_l h82, h97
+    h99 = implies_elim h96, h98
+    h100 = implies_intro h99
+    h101 = iff_elim_r h88, h100
+    h102 = implies_intro h101
+    h103 = iff_intro h95, h102
+    h104 = use mm_albii
+    h105 = forall_elim h104, x
+    h106 = forall_elim h105, h75_w
+    h107 = forall_elim h106, h86_w
+    h108 = forall_elim h107, u0
+    h109 = assume elem(u0, h75_w)
+    h110 = iff_elim_l h77, h109
+    h111 = iff_elim_l h71, h110
+    h112 = iff_elim_r h103, h111
+    h113 = implies_intro h112
+    h114 = assume elem(u0, h86_w)
+    h115 = iff_elim_l h103, h114
+    h116 = iff_elim_r h71, h115
+    h117 = iff_elim_r h77, h116
+    h118 = implies_intro h117
+    h119 = iff_intro h113, h118
+    h120 = implies_elim h108, h119
+    h121 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h122 = iff_elim_r h77, h121
+    h123 = iff_elim_l h120, h122
+    h124 = iff_elim_l h103, h123
+    h125 = implies_intro h124
+    h126 = assume (~elem(u0, S_ph) -> elem(u0, S_ps))
+    h127 = iff_elim_r h103, h126
+    h128 = iff_elim_r h120, h127
+    h129 = iff_elim_l h77, h128
+    h130 = implies_intro h129
+    h131 = iff_intro h125, h130
+    h132 = assume elem(u0, S_ph) | elem(u0, S_ps)
+    h133 = assume ~elem(u0, S_ph)
+    h134 = assume elem(u0, S_ph)
+    h135 = not_elim h133, h134
+    h136 = let elem(u0, S_ps)
+    h137 = bottom_elim h135, h136
+    h138 = implies_intro h137
+    h139 = assume elem(u0, S_ps)
+    h140 = implies_intro h139
+    h141 = or_elim h132, h138, h140
+    h142 = implies_intro h141
+    h143 = implies_intro h142
+    h144 = assume ~elem(u0, S_ph) -> elem(u0, S_ps)
+    h145 = let elem(u0, S_ph)
+    h146 = excluded_middle h145
+    h147 = assume elem(u0, S_ph)
+    h148 = let elem(u0, S_ps)
+    h149 = or_intro_l h147, h148
+    h150 = implies_intro h149
+    h151 = assume ~elem(u0, S_ph)
+    h152 = implies_elim h144, h151
+    h153 = let elem(u0, S_ph)
+    h154 = or_intro_r h153, h152
+    h155 = implies_intro h154
+    h156 = or_elim h146, h150, h155
+    h157 = implies_intro h156
+    h158 = iff_intro h143, h157
+    h159 = use wff_neg
+    h160 = forall_elim h159, S_ph
+    h162 = iota_elim h160, h161_w
+    h163 = forall_elim h162, u0
+    h164 = use wff_impl
+    h165 = forall_elim h164, h161_w
+    h166 = forall_elim h165, S_ps
+    h168 = iota_elim h166, h167_w
+    h169 = forall_elim h168, u0
+    h170 = assume elem(u0, h167_w)
+    h171 = iff_elim_l h169, h170
+    h172 = assume ~elem(u0, S_ph)
+    h173 = iff_elim_r h163, h172
+    h174 = implies_elim h171, h173
+    h175 = implies_intro h174
+    h176 = implies_intro h175
+    h177 = assume (~elem(u0, S_ph) -> elem(u0, S_ps))
+    h178 = assume elem(u0, h161_w)
+    h179 = iff_elim_l h163, h178
+    h180 = implies_elim h177, h179
+    h181 = implies_intro h180
+    h182 = iff_elim_r h169, h181
+    h183 = implies_intro h182
+    h184 = iff_intro h176, h183
+    h185 = use wff_neg
+    h186 = forall_elim h185, S_ph
+    h188 = iota_elim h186, h187_w
+    h189 = forall_elim h188, u0
+    h190 = use wff_impl
+    h191 = forall_elim h190, h187_w
+    h192 = forall_elim h191, S_ps
+    h194 = iota_elim h192, h193_w
+    h195 = forall_elim h194, u0
+    h196 = assume elem(u0, h193_w)
+    h197 = iff_elim_l h195, h196
+    h198 = assume ~elem(u0, S_ph)
+    h199 = iff_elim_r h189, h198
+    h200 = implies_elim h197, h199
+    h201 = implies_intro h200
+    h202 = implies_intro h201
+    h203 = assume (~elem(u0, S_ph) -> elem(u0, S_ps))
+    h204 = assume elem(u0, h187_w)
+    h205 = iff_elim_l h189, h204
+    h206 = implies_elim h203, h205
+    h207 = implies_intro h206
+    h208 = iff_elim_r h195, h207
+    h209 = implies_intro h208
+    h210 = iff_intro h202, h209
+    h211 = use wff_or
+    h212 = forall_elim h211, S_ph
+    h213 = forall_elim h212, S_ps
+    h215 = iota_elim h213, h214_w
+    h216 = forall_elim h215, u0
+    h217 = use wff_or
+    h218 = forall_elim h217, S_ph
+    h219 = forall_elim h218, S_ps
+    h221 = iota_elim h219, h220_w
+    h222 = forall_elim h221, u0
+    h223 = use mm_3bitr4i
+    h224 = forall_elim h223, h167_w
+    h225 = forall_elim h224, h193_w
+    h226 = forall_elim h225, h214_w
+    h227 = forall_elim h226, h220_w
+    h228 = forall_elim h227, u0
+    h229 = assume elem(u0, h167_w)
+    h230 = iff_elim_l h184, h229
+    h231 = iff_elim_l h44, h230
+    h232 = iff_elim_r h210, h231
+    h233 = implies_intro h232
+    h234 = assume elem(u0, h193_w)
+    h235 = iff_elim_l h210, h234
+    h236 = iff_elim_r h44, h235
+    h237 = iff_elim_r h184, h236
+    h238 = implies_intro h237
+    h239 = iff_intro h233, h238
+    h240 = implies_elim h228, h239
+    h241 = assume elem(u0, h214_w)
+    h242 = iff_elim_l h216, h241
+    h243 = iff_elim_l h131, h242
+    h244 = iff_elim_r h184, h243
+    h245 = implies_intro h244
+    h246 = assume elem(u0, h167_w)
+    h247 = iff_elim_l h184, h246
+    h248 = iff_elim_r h131, h247
+    h249 = iff_elim_r h216, h248
+    h250 = implies_intro h249
+    h251 = iff_intro h245, h250
+    h252 = implies_elim h240, h251
+    h253 = assume elem(u0, h220_w)
+    h254 = iff_elim_l h222, h253
+    h255 = iff_elim_l h158, h254
+    h256 = iff_elim_r h210, h255
+    h257 = implies_intro h256
+    h258 = assume elem(u0, h193_w)
+    h259 = iff_elim_l h210, h258
+    h260 = iff_elim_r h158, h259
+    h261 = iff_elim_r h222, h260
+    h262 = implies_intro h261
+    h263 = iff_intro h257, h262
+    h264 = implies_elim h252, h263
+    h265 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h266 = iff_elim_r h216, h265
+    h267 = iff_elim_l h264, h266
+    h268 = iff_elim_l h222, h267
+    h269 = implies_intro h268
+    h270 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h271 = iff_elim_r h222, h270
+    h272 = iff_elim_r h264, h271
+    h273 = iff_elim_l h216, h272
+    h274 = implies_intro h273
+    h275 = iff_intro h269, h274
+    h276 = and_intro hyp_mm_19_32_1, h275
+    h277 = and_elim_r h276
+    h278 = implies_intro h277
+    h279 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+    h280 = implies_intro h279
+    h281 = implies_elim h280, h278
+    h282 = forall_intro h281
+    h283 = forall_intro h282
+    h284 = forall_intro h283
+    h285 = forall_intro h284
+    qed h285
+
+# 19.31
+proof mm_19_31:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_31_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_19_32
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ps
+    h4 = forall_elim h3, S_ph
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_19_31_1
+    h7 = use mm_orcom
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, S_ps
+    h10 = forall_elim h9, u0
+    h11 = use wff_or
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ps
+    h15 = iota_elim h13, h14_w
+    h16 = forall_elim h15, u0
+    h17 = use wff_or
+    h18 = forall_elim h17, S_ps
+    h19 = forall_elim h18, S_ph
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use mm_albii
+    h24 = forall_elim h23, x
+    h25 = forall_elim h24, h14_w
+    h26 = forall_elim h25, h20_w
+    h27 = forall_elim h26, u0
+    h28 = assume elem(u0, h14_w)
+    h29 = iff_elim_l h16, h28
+    h30 = iff_elim_l h10, h29
+    h31 = iff_elim_r h22, h30
+    h32 = implies_intro h31
+    h33 = assume elem(u0, h20_w)
+    h34 = iff_elim_l h22, h33
+    h35 = iff_elim_r h10, h34
+    h36 = iff_elim_r h16, h35
+    h37 = implies_intro h36
+    h38 = iff_intro h32, h37
+    h39 = implies_elim h27, h38
+    h40 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h41 = iff_elim_r h16, h40
+    h42 = iff_elim_l h39, h41
+    h43 = iff_elim_l h22, h42
+    h44 = implies_intro h43
+    h45 = assume (elem(u0, S_ps) | elem(u0, S_ph))
+    h46 = iff_elim_r h22, h45
+    h47 = iff_elim_r h39, h46
+    h48 = iff_elim_l h16, h47
+    h49 = implies_intro h48
+    h50 = iff_intro h44, h49
+    h51 = use mm_orcom
+    h52 = forall_elim h51, S_ph
+    h53 = forall_elim h52, S_ps
+    h54 = forall_elim h53, u0
+    h55 = use wff_or
+    h56 = forall_elim h55, S_ps
+    h57 = forall_elim h56, S_ph
+    h59 = iota_elim h57, h58_w
+    h60 = forall_elim h59, u0
+    h61 = use wff_or
+    h62 = forall_elim h61, S_ps
+    h63 = forall_elim h62, S_ph
+    h65 = iota_elim h63, h64_w
+    h66 = forall_elim h65, u0
+    h67 = use wff_or
+    h68 = forall_elim h67, S_ph
+    h69 = forall_elim h68, S_ps
+    h71 = iota_elim h69, h70_w
+    h72 = forall_elim h71, u0
+    h73 = use wff_or
+    h74 = forall_elim h73, S_ph
+    h75 = forall_elim h74, S_ps
+    h77 = iota_elim h75, h76_w
+    h78 = forall_elim h77, u0
+    h79 = use mm_3bitr4i
+    h80 = forall_elim h79, h58_w
+    h81 = forall_elim h80, h64_w
+    h82 = forall_elim h81, h70_w
+    h83 = forall_elim h82, h76_w
+    h84 = forall_elim h83, u0
+    h85 = assume elem(u0, h58_w)
+    h86 = iff_elim_l h60, h85
+    h87 = iff_elim_l h6, h86
+    h88 = iff_elim_r h66, h87
+    h89 = implies_intro h88
+    h90 = assume elem(u0, h64_w)
+    h91 = iff_elim_l h66, h90
+    h92 = iff_elim_r h6, h91
+    h93 = iff_elim_r h60, h92
+    h94 = implies_intro h93
+    h95 = iff_intro h89, h94
+    h96 = implies_elim h84, h95
+    h97 = assume elem(u0, h70_w)
+    h98 = iff_elim_l h72, h97
+    h99 = iff_elim_l h50, h98
+    h100 = iff_elim_r h60, h99
+    h101 = implies_intro h100
+    h102 = assume elem(u0, h58_w)
+    h103 = iff_elim_l h60, h102
+    h104 = iff_elim_r h50, h103
+    h105 = iff_elim_r h72, h104
+    h106 = implies_intro h105
+    h107 = iff_intro h101, h106
+    h108 = implies_elim h96, h107
+    h109 = assume elem(u0, h76_w)
+    h110 = iff_elim_l h78, h109
+    h111 = iff_elim_l h54, h110
+    h112 = iff_elim_r h66, h111
+    h113 = implies_intro h112
+    h114 = assume elem(u0, h64_w)
+    h115 = iff_elim_l h66, h114
+    h116 = iff_elim_r h54, h115
+    h117 = iff_elim_r h78, h116
+    h118 = implies_intro h117
+    h119 = iff_intro h113, h118
+    h120 = implies_elim h108, h119
+    h121 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h122 = iff_elim_r h72, h121
+    h123 = iff_elim_l h120, h122
+    h124 = iff_elim_l h78, h123
+    h125 = implies_intro h124
+    h126 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h127 = iff_elim_r h78, h126
+    h128 = iff_elim_r h120, h127
+    h129 = iff_elim_l h72, h128
+    h130 = implies_intro h129
+    h131 = iff_intro h125, h130
+    h132 = and_intro hyp_mm_19_31_1, h131
+    h133 = and_elim_r h132
+    h134 = implies_intro h133
+    h135 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+    h136 = implies_intro h135
+    h137 = implies_elim h136, h134
+    h138 = forall_intro h137
+    h139 = forall_intro h138
+    h140 = forall_intro h139
+    h141 = forall_intro h140
+    qed h141
+
+# 19.41
+proof mm_19_41:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_41_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_19_40
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_9
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ps
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_41_1
+    h11 = use mm_anbi2i
+    h12 = forall_elim h11, S_ps
+    h13 = forall_elim h12, S_ps
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, u0
+    h16 = implies_elim h15, h10
+    h17 = use wff_and
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use wff_and
+    h24 = forall_elim h23, S_ph
+    h25 = forall_elim h24, S_ps
+    h27 = iota_elim h25, h26_w
+    h28 = forall_elim h27, u0
+    h29 = use wff_and
+    h30 = forall_elim h29, S_ph
+    h31 = forall_elim h30, S_ps
+    h33 = iota_elim h31, h32_w
+    h34 = forall_elim h33, u0
+    h35 = use mm_sylib
+    h36 = forall_elim h35, h20_w
+    h37 = forall_elim h36, h26_w
+    h38 = forall_elim h37, h32_w
+    h39 = forall_elim h38, u0
+    h40 = assume elem(u0, h20_w)
+    h41 = iff_elim_l h22, h40
+    h42 = implies_elim h5, h41
+    h43 = iff_elim_r h28, h42
+    h44 = implies_intro h43
+    h45 = implies_elim h39, h44
+    h46 = assume elem(u0, h26_w)
+    h47 = iff_elim_l h28, h46
+    h48 = iff_elim_l h16, h47
+    h49 = iff_elim_r h34, h48
+    h50 = implies_intro h49
+    h51 = assume elem(u0, h32_w)
+    h52 = iff_elim_l h34, h51
+    h53 = iff_elim_r h16, h52
+    h54 = iff_elim_r h28, h53
+    h55 = implies_intro h54
+    h56 = iff_intro h50, h55
+    h57 = implies_elim h45, h56
+    h58 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h59 = iff_elim_r h22, h58
+    h60 = implies_elim h57, h59
+    h61 = iff_elim_l h34, h60
+    h62 = implies_intro h61
+    h63 = use mm_pm3_21
+    h64 = forall_elim h63, S_ps
+    h65 = forall_elim h64, S_ph
+    h66 = forall_elim h65, u0
+    h67 = use wff_and
+    h68 = forall_elim h67, S_ph
+    h69 = forall_elim h68, S_ps
+    h71 = iota_elim h69, h70_w
+    h72 = forall_elim h71, u0
+    h73 = use mm_eximd
+    h74 = forall_elim h73, x
+    h75 = forall_elim h74, S_ps
+    h76 = forall_elim h75, S_ph
+    h77 = forall_elim h76, h70_w
+    h78 = forall_elim h77, u0
+    h79 = implies_elim h78, hyp_mm_19_41_1
+    h80 = assume elem(u0, S_ps)
+    h81 = implies_elim h66, h80
+    h82 = assume elem(u0, S_ph)
+    h83 = implies_elim h81, h82
+    h84 = iff_elim_r h72, h83
+    h85 = implies_intro h84
+    h86 = implies_intro h85
+    h87 = implies_elim h79, h86
+    h88 = assume elem(u0, S_ps)
+    h89 = implies_elim h87, h88
+    h90 = assume elem(u0, S_ph)
+    h91 = implies_elim h89, h90
+    h92 = iff_elim_l h72, h91
+    h93 = implies_intro h92
+    h94 = implies_intro h93
+    h95 = use wff_and
+    h96 = forall_elim h95, S_ph
+    h97 = forall_elim h96, S_ps
+    h99 = iota_elim h97, h98_w
+    h100 = forall_elim h99, u0
+    h101 = use mm_impcom
+    h102 = forall_elim h101, S_ps
+    h103 = forall_elim h102, S_ph
+    h104 = forall_elim h103, h98_w
+    h105 = forall_elim h104, u0
+    h106 = assume elem(u0, S_ps)
+    h107 = implies_elim h94, h106
+    h108 = assume elem(u0, S_ph)
+    h109 = implies_elim h107, h108
+    h110 = iff_elim_r h100, h109
+    h111 = implies_intro h110
+    h112 = implies_intro h111
+    h113 = implies_elim h105, h112
+    h114 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h115 = implies_elim h113, h114
+    h116 = iff_elim_l h100, h115
+    h117 = implies_intro h116
+    h118 = use wff_and
+    h119 = forall_elim h118, S_ph
+    h120 = forall_elim h119, S_ps
+    h122 = iota_elim h120, h121_w
+    h123 = forall_elim h122, u0
+    h124 = use wff_and
+    h125 = forall_elim h124, S_ph
+    h126 = forall_elim h125, S_ps
+    h128 = iota_elim h126, h127_w
+    h129 = forall_elim h128, u0
+    h130 = use mm_impbii
+    h131 = forall_elim h130, h121_w
+    h132 = forall_elim h131, h127_w
+    h133 = forall_elim h132, u0
+    h134 = assume elem(u0, h121_w)
+    h135 = iff_elim_l h123, h134
+    h136 = implies_elim h62, h135
+    h137 = iff_elim_r h129, h136
+    h138 = implies_intro h137
+    h139 = implies_elim h133, h138
+    h140 = assume elem(u0, h127_w)
+    h141 = iff_elim_l h129, h140
+    h142 = implies_elim h117, h141
+    h143 = iff_elim_r h123, h142
+    h144 = implies_intro h143
+    h145 = implies_elim h139, h144
+    h146 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h147 = iff_elim_r h123, h146
+    h148 = iff_elim_l h145, h147
+    h149 = iff_elim_l h129, h148
+    h150 = implies_intro h149
+    h151 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h152 = iff_elim_r h129, h151
+    h153 = iff_elim_r h145, h152
+    h154 = iff_elim_l h123, h153
+    h155 = implies_intro h154
+    h156 = iff_intro h150, h155
+    h157 = and_intro hyp_mm_19_41_1, h156
+    h158 = and_elim_r h157
+    h159 = implies_intro h158
+    h160 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ps))))
+    h161 = implies_intro h160
+    h162 = implies_elim h161, h159
+    h163 = forall_intro h162
+    h164 = forall_intro h163
+    h165 = forall_intro h164
+    h166 = forall_intro h165
+    qed h166
+
+# 19.42
+proof mm_19_42:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_42_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_41
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ps
+    h4 = forall_elim h3, S_ph
+    h5 = forall_elim h4, u0
+    h6 = implies_elim h5, hyp_mm_19_42_1
+    h7 = use mm_exancom
+    h8 = forall_elim h7, x
+    h9 = forall_elim h8, S_ph
+    h10 = forall_elim h9, S_ps
+    h11 = forall_elim h10, u0
+    h12 = use mm_ancom
+    h13 = forall_elim h12, S_ph
+    h14 = forall_elim h13, S_ps
+    h15 = forall_elim h14, u0
+    h16 = use wff_and
+    h17 = forall_elim h16, S_ps
+    h18 = forall_elim h17, S_ph
+    h20 = iota_elim h18, h19_w
+    h21 = forall_elim h20, u0
+    h22 = use wff_and
+    h23 = forall_elim h22, S_ps
+    h24 = forall_elim h23, S_ph
+    h26 = iota_elim h24, h25_w
+    h27 = forall_elim h26, u0
+    h28 = use wff_and
+    h29 = forall_elim h28, S_ph
+    h30 = forall_elim h29, S_ps
+    h32 = iota_elim h30, h31_w
+    h33 = forall_elim h32, u0
+    h34 = use wff_and
+    h35 = forall_elim h34, S_ph
+    h36 = forall_elim h35, S_ps
+    h38 = iota_elim h36, h37_w
+    h39 = forall_elim h38, u0
+    h40 = use mm_3bitr4i
+    h41 = forall_elim h40, h19_w
+    h42 = forall_elim h41, h25_w
+    h43 = forall_elim h42, h31_w
+    h44 = forall_elim h43, h37_w
+    h45 = forall_elim h44, u0
+    h46 = assume elem(u0, h19_w)
+    h47 = iff_elim_l h21, h46
+    h48 = iff_elim_l h6, h47
+    h49 = iff_elim_r h27, h48
+    h50 = implies_intro h49
+    h51 = assume elem(u0, h25_w)
+    h52 = iff_elim_l h27, h51
+    h53 = iff_elim_r h6, h52
+    h54 = iff_elim_r h21, h53
+    h55 = implies_intro h54
+    h56 = iff_intro h50, h55
+    h57 = implies_elim h45, h56
+    h58 = assume elem(u0, h31_w)
+    h59 = iff_elim_l h33, h58
+    h60 = iff_elim_l h11, h59
+    h61 = iff_elim_r h21, h60
+    h62 = implies_intro h61
+    h63 = assume elem(u0, h19_w)
+    h64 = iff_elim_l h21, h63
+    h65 = iff_elim_r h11, h64
+    h66 = iff_elim_r h33, h65
+    h67 = implies_intro h66
+    h68 = iff_intro h62, h67
+    h69 = implies_elim h57, h68
+    h70 = assume elem(u0, h37_w)
+    h71 = iff_elim_l h39, h70
+    h72 = iff_elim_l h15, h71
+    h73 = iff_elim_r h27, h72
+    h74 = implies_intro h73
+    h75 = assume elem(u0, h25_w)
+    h76 = iff_elim_l h27, h75
+    h77 = iff_elim_r h15, h76
+    h78 = iff_elim_r h39, h77
+    h79 = implies_intro h78
+    h80 = iff_intro h74, h79
+    h81 = implies_elim h69, h80
+    h82 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h83 = iff_elim_r h33, h82
+    h84 = iff_elim_l h81, h83
+    h85 = iff_elim_l h39, h84
+    h86 = implies_intro h85
+    h87 = assume (elem(u0, S_ph) & elem(u0, S_ps))
+    h88 = iff_elim_r h39, h87
+    h89 = iff_elim_r h81, h88
+    h90 = iff_elim_l h33, h89
+    h91 = implies_intro h90
+    h92 = iff_intro h86, h91
+    h93 = and_intro hyp_mm_19_42_1, h92
+    h94 = and_elim_r h93
+    h95 = implies_intro h94
+    h96 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) & elem(u0, S_ps)) <-> (elem(u0, S_ph) & elem(u0, S_ps))))
+    h97 = implies_intro h96
+    h98 = implies_elim h97, h95
+    h99 = forall_intro h98
+    h100 = forall_intro h99
+    h101 = forall_intro h100
+    h102 = forall_intro h101
+    qed h102
+
+# 19.44
+proof mm_19_44:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_44_1 = assume (elem(u0, S_ps) -> elem(u0, S_ps))
+    h1 = use mm_19_43
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_9
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ps
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_44_1
+    h11 = use mm_orbi2i
+    h12 = forall_elim h11, S_ps
+    h13 = forall_elim h12, S_ps
+    h14 = forall_elim h13, S_ph
+    h15 = forall_elim h14, u0
+    h16 = implies_elim h15, h10
+    h17 = use wff_or
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use wff_or
+    h24 = forall_elim h23, S_ph
+    h25 = forall_elim h24, S_ps
+    h27 = iota_elim h25, h26_w
+    h28 = forall_elim h27, u0
+    h29 = use wff_or
+    h30 = forall_elim h29, S_ph
+    h31 = forall_elim h30, S_ps
+    h33 = iota_elim h31, h32_w
+    h34 = forall_elim h33, u0
+    h35 = use mm_bitri
+    h36 = forall_elim h35, h20_w
+    h37 = forall_elim h36, h26_w
+    h38 = forall_elim h37, h32_w
+    h39 = forall_elim h38, u0
+    h40 = assume elem(u0, h20_w)
+    h41 = iff_elim_l h22, h40
+    h42 = iff_elim_l h5, h41
+    h43 = iff_elim_r h28, h42
+    h44 = implies_intro h43
+    h45 = assume elem(u0, h26_w)
+    h46 = iff_elim_l h28, h45
+    h47 = iff_elim_r h5, h46
+    h48 = iff_elim_r h22, h47
+    h49 = implies_intro h48
+    h50 = iff_intro h44, h49
+    h51 = implies_elim h39, h50
+    h52 = assume elem(u0, h26_w)
+    h53 = iff_elim_l h28, h52
+    h54 = iff_elim_l h16, h53
+    h55 = iff_elim_r h34, h54
+    h56 = implies_intro h55
+    h57 = assume elem(u0, h32_w)
+    h58 = iff_elim_l h34, h57
+    h59 = iff_elim_r h16, h58
+    h60 = iff_elim_r h28, h59
+    h61 = implies_intro h60
+    h62 = iff_intro h56, h61
+    h63 = implies_elim h51, h62
+    h64 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h65 = iff_elim_r h22, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_l h34, h66
+    h68 = implies_intro h67
+    h69 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h70 = iff_elim_r h34, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_l h22, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = and_intro hyp_mm_19_44_1, h74
+    h76 = and_elim_r h75
+    h77 = implies_intro h76
+    h78 = assume ((elem(u0, S_ps) -> elem(u0, S_ps)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+    h79 = implies_intro h78
+    h80 = implies_elim h79, h77
+    h81 = forall_intro h80
+    h82 = forall_intro h81
+    h83 = forall_intro h82
+    h84 = forall_intro h83
+    qed h84
+
+# 19.45
+proof mm_19_45:
+    fix x
+    fix S_ph
+    fix S_ps
+    fix u0
+    hyp_mm_19_45_1 = assume (elem(u0, S_ph) -> elem(u0, S_ph))
+    h1 = use mm_19_43
+    h2 = forall_elim h1, x
+    h3 = forall_elim h2, S_ph
+    h4 = forall_elim h3, S_ps
+    h5 = forall_elim h4, u0
+    h6 = use mm_19_9
+    h7 = forall_elim h6, x
+    h8 = forall_elim h7, S_ph
+    h9 = forall_elim h8, u0
+    h10 = implies_elim h9, hyp_mm_19_45_1
+    h11 = use mm_orbi1i
+    h12 = forall_elim h11, S_ph
+    h13 = forall_elim h12, S_ph
+    h14 = forall_elim h13, S_ps
+    h15 = forall_elim h14, u0
+    h16 = implies_elim h15, h10
+    h17 = use wff_or
+    h18 = forall_elim h17, S_ph
+    h19 = forall_elim h18, S_ps
+    h21 = iota_elim h19, h20_w
+    h22 = forall_elim h21, u0
+    h23 = use wff_or
+    h24 = forall_elim h23, S_ph
+    h25 = forall_elim h24, S_ps
+    h27 = iota_elim h25, h26_w
+    h28 = forall_elim h27, u0
+    h29 = use wff_or
+    h30 = forall_elim h29, S_ph
+    h31 = forall_elim h30, S_ps
+    h33 = iota_elim h31, h32_w
+    h34 = forall_elim h33, u0
+    h35 = use mm_bitri
+    h36 = forall_elim h35, h20_w
+    h37 = forall_elim h36, h26_w
+    h38 = forall_elim h37, h32_w
+    h39 = forall_elim h38, u0
+    h40 = assume elem(u0, h20_w)
+    h41 = iff_elim_l h22, h40
+    h42 = iff_elim_l h5, h41
+    h43 = iff_elim_r h28, h42
+    h44 = implies_intro h43
+    h45 = assume elem(u0, h26_w)
+    h46 = iff_elim_l h28, h45
+    h47 = iff_elim_r h5, h46
+    h48 = iff_elim_r h22, h47
+    h49 = implies_intro h48
+    h50 = iff_intro h44, h49
+    h51 = implies_elim h39, h50
+    h52 = assume elem(u0, h26_w)
+    h53 = iff_elim_l h28, h52
+    h54 = iff_elim_l h16, h53
+    h55 = iff_elim_r h34, h54
+    h56 = implies_intro h55
+    h57 = assume elem(u0, h32_w)
+    h58 = iff_elim_l h34, h57
+    h59 = iff_elim_r h16, h58
+    h60 = iff_elim_r h28, h59
+    h61 = implies_intro h60
+    h62 = iff_intro h56, h61
+    h63 = implies_elim h51, h62
+    h64 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h65 = iff_elim_r h22, h64
+    h66 = iff_elim_l h63, h65
+    h67 = iff_elim_l h34, h66
+    h68 = implies_intro h67
+    h69 = assume (elem(u0, S_ph) | elem(u0, S_ps))
+    h70 = iff_elim_r h34, h69
+    h71 = iff_elim_r h63, h70
+    h72 = iff_elim_l h22, h71
+    h73 = implies_intro h72
+    h74 = iff_intro h68, h73
+    h75 = and_intro hyp_mm_19_45_1, h74
+    h76 = and_elim_r h75
+    h77 = implies_intro h76
+    h78 = assume ((elem(u0, S_ph) -> elem(u0, S_ph)) -> ((elem(u0, S_ph) | elem(u0, S_ps)) <-> (elem(u0, S_ph) | elem(u0, S_ps))))
+    h79 = implies_intro h78
+    h80 = implies_elim h79, h77
+    h81 = forall_intro h80
+    h82 = forall_intro h81
+    h83 = forall_intro h82
+    h84 = forall_intro h83
+    qed h84
+
+# sbid
+proof mm_sbid:
+    fix x
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    qed h8
+
+# sbcov
+proof mm_sbcov:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    qed h9
+
+# sbcovOLD
+proof mm_sbcovOLD:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    qed h9
+
+# sbid2vw
+proof mm_sbid2vw:
+    fix x
+    fix t
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    qed h9
+
+# sbf2
+proof mm_sbf2:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = assume elem(u0, S_ph)
+    h4 = implies_intro h3
+    h5 = iff_intro h2, h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    h8 = forall_intro h7
+    h9 = forall_intro h8
+    qed h9
+
+# hbs1
+proof mm_hbs1:
+    fix x
+    fix y
+    fix S_ph
+    fix u0
+    h1 = assume elem(u0, S_ph)
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    qed h6
+
 # nfs1f
 proof mm_nfs1f:
     fix x
@@ -1425,7 +5450,7 @@ proof mm_hbae:
     fix y
     fix z
     fix u0
-    h1 = assume (forall x. eq(x, y))
+    h1 = assume elem(u0, u0)
     h2 = implies_intro h1
     h3 = forall_intro h2
     h4 = forall_intro h3
@@ -1439,7 +5464,7 @@ proof mm_hbnae:
     fix y
     fix z
     fix u0
-    h1 = assume ~(forall x. eq(x, y))
+    h1 = assume elem(u0, u0)
     h2 = implies_intro h1
     h3 = forall_intro h2
     h4 = forall_intro h3
@@ -3499,6 +7524,38 @@ proof mm_clelsb2:
     h9 = forall_intro h8
     h10 = forall_intro h9
     qed h10
+
+# hblem
+proof mm_hblem:
+    fix x
+    fix y
+    fix z
+    fix A
+    fix u0
+    h1 = assume (elem(u0, u0) -> elem(u0, u0))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
+
+# hblemg
+proof mm_hblemg:
+    fix x
+    fix y
+    fix z
+    fix A
+    fix u0
+    h1 = assume (elem(u0, u0) -> elem(u0, u0))
+    h2 = implies_intro h1
+    h3 = forall_intro h2
+    h4 = forall_intro h3
+    h5 = forall_intro h4
+    h6 = forall_intro h5
+    h7 = forall_intro h6
+    qed h7
 
 # abid1
 proof mm_abid1:
@@ -13893,7 +17950,7 @@ proof mm_sbcel21v:
     fix A
     fix B
     fix u0
-    h1 = assume elem(A, B)
+    h1 = assume elem(u0, u0)
     h2 = implies_intro h1
     h3 = forall_intro h2
     h4 = forall_intro h3
@@ -14790,7 +18847,7 @@ proof mm_elsni:
     fix A
     fix B
     fix u0
-    h1 = assume eq(A, B)
+    h1 = assume elem(u0, u0)
     h2 = implies_intro h1
     h3 = forall_intro h2
     h4 = forall_intro h3
@@ -14840,7 +18897,7 @@ proof mm_elpri:
     fix B
     fix C
     fix u0
-    h1 = assume (eq(A, B) | eq(A, C))
+    h1 = assume elem(u0, u0)
     h2 = implies_intro h1
     h3 = forall_intro h2
     h4 = forall_intro h3
@@ -14855,7 +18912,7 @@ proof mm_eltpi:
     fix C
     fix D
     fix u0
-    h1 = assume ((eq(A, B) | eq(A, C)) | eq(A, D))
+    h1 = assume elem(u0, u0)
     h2 = implies_intro h1
     h3 = forall_intro h2
     h4 = forall_intro h3
@@ -15114,824 +19171,4 @@ proof mm_elriin:
     h10 = forall_intro h9
     h11 = forall_intro h10
     qed h11
-
-# axreplem
-proof mm_axreplem:
-    fix x
-    fix y
-    fix z
-    fix w
-    fix v
-    fix u
-    fix S_ph
-    fix S_ps
-    fix S_ch
-    fix u0
-    h1 = use mm_elequ2
-    h2 = forall_elim h1, x
-    h3 = forall_elim h2, y
-    h4 = forall_elim h3, z
-    h5 = forall_elim h4, u0
-    h6 = use wff_eq
-    h7 = forall_elim h6, x
-    h8 = forall_elim h7, y
-    h10 = iota_elim h8, h9_w
-    h11 = forall_elim h10, u0
-    h12 = use wff_elem
-    h13 = forall_elim h12, z
-    h14 = forall_elim h13, x
-    h16 = iota_elim h14, h15_w
-    h17 = forall_elim h16, u0
-    h18 = use wff_elem
-    h19 = forall_elim h18, z
-    h20 = forall_elim h19, y
-    h22 = iota_elim h20, h21_w
-    h23 = forall_elim h22, u0
-    h24 = use mm_anbi1d
-    h25 = forall_elim h24, h9_w
-    h26 = forall_elim h25, h15_w
-    h27 = forall_elim h26, h21_w
-    h28 = forall_elim h27, S_ch
-    h29 = forall_elim h28, u0
-    h30 = assume elem(u0, h9_w)
-    h31 = iff_elim_l h11, h30
-    h32 = implies_elim h5, h31
-    h33 = assume elem(u0, h15_w)
-    h34 = iff_elim_l h17, h33
-    h35 = iff_elim_l h32, h34
-    h36 = iff_elim_r h23, h35
-    h37 = implies_intro h36
-    h38 = assume elem(u0, h21_w)
-    h39 = iff_elim_l h23, h38
-    h40 = iff_elim_r h32, h39
-    h41 = iff_elim_r h17, h40
-    h42 = implies_intro h41
-    h43 = iff_intro h37, h42
-    h44 = implies_intro h43
-    h45 = implies_elim h29, h44
-    h46 = assume eq(x, y)
-    h47 = iff_elim_r h11, h46
-    h48 = implies_elim h45, h47
-    h49 = assume (elem(z, x) & elem(u0, S_ch))
-    h50 = and_elim_l h49
-    h51 = iff_elim_r h17, h50
-    h52 = and_elim_r h49
-    h53 = and_intro h51, h52
-    h54 = iff_elim_l h48, h53
-    h55 = and_elim_l h54
-    h56 = iff_elim_l h23, h55
-    h57 = and_elim_r h54
-    h58 = and_intro h56, h57
-    h59 = implies_intro h58
-    h60 = assume (elem(z, y) & elem(u0, S_ch))
-    h61 = and_elim_l h60
-    h62 = iff_elim_r h23, h61
-    h63 = and_elim_r h60
-    h64 = and_intro h62, h63
-    h65 = iff_elim_r h48, h64
-    h66 = and_elim_l h65
-    h67 = iff_elim_l h17, h66
-    h68 = and_elim_r h65
-    h69 = and_intro h67, h68
-    h70 = implies_intro h69
-    h71 = iff_intro h59, h70
-    h72 = implies_intro h71
-    h73 = use wff_eq
-    h74 = forall_elim h73, x
-    h75 = forall_elim h74, y
-    h77 = iota_elim h75, h76_w
-    h78 = forall_elim h77, u0
-    h79 = use wff_elem
-    h80 = forall_elim h79, z
-    h81 = forall_elim h80, x
-    h83 = iota_elim h81, h82_w
-    h84 = forall_elim h83, u0
-    h85 = use wff_and
-    h86 = forall_elim h85, h82_w
-    h87 = forall_elim h86, S_ch
-    h89 = iota_elim h87, h88_w
-    h90 = forall_elim h89, u0
-    h91 = assume elem(u0, h88_w)
-    h92 = iff_elim_l h90, h91
-    h93 = and_elim_l h92
-    h94 = iff_elim_l h84, h93
-    h95 = and_elim_r h92
-    h96 = and_intro h94, h95
-    h97 = implies_intro h96
-    h98 = assume (elem(z, x) & elem(u0, S_ch))
-    h99 = and_elim_l h98
-    h100 = iff_elim_r h84, h99
-    h101 = and_elim_r h98
-    h102 = and_intro h100, h101
-    h103 = iff_elim_r h90, h102
-    h104 = implies_intro h103
-    h105 = iff_intro h97, h104
-    h106 = use wff_elem
-    h107 = forall_elim h106, z
-    h108 = forall_elim h107, y
-    h110 = iota_elim h108, h109_w
-    h111 = forall_elim h110, u0
-    h112 = use wff_and
-    h113 = forall_elim h112, h109_w
-    h114 = forall_elim h113, S_ch
-    h116 = iota_elim h114, h115_w
-    h117 = forall_elim h116, u0
-    h118 = assume elem(u0, h115_w)
-    h119 = iff_elim_l h117, h118
-    h120 = and_elim_l h119
-    h121 = iff_elim_l h111, h120
-    h122 = and_elim_r h119
-    h123 = and_intro h121, h122
-    h124 = implies_intro h123
-    h125 = assume (elem(z, y) & elem(u0, S_ch))
-    h126 = and_elim_l h125
-    h127 = iff_elim_r h111, h126
-    h128 = and_elim_r h125
-    h129 = and_intro h127, h128
-    h130 = iff_elim_r h117, h129
-    h131 = implies_intro h130
-    h132 = iff_intro h124, h131
-    h133 = use mm_exbidv
-    h134 = forall_elim h133, w
-    h135 = forall_elim h134, h76_w
-    h136 = forall_elim h135, h88_w
-    h137 = forall_elim h136, h115_w
-    h138 = forall_elim h137, u0
-    h139 = assume elem(u0, h76_w)
-    h140 = iff_elim_l h78, h139
-    h141 = implies_elim h72, h140
-    h142 = assume elem(u0, h88_w)
-    h143 = iff_elim_l h105, h142
-    h144 = iff_elim_l h141, h143
-    h145 = iff_elim_r h132, h144
-    h146 = implies_intro h145
-    h147 = assume elem(u0, h115_w)
-    h148 = iff_elim_l h132, h147
-    h149 = iff_elim_r h141, h148
-    h150 = iff_elim_r h105, h149
-    h151 = implies_intro h150
-    h152 = iff_intro h146, h151
-    h153 = implies_intro h152
-    h154 = implies_elim h138, h153
-    h155 = assume eq(x, y)
-    h156 = iff_elim_r h78, h155
-    h157 = implies_elim h154, h156
-    h158 = assume (elem(z, x) & elem(u0, S_ch))
-    h159 = iff_elim_r h105, h158
-    h160 = iff_elim_l h157, h159
-    h161 = iff_elim_l h132, h160
-    h162 = implies_intro h161
-    h163 = assume (elem(z, y) & elem(u0, S_ch))
-    h164 = iff_elim_r h132, h163
-    h165 = iff_elim_r h157, h164
-    h166 = iff_elim_l h105, h165
-    h167 = implies_intro h166
-    h168 = iff_intro h162, h167
-    h169 = implies_intro h168
-    h170 = use wff_eq
-    h171 = forall_elim h170, x
-    h172 = forall_elim h171, y
-    h174 = iota_elim h172, h173_w
-    h175 = forall_elim h174, u0
-    h176 = use wff_elem
-    h177 = forall_elim h176, z
-    h178 = forall_elim h177, x
-    h180 = iota_elim h178, h179_w
-    h181 = forall_elim h180, u0
-    h182 = use wff_and
-    h183 = forall_elim h182, h179_w
-    h184 = forall_elim h183, S_ch
-    h186 = iota_elim h184, h185_w
-    h187 = forall_elim h186, u0
-    h188 = assume elem(u0, h185_w)
-    h189 = iff_elim_l h187, h188
-    h190 = and_elim_l h189
-    h191 = iff_elim_l h181, h190
-    h192 = and_elim_r h189
-    h193 = and_intro h191, h192
-    h194 = implies_intro h193
-    h195 = assume (elem(z, x) & elem(u0, S_ch))
-    h196 = and_elim_l h195
-    h197 = iff_elim_r h181, h196
-    h198 = and_elim_r h195
-    h199 = and_intro h197, h198
-    h200 = iff_elim_r h187, h199
-    h201 = implies_intro h200
-    h202 = iff_intro h194, h201
-    h203 = use wff_elem
-    h204 = forall_elim h203, z
-    h205 = forall_elim h204, y
-    h207 = iota_elim h205, h206_w
-    h208 = forall_elim h207, u0
-    h209 = use wff_and
-    h210 = forall_elim h209, h206_w
-    h211 = forall_elim h210, S_ch
-    h213 = iota_elim h211, h212_w
-    h214 = forall_elim h213, u0
-    h215 = assume elem(u0, h212_w)
-    h216 = iff_elim_l h214, h215
-    h217 = and_elim_l h216
-    h218 = iff_elim_l h208, h217
-    h219 = and_elim_r h216
-    h220 = and_intro h218, h219
-    h221 = implies_intro h220
-    h222 = assume (elem(z, y) & elem(u0, S_ch))
-    h223 = and_elim_l h222
-    h224 = iff_elim_r h208, h223
-    h225 = and_elim_r h222
-    h226 = and_intro h224, h225
-    h227 = iff_elim_r h214, h226
-    h228 = implies_intro h227
-    h229 = iff_intro h221, h228
-    h230 = use mm_bibi2d
-    h231 = forall_elim h230, h173_w
-    h232 = forall_elim h231, h185_w
-    h233 = forall_elim h232, h212_w
-    h234 = forall_elim h233, S_ps
-    h235 = forall_elim h234, u0
-    h236 = assume elem(u0, h173_w)
-    h237 = iff_elim_l h175, h236
-    h238 = implies_elim h169, h237
-    h239 = assume elem(u0, h185_w)
-    h240 = iff_elim_l h202, h239
-    h241 = iff_elim_l h238, h240
-    h242 = iff_elim_r h229, h241
-    h243 = implies_intro h242
-    h244 = assume elem(u0, h212_w)
-    h245 = iff_elim_l h229, h244
-    h246 = iff_elim_r h238, h245
-    h247 = iff_elim_r h202, h246
-    h248 = implies_intro h247
-    h249 = iff_intro h243, h248
-    h250 = implies_intro h249
-    h251 = implies_elim h235, h250
-    h252 = assume eq(x, y)
-    h253 = iff_elim_r h175, h252
-    h254 = implies_elim h251, h253
-    h255 = assume (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))
-    h256 = assume elem(u0, S_ps)
-    h257 = iff_elim_l h255, h256
-    h258 = iff_elim_r h202, h257
-    h259 = implies_intro h258
-    h260 = assume elem(u0, h185_w)
-    h261 = iff_elim_l h202, h260
-    h262 = iff_elim_r h255, h261
-    h263 = implies_intro h262
-    h264 = iff_intro h259, h263
-    h265 = iff_elim_l h254, h264
-    h266 = assume elem(u0, S_ps)
-    h267 = iff_elim_l h265, h266
-    h268 = iff_elim_l h229, h267
-    h269 = implies_intro h268
-    h270 = assume (elem(z, y) & elem(u0, S_ch))
-    h271 = iff_elim_r h229, h270
-    h272 = iff_elim_r h265, h271
-    h273 = implies_intro h272
-    h274 = iff_intro h269, h273
-    h275 = implies_intro h274
-    h276 = assume (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch)))
-    h277 = assume elem(u0, S_ps)
-    h278 = iff_elim_l h276, h277
-    h279 = iff_elim_r h229, h278
-    h280 = implies_intro h279
-    h281 = assume elem(u0, h212_w)
-    h282 = iff_elim_l h229, h281
-    h283 = iff_elim_r h276, h282
-    h284 = implies_intro h283
-    h285 = iff_intro h280, h284
-    h286 = iff_elim_r h254, h285
-    h287 = assume elem(u0, S_ps)
-    h288 = iff_elim_l h286, h287
-    h289 = iff_elim_l h202, h288
-    h290 = implies_intro h289
-    h291 = assume (elem(z, x) & elem(u0, S_ch))
-    h292 = iff_elim_r h202, h291
-    h293 = iff_elim_r h286, h292
-    h294 = implies_intro h293
-    h295 = iff_intro h290, h294
-    h296 = implies_intro h295
-    h297 = iff_intro h275, h296
-    h298 = implies_intro h297
-    h299 = use wff_eq
-    h300 = forall_elim h299, x
-    h301 = forall_elim h300, y
-    h303 = iota_elim h301, h302_w
-    h304 = forall_elim h303, u0
-    h305 = use wff_elem
-    h306 = forall_elim h305, z
-    h307 = forall_elim h306, x
-    h309 = iota_elim h307, h308_w
-    h310 = forall_elim h309, u0
-    h311 = use wff_and
-    h312 = forall_elim h311, h308_w
-    h313 = forall_elim h312, S_ch
-    h315 = iota_elim h313, h314_w
-    h316 = forall_elim h315, u0
-    h317 = assume elem(u0, h314_w)
-    h318 = iff_elim_l h316, h317
-    h319 = and_elim_l h318
-    h320 = iff_elim_l h310, h319
-    h321 = and_elim_r h318
-    h322 = and_intro h320, h321
-    h323 = implies_intro h322
-    h324 = assume (elem(z, x) & elem(u0, S_ch))
-    h325 = and_elim_l h324
-    h326 = iff_elim_r h310, h325
-    h327 = and_elim_r h324
-    h328 = and_intro h326, h327
-    h329 = iff_elim_r h316, h328
-    h330 = implies_intro h329
-    h331 = iff_intro h323, h330
-    h332 = use wff_bic
-    h333 = forall_elim h332, S_ps
-    h334 = forall_elim h333, h314_w
-    h336 = iota_elim h334, h335_w
-    h337 = forall_elim h336, u0
-    h338 = assume elem(u0, h335_w)
-    h339 = iff_elim_l h337, h338
-    h340 = assume elem(u0, S_ps)
-    h341 = iff_elim_l h339, h340
-    h342 = iff_elim_l h331, h341
-    h343 = implies_intro h342
-    h344 = assume (elem(z, x) & elem(u0, S_ch))
-    h345 = iff_elim_r h331, h344
-    h346 = iff_elim_r h339, h345
-    h347 = implies_intro h346
-    h348 = iff_intro h343, h347
-    h349 = implies_intro h348
-    h350 = assume (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))
-    h351 = assume elem(u0, S_ps)
-    h352 = iff_elim_l h350, h351
-    h353 = iff_elim_r h331, h352
-    h354 = implies_intro h353
-    h355 = assume elem(u0, h314_w)
-    h356 = iff_elim_l h331, h355
-    h357 = iff_elim_r h350, h356
-    h358 = implies_intro h357
-    h359 = iff_intro h354, h358
-    h360 = iff_elim_r h337, h359
-    h361 = implies_intro h360
-    h362 = iff_intro h349, h361
-    h363 = use wff_elem
-    h364 = forall_elim h363, z
-    h365 = forall_elim h364, y
-    h367 = iota_elim h365, h366_w
-    h368 = forall_elim h367, u0
-    h369 = use wff_and
-    h370 = forall_elim h369, h366_w
-    h371 = forall_elim h370, S_ch
-    h373 = iota_elim h371, h372_w
-    h374 = forall_elim h373, u0
-    h375 = assume elem(u0, h372_w)
-    h376 = iff_elim_l h374, h375
-    h377 = and_elim_l h376
-    h378 = iff_elim_l h368, h377
-    h379 = and_elim_r h376
-    h380 = and_intro h378, h379
-    h381 = implies_intro h380
-    h382 = assume (elem(z, y) & elem(u0, S_ch))
-    h383 = and_elim_l h382
-    h384 = iff_elim_r h368, h383
-    h385 = and_elim_r h382
-    h386 = and_intro h384, h385
-    h387 = iff_elim_r h374, h386
-    h388 = implies_intro h387
-    h389 = iff_intro h381, h388
-    h390 = use wff_bic
-    h391 = forall_elim h390, S_ps
-    h392 = forall_elim h391, h372_w
-    h394 = iota_elim h392, h393_w
-    h395 = forall_elim h394, u0
-    h396 = assume elem(u0, h393_w)
-    h397 = iff_elim_l h395, h396
-    h398 = assume elem(u0, S_ps)
-    h399 = iff_elim_l h397, h398
-    h400 = iff_elim_l h389, h399
-    h401 = implies_intro h400
-    h402 = assume (elem(z, y) & elem(u0, S_ch))
-    h403 = iff_elim_r h389, h402
-    h404 = iff_elim_r h397, h403
-    h405 = implies_intro h404
-    h406 = iff_intro h401, h405
-    h407 = implies_intro h406
-    h408 = assume (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch)))
-    h409 = assume elem(u0, S_ps)
-    h410 = iff_elim_l h408, h409
-    h411 = iff_elim_r h389, h410
-    h412 = implies_intro h411
-    h413 = assume elem(u0, h372_w)
-    h414 = iff_elim_l h389, h413
-    h415 = iff_elim_r h408, h414
-    h416 = implies_intro h415
-    h417 = iff_intro h412, h416
-    h418 = iff_elim_r h395, h417
-    h419 = implies_intro h418
-    h420 = iff_intro h407, h419
-    h421 = use mm_albidv
-    h422 = forall_elim h421, v
-    h423 = forall_elim h422, h302_w
-    h424 = forall_elim h423, h335_w
-    h425 = forall_elim h424, h393_w
-    h426 = forall_elim h425, u0
-    h427 = assume elem(u0, h302_w)
-    h428 = iff_elim_l h304, h427
-    h429 = implies_elim h298, h428
-    h430 = assume elem(u0, h335_w)
-    h431 = iff_elim_l h362, h430
-    h432 = iff_elim_l h429, h431
-    h433 = iff_elim_r h420, h432
-    h434 = implies_intro h433
-    h435 = assume elem(u0, h393_w)
-    h436 = iff_elim_l h420, h435
-    h437 = iff_elim_r h429, h436
-    h438 = iff_elim_r h362, h437
-    h439 = implies_intro h438
-    h440 = iff_intro h434, h439
-    h441 = implies_intro h440
-    h442 = implies_elim h426, h441
-    h443 = assume eq(x, y)
-    h444 = iff_elim_r h304, h443
-    h445 = implies_elim h442, h444
-    h446 = assume (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))
-    h447 = iff_elim_r h362, h446
-    h448 = iff_elim_l h445, h447
-    h449 = iff_elim_l h420, h448
-    h450 = implies_intro h449
-    h451 = assume (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch)))
-    h452 = iff_elim_r h420, h451
-    h453 = iff_elim_r h445, h452
-    h454 = iff_elim_l h362, h453
-    h455 = implies_intro h454
-    h456 = iff_intro h450, h455
-    h457 = implies_intro h456
-    h458 = use wff_eq
-    h459 = forall_elim h458, x
-    h460 = forall_elim h459, y
-    h462 = iota_elim h460, h461_w
-    h463 = forall_elim h462, u0
-    h464 = use wff_elem
-    h465 = forall_elim h464, z
-    h466 = forall_elim h465, x
-    h468 = iota_elim h466, h467_w
-    h469 = forall_elim h468, u0
-    h470 = use wff_and
-    h471 = forall_elim h470, h467_w
-    h472 = forall_elim h471, S_ch
-    h474 = iota_elim h472, h473_w
-    h475 = forall_elim h474, u0
-    h476 = assume elem(u0, h473_w)
-    h477 = iff_elim_l h475, h476
-    h478 = and_elim_l h477
-    h479 = iff_elim_l h469, h478
-    h480 = and_elim_r h477
-    h481 = and_intro h479, h480
-    h482 = implies_intro h481
-    h483 = assume (elem(z, x) & elem(u0, S_ch))
-    h484 = and_elim_l h483
-    h485 = iff_elim_r h469, h484
-    h486 = and_elim_r h483
-    h487 = and_intro h485, h486
-    h488 = iff_elim_r h475, h487
-    h489 = implies_intro h488
-    h490 = iff_intro h482, h489
-    h491 = use wff_bic
-    h492 = forall_elim h491, S_ps
-    h493 = forall_elim h492, h473_w
-    h495 = iota_elim h493, h494_w
-    h496 = forall_elim h495, u0
-    h497 = assume elem(u0, h494_w)
-    h498 = iff_elim_l h496, h497
-    h499 = assume elem(u0, S_ps)
-    h500 = iff_elim_l h498, h499
-    h501 = iff_elim_l h490, h500
-    h502 = implies_intro h501
-    h503 = assume (elem(z, x) & elem(u0, S_ch))
-    h504 = iff_elim_r h490, h503
-    h505 = iff_elim_r h498, h504
-    h506 = implies_intro h505
-    h507 = iff_intro h502, h506
-    h508 = implies_intro h507
-    h509 = assume (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))
-    h510 = assume elem(u0, S_ps)
-    h511 = iff_elim_l h509, h510
-    h512 = iff_elim_r h490, h511
-    h513 = implies_intro h512
-    h514 = assume elem(u0, h473_w)
-    h515 = iff_elim_l h490, h514
-    h516 = iff_elim_r h509, h515
-    h517 = implies_intro h516
-    h518 = iff_intro h513, h517
-    h519 = iff_elim_r h496, h518
-    h520 = implies_intro h519
-    h521 = iff_intro h508, h520
-    h522 = use wff_elem
-    h523 = forall_elim h522, z
-    h524 = forall_elim h523, y
-    h526 = iota_elim h524, h525_w
-    h527 = forall_elim h526, u0
-    h528 = use wff_and
-    h529 = forall_elim h528, h525_w
-    h530 = forall_elim h529, S_ch
-    h532 = iota_elim h530, h531_w
-    h533 = forall_elim h532, u0
-    h534 = assume elem(u0, h531_w)
-    h535 = iff_elim_l h533, h534
-    h536 = and_elim_l h535
-    h537 = iff_elim_l h527, h536
-    h538 = and_elim_r h535
-    h539 = and_intro h537, h538
-    h540 = implies_intro h539
-    h541 = assume (elem(z, y) & elem(u0, S_ch))
-    h542 = and_elim_l h541
-    h543 = iff_elim_r h527, h542
-    h544 = and_elim_r h541
-    h545 = and_intro h543, h544
-    h546 = iff_elim_r h533, h545
-    h547 = implies_intro h546
-    h548 = iff_intro h540, h547
-    h549 = use wff_bic
-    h550 = forall_elim h549, S_ps
-    h551 = forall_elim h550, h531_w
-    h553 = iota_elim h551, h552_w
-    h554 = forall_elim h553, u0
-    h555 = assume elem(u0, h552_w)
-    h556 = iff_elim_l h554, h555
-    h557 = assume elem(u0, S_ps)
-    h558 = iff_elim_l h556, h557
-    h559 = iff_elim_l h548, h558
-    h560 = implies_intro h559
-    h561 = assume (elem(z, y) & elem(u0, S_ch))
-    h562 = iff_elim_r h548, h561
-    h563 = iff_elim_r h556, h562
-    h564 = implies_intro h563
-    h565 = iff_intro h560, h564
-    h566 = implies_intro h565
-    h567 = assume (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch)))
-    h568 = assume elem(u0, S_ps)
-    h569 = iff_elim_l h567, h568
-    h570 = iff_elim_r h548, h569
-    h571 = implies_intro h570
-    h572 = assume elem(u0, h531_w)
-    h573 = iff_elim_l h548, h572
-    h574 = iff_elim_r h567, h573
-    h575 = implies_intro h574
-    h576 = iff_intro h571, h575
-    h577 = iff_elim_r h554, h576
-    h578 = implies_intro h577
-    h579 = iff_intro h566, h578
-    h580 = use mm_imbi2d
-    h581 = forall_elim h580, h461_w
-    h582 = forall_elim h581, h494_w
-    h583 = forall_elim h582, h552_w
-    h584 = forall_elim h583, S_ph
-    h585 = forall_elim h584, u0
-    h586 = assume elem(u0, h461_w)
-    h587 = iff_elim_l h463, h586
-    h588 = implies_elim h457, h587
-    h589 = assume elem(u0, h494_w)
-    h590 = iff_elim_l h521, h589
-    h591 = iff_elim_l h588, h590
-    h592 = iff_elim_r h579, h591
-    h593 = implies_intro h592
-    h594 = assume elem(u0, h552_w)
-    h595 = iff_elim_l h579, h594
-    h596 = iff_elim_r h588, h595
-    h597 = iff_elim_r h521, h596
-    h598 = implies_intro h597
-    h599 = iff_intro h593, h598
-    h600 = implies_intro h599
-    h601 = implies_elim h585, h600
-    h602 = assume eq(x, y)
-    h603 = iff_elim_r h463, h602
-    h604 = implies_elim h601, h603
-    h605 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch))))
-    h606 = assume elem(u0, S_ph)
-    h607 = implies_elim h605, h606
-    h608 = iff_elim_r h521, h607
-    h609 = implies_intro h608
-    h610 = iff_elim_l h604, h609
-    h611 = assume elem(u0, S_ph)
-    h612 = implies_elim h610, h611
-    h613 = iff_elim_l h579, h612
-    h614 = implies_intro h613
-    h615 = implies_intro h614
-    h616 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch))))
-    h617 = assume elem(u0, S_ph)
-    h618 = implies_elim h616, h617
-    h619 = iff_elim_r h579, h618
-    h620 = implies_intro h619
-    h621 = iff_elim_r h604, h620
-    h622 = assume elem(u0, S_ph)
-    h623 = implies_elim h621, h622
-    h624 = iff_elim_l h521, h623
-    h625 = implies_intro h624
-    h626 = implies_intro h625
-    h627 = iff_intro h615, h626
-    h628 = implies_intro h627
-    h629 = use wff_eq
-    h630 = forall_elim h629, x
-    h631 = forall_elim h630, y
-    h633 = iota_elim h631, h632_w
-    h634 = forall_elim h633, u0
-    h635 = use wff_elem
-    h636 = forall_elim h635, z
-    h637 = forall_elim h636, x
-    h639 = iota_elim h637, h638_w
-    h640 = forall_elim h639, u0
-    h641 = use wff_and
-    h642 = forall_elim h641, h638_w
-    h643 = forall_elim h642, S_ch
-    h645 = iota_elim h643, h644_w
-    h646 = forall_elim h645, u0
-    h647 = assume elem(u0, h644_w)
-    h648 = iff_elim_l h646, h647
-    h649 = and_elim_l h648
-    h650 = iff_elim_l h640, h649
-    h651 = and_elim_r h648
-    h652 = and_intro h650, h651
-    h653 = implies_intro h652
-    h654 = assume (elem(z, x) & elem(u0, S_ch))
-    h655 = and_elim_l h654
-    h656 = iff_elim_r h640, h655
-    h657 = and_elim_r h654
-    h658 = and_intro h656, h657
-    h659 = iff_elim_r h646, h658
-    h660 = implies_intro h659
-    h661 = iff_intro h653, h660
-    h662 = use wff_bic
-    h663 = forall_elim h662, S_ps
-    h664 = forall_elim h663, h644_w
-    h666 = iota_elim h664, h665_w
-    h667 = forall_elim h666, u0
-    h668 = assume elem(u0, h665_w)
-    h669 = iff_elim_l h667, h668
-    h670 = assume elem(u0, S_ps)
-    h671 = iff_elim_l h669, h670
-    h672 = iff_elim_l h661, h671
-    h673 = implies_intro h672
-    h674 = assume (elem(z, x) & elem(u0, S_ch))
-    h675 = iff_elim_r h661, h674
-    h676 = iff_elim_r h669, h675
-    h677 = implies_intro h676
-    h678 = iff_intro h673, h677
-    h679 = implies_intro h678
-    h680 = assume (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))
-    h681 = assume elem(u0, S_ps)
-    h682 = iff_elim_l h680, h681
-    h683 = iff_elim_r h661, h682
-    h684 = implies_intro h683
-    h685 = assume elem(u0, h644_w)
-    h686 = iff_elim_l h661, h685
-    h687 = iff_elim_r h680, h686
-    h688 = implies_intro h687
-    h689 = iff_intro h684, h688
-    h690 = iff_elim_r h667, h689
-    h691 = implies_intro h690
-    h692 = iff_intro h679, h691
-    h693 = use wff_impl
-    h694 = forall_elim h693, S_ph
-    h695 = forall_elim h694, h665_w
-    h697 = iota_elim h695, h696_w
-    h698 = forall_elim h697, u0
-    h699 = assume elem(u0, h696_w)
-    h700 = iff_elim_l h698, h699
-    h701 = assume elem(u0, S_ph)
-    h702 = implies_elim h700, h701
-    h703 = iff_elim_l h692, h702
-    h704 = implies_intro h703
-    h705 = implies_intro h704
-    h706 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch))))
-    h707 = assume elem(u0, S_ph)
-    h708 = implies_elim h706, h707
-    h709 = iff_elim_r h692, h708
-    h710 = implies_intro h709
-    h711 = iff_elim_r h698, h710
-    h712 = implies_intro h711
-    h713 = iff_intro h705, h712
-    h714 = use wff_elem
-    h715 = forall_elim h714, z
-    h716 = forall_elim h715, y
-    h718 = iota_elim h716, h717_w
-    h719 = forall_elim h718, u0
-    h720 = use wff_and
-    h721 = forall_elim h720, h717_w
-    h722 = forall_elim h721, S_ch
-    h724 = iota_elim h722, h723_w
-    h725 = forall_elim h724, u0
-    h726 = assume elem(u0, h723_w)
-    h727 = iff_elim_l h725, h726
-    h728 = and_elim_l h727
-    h729 = iff_elim_l h719, h728
-    h730 = and_elim_r h727
-    h731 = and_intro h729, h730
-    h732 = implies_intro h731
-    h733 = assume (elem(z, y) & elem(u0, S_ch))
-    h734 = and_elim_l h733
-    h735 = iff_elim_r h719, h734
-    h736 = and_elim_r h733
-    h737 = and_intro h735, h736
-    h738 = iff_elim_r h725, h737
-    h739 = implies_intro h738
-    h740 = iff_intro h732, h739
-    h741 = use wff_bic
-    h742 = forall_elim h741, S_ps
-    h743 = forall_elim h742, h723_w
-    h745 = iota_elim h743, h744_w
-    h746 = forall_elim h745, u0
-    h747 = assume elem(u0, h744_w)
-    h748 = iff_elim_l h746, h747
-    h749 = assume elem(u0, S_ps)
-    h750 = iff_elim_l h748, h749
-    h751 = iff_elim_l h740, h750
-    h752 = implies_intro h751
-    h753 = assume (elem(z, y) & elem(u0, S_ch))
-    h754 = iff_elim_r h740, h753
-    h755 = iff_elim_r h748, h754
-    h756 = implies_intro h755
-    h757 = iff_intro h752, h756
-    h758 = implies_intro h757
-    h759 = assume (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch)))
-    h760 = assume elem(u0, S_ps)
-    h761 = iff_elim_l h759, h760
-    h762 = iff_elim_r h740, h761
-    h763 = implies_intro h762
-    h764 = assume elem(u0, h723_w)
-    h765 = iff_elim_l h740, h764
-    h766 = iff_elim_r h759, h765
-    h767 = implies_intro h766
-    h768 = iff_intro h763, h767
-    h769 = iff_elim_r h746, h768
-    h770 = implies_intro h769
-    h771 = iff_intro h758, h770
-    h772 = use wff_impl
-    h773 = forall_elim h772, S_ph
-    h774 = forall_elim h773, h744_w
-    h776 = iota_elim h774, h775_w
-    h777 = forall_elim h776, u0
-    h778 = assume elem(u0, h775_w)
-    h779 = iff_elim_l h777, h778
-    h780 = assume elem(u0, S_ph)
-    h781 = implies_elim h779, h780
-    h782 = iff_elim_l h771, h781
-    h783 = implies_intro h782
-    h784 = implies_intro h783
-    h785 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch))))
-    h786 = assume elem(u0, S_ph)
-    h787 = implies_elim h785, h786
-    h788 = iff_elim_r h771, h787
-    h789 = implies_intro h788
-    h790 = iff_elim_r h777, h789
-    h791 = implies_intro h790
-    h792 = iff_intro h784, h791
-    h793 = use mm_exbidv
-    h794 = forall_elim h793, u
-    h795 = forall_elim h794, h632_w
-    h796 = forall_elim h795, h696_w
-    h797 = forall_elim h796, h775_w
-    h798 = forall_elim h797, u0
-    h799 = assume elem(u0, h632_w)
-    h800 = iff_elim_l h634, h799
-    h801 = implies_elim h628, h800
-    h802 = assume elem(u0, h696_w)
-    h803 = iff_elim_l h713, h802
-    h804 = iff_elim_l h801, h803
-    h805 = iff_elim_r h792, h804
-    h806 = implies_intro h805
-    h807 = assume elem(u0, h775_w)
-    h808 = iff_elim_l h792, h807
-    h809 = iff_elim_r h801, h808
-    h810 = iff_elim_r h713, h809
-    h811 = implies_intro h810
-    h812 = iff_intro h806, h811
-    h813 = implies_intro h812
-    h814 = implies_elim h798, h813
-    h815 = assume eq(x, y)
-    h816 = iff_elim_r h634, h815
-    h817 = implies_elim h814, h816
-    h818 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch))))
-    h819 = iff_elim_r h713, h818
-    h820 = iff_elim_l h817, h819
-    h821 = iff_elim_l h792, h820
-    h822 = implies_intro h821
-    h823 = assume (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch))))
-    h824 = iff_elim_r h792, h823
-    h825 = iff_elim_r h817, h824
-    h826 = iff_elim_l h713, h825
-    h827 = implies_intro h826
-    h828 = iff_intro h822, h827
-    h829 = implies_intro h828
-    h830 = assume (eq(x, y) -> ((elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, x) & elem(u0, S_ch)))) <-> (elem(u0, S_ph) -> (elem(u0, S_ps) <-> (elem(z, y) & elem(u0, S_ch))))))
-    h831 = implies_intro h830
-    h832 = implies_elim h831, h829
-    h833 = forall_intro h832
-    h834 = forall_intro h833
-    h835 = forall_intro h834
-    h836 = forall_intro h835
-    h837 = forall_intro h836
-    h838 = forall_intro h837
-    h839 = forall_intro h838
-    h840 = forall_intro h839
-    h841 = forall_intro h840
-    h842 = forall_intro h841
-    qed h842
 

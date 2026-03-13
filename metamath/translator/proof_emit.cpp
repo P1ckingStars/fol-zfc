@@ -356,18 +356,13 @@ LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
                 return node.name;
             case WffNode::Kind::Pred:
                 return render_pred(node);
-            case WffNode::Kind::Verum: {
-                std::string s = info.set_var_order.empty()
-                    ? info.dummy_var : info.set_var_order[0];
-                return "(elem(" + info.dummy_var + ", " + s +
-                       ") -> elem(" + info.dummy_var + ", " + s + "))";
-            }
-            case WffNode::Kind::Falsum: {
-                std::string s = info.set_var_order.empty()
-                    ? info.dummy_var : info.set_var_order[0];
-                return "~(elem(" + info.dummy_var + ", " + s +
-                       ") -> elem(" + info.dummy_var + ", " + s + "))";
-            }
+            case WffNode::Kind::Verum:
+                return "(elem(" + info.dummy_var + ", " + info.dummy_var +
+                       ") -> elem(" + info.dummy_var + ", " + info.dummy_var + "))";
+            case WffNode::Kind::Falsum:
+                return "~(elem(" + info.dummy_var + ", " + info.dummy_var +
+                       ") -> elem(" + info.dummy_var + ", " + info.dummy_var + "))";
+
             default:
                 return "??";
         }

@@ -48,16 +48,32 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
 
     // --- Propositional connectives ---
 
-    if (L == "wi" && C.size() == 2)
-        return wff_binary(WffNode::Op::Implies, convert_wff(C[0]), convert_wff(C[1]));
+    if (L == "wi" && C.size() == 2) {
+        auto lhs = convert_wff(C[0]);
+        auto rhs = convert_wff(C[1]);
+        // (A -> A) where A is a ground term (no Var/Verum/Falsum) = Verum.
+        // Only collapse fully ground self-implications like (forall x. eq(x,x) -> forall x. eq(x,x))
+        // from df-tru/df-fal. Don't collapse (F.->F.) or (T.->T.) because these would create
+        // mismatches between frame-level ASTs and substitution-level ASTs at ax-mp boundaries.
+        if (*lhs == *rhs && !any_leaf(*lhs, [](const WffNode& n) {
+                return n.kind == WffNode::Kind::Var ||
+                       n.kind == WffNode::Kind::Verum ||
+                       n.kind == WffNode::Kind::Falsum; }))
+            return wff_verum();
+        return wff_binary(WffNode::Op::Implies, std::move(lhs), std::move(rhs));
+    }
     if (L == "wa" && C.size() == 2)
         return wff_binary(WffNode::Op::And, convert_wff(C[0]), convert_wff(C[1]));
     if (L == "wo" && C.size() == 2)
         return wff_binary(WffNode::Op::Or, convert_wff(C[0]), convert_wff(C[1]));
     if (L == "wb" && C.size() == 2)
         return wff_binary(WffNode::Op::Iff, convert_wff(C[0]), convert_wff(C[1]));
-    if (L == "wn" && C.size() == 1)
-        return wff_neg(convert_wff(C[0]));
+    if (L == "wn" && C.size() == 1) {
+        auto child = convert_wff(C[0]);
+        // ~T. = F. (needed for df-fal to be identity biconditional)
+        if (child->kind == WffNode::Kind::Verum) return wff_falsum();
+        return wff_neg(std::move(child));
+    }
 
     // n-ary conjunction/disjunction: w3a, w3o
     if (L == "w3a" && C.size() == 3)

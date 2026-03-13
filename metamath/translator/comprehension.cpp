@@ -29,6 +29,9 @@ LeafRenderer make_compound_renderer(
 }
 
 // Leaf renderer using WffAtom elem_str for Var nodes.
+// Verum/Falsum use compound_str (same as make_compound_renderer) because
+// make_claim_renderer renders them as compound, so the claim form has them
+// in compound form — the elem/compound distinction only applies to Var nodes.
 // IMPORTANT: captures `atoms` by reference; caller must ensure it outlives the lambda.
 LeafRenderer make_elem_renderer(
     const std::unordered_map<std::string, WffAtom>& atoms) {
@@ -39,11 +42,11 @@ LeafRenderer make_elem_renderer(
         }
         if (node.kind == WffNode::Kind::Verum) {
             auto it = atoms.find("T.");
-            if (it != atoms.end()) return it->second.elem_str;
+            if (it != atoms.end()) return it->second.compound_str;
         }
         if (node.kind == WffNode::Kind::Falsum) {
             auto it = atoms.find("F.");
-            if (it != atoms.end()) return it->second.elem_str;
+            if (it != atoms.end()) return it->second.compound_str;
         }
         if (node.kind == WffNode::Kind::Literal) return node.name;
         if (node.kind == WffNode::Kind::Pred) return render_pred(node);
@@ -52,6 +55,8 @@ LeafRenderer make_elem_renderer(
 }
 
 // Check if any leaf in the subtree needs iff conversion.
+// Only Var nodes need conversion (Verum/Falsum are always compound in both
+// claim form and target form, so no conversion is needed for them).
 bool needs_conv(const WffNode& node,
                 const std::unordered_map<std::string, WffAtom>& atoms) {
     return any_leaf(node, [&](const WffNode& leaf) {
@@ -252,23 +257,20 @@ CompResult build_comp_impl(
 
     // Verum (T.) / Falsum (F.) — create witness set via comprehension
     if (tok == "T." || tok == "F.") {
-        std::string any_set = caller_info.set_var_order.empty()
-            ? caller_info.dummy_var
-            : caller_info.set_var_order[0];
+        // Always use dummy_var for canonical Verum/Falsum rendering
+        const std::string& d = caller_info.dummy_var;
         std::string axiom = (tok == "T.") ? "wff_true" : "wff_false";
         std::string h_ax = state.fresh();
         state.emit(h_ax + " = use " + axiom);
         std::string h1 = state.fresh();
-        state.emit(h1 + " = forall_elim " + h_ax + ", " + any_set);
+        state.emit(h1 + " = forall_elim " + h_ax + ", " + d);
         std::string witness = state.fresh() + "_w";
         std::string h2 = state.fresh();
         state.emit(h2 + " = iota_elim " + h1 + ", " + witness);
         std::string axiom_iff = state.fresh();
-        state.emit(axiom_iff + " = forall_elim " + h2 + ", " +
-                   caller_info.dummy_var);
-        std::string taut = "(elem(" + caller_info.dummy_var + ", " +
-                           any_set + ") -> elem(" + caller_info.dummy_var +
-                           ", " + any_set + "))";
+        state.emit(axiom_iff + " = forall_elim " + h2 + ", " + d);
+        std::string taut = "(elem(" + d + ", " + d +
+                           ") -> elem(" + d + ", " + d + "))";
         std::string compound = (tok == "T.") ? taut : neg(taut);
         return {witness, axiom_iff, compound};
     }
