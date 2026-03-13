@@ -325,7 +325,7 @@ CompResult build_comp_impl(
         // Detect A. x ( x = VAR -> body ) → body
         // when bound var doesn't appear in body (equsv equivalence).
         // Pattern: A. x ( x = VAR -> ... ) or A. x ( VAR = x -> ... )
-        if (tok == "A." && pos + 3 < mm_tokens.size() &&
+        if (tok == "A." && pos + 4 < mm_tokens.size() &&
             mm_tokens[pos] == "(") {
             // Check for "( x = VAR ->" or "( VAR = x ->"
             bool fwd = (mm_tokens[pos + 1] == bound &&

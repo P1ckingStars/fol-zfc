@@ -134,17 +134,20 @@ std::string MmTranslator::emit_comprehension_use(
     }
 
     // Add T./F. as atoms if they appear in the referenced expression.
-    // Build comprehension witness with proper iff_handle for conversion.
-    for (const auto& tok : ref_thm.expression) {
-        if ((tok == "T." || tok == "F.") && atom_map.find(tok) == atom_map.end()) {
-            Expression tf_expr = {tok};
-            auto cr = build_comp_impl(tf_expr, 0, caller_info, state);
-            if (!cr.set_var.empty()) {
+    // Verum/Falsum are always in compound form in both claim and target
+    // representations (needs_conv ignores them, convert_proof returns h
+    // unchanged), so no witness set or iff_handle is needed — just the
+    // compound string for the renderers.
+    {
+        const std::string& d = caller_info.dummy_var;
+        std::string taut = "(elem(" + d + ", " + d +
+                           ") -> elem(" + d + ", " + d + "))";
+        for (const auto& tok : ref_thm.expression) {
+            if ((tok == "T." || tok == "F.") &&
+                atom_map.find(tok) == atom_map.end()) {
                 WffAtom wa;
-                wa.iff_handle = cr.iff_handle;
-                wa.elem_str = "elem(" + caller_info.dummy_var + ", " +
-                              cr.set_var + ")";
-                wa.compound_str = cr.compound_str;
+                wa.compound_str = (tok == "T.") ? taut : neg(taut);
+                wa.elem_str = wa.compound_str;  // same: no elem/compound distinction
                 atom_map[tok] = wa;
             }
         }
@@ -555,8 +558,6 @@ void MmTranslator::init_identity_defs() {
         // Negated predicate definitions (compound class fallback only;
         // simple setvar cases handled by bridge in proof_emit_tree)
         "df-ne", "df-nel",
-        // Subset definitions
-        "df-ss", "df-pss",
     };
     for (const char* l : labels) {
         wff_identity_defs_.insert(l);

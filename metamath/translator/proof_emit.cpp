@@ -342,14 +342,17 @@ std::string inline_df_or(const std::string& a, const std::string& b,
     return h_result;
 }
 
-// IMPORTANT: captures `info` by reference; caller must ensure it outlives the lambda.
 LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
-    return [&info](const WffNode& node) -> std::string {
+    // Capture only the fields we need — avoids dangling reference to info.
+    auto dummy_var = info.dummy_var;
+    auto wff_to_set = info.wff_to_set;
+    return [dummy_var = std::move(dummy_var),
+            wff_to_set = std::move(wff_to_set)](const WffNode& node) -> std::string {
         switch (node.kind) {
             case WffNode::Kind::Var: {
-                auto it = info.wff_to_set.find(node.name);
-                if (it != info.wff_to_set.end())
-                    return "elem(" + info.dummy_var + ", " + it->second + ")";
+                auto it = wff_to_set.find(node.name);
+                if (it != wff_to_set.end())
+                    return "elem(" + dummy_var + ", " + it->second + ")";
                 return node.name;
             }
             case WffNode::Kind::Literal:
@@ -357,11 +360,11 @@ LeafRenderer make_claim_renderer(const MmTranslator::FrameInfo& info) {
             case WffNode::Kind::Pred:
                 return render_pred(node);
             case WffNode::Kind::Verum:
-                return "(elem(" + info.dummy_var + ", " + info.dummy_var +
-                       ") -> elem(" + info.dummy_var + ", " + info.dummy_var + "))";
+                return "(elem(" + dummy_var + ", " + dummy_var +
+                       ") -> elem(" + dummy_var + ", " + dummy_var + "))";
             case WffNode::Kind::Falsum:
-                return "~(elem(" + info.dummy_var + ", " + info.dummy_var +
-                       ") -> elem(" + info.dummy_var + ", " + info.dummy_var + "))";
+                return "~(elem(" + dummy_var + ", " + dummy_var +
+                       ") -> elem(" + dummy_var + ", " + dummy_var + "))";
 
             default:
                 return "??";

@@ -51,14 +51,17 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
     if (L == "wi" && C.size() == 2) {
         auto lhs = convert_wff(C[0]);
         auto rhs = convert_wff(C[1]);
-        // (A -> A) where A is a ground term (no Var/Verum/Falsum) = Verum.
-        // Only collapse fully ground self-implications like (forall x. eq(x,x) -> forall x. eq(x,x))
-        // from df-tru/df-fal. Don't collapse (F.->F.) or (T.->T.) because these would create
-        // mismatches between frame-level ASTs and substitution-level ASTs at ax-mp boundaries.
+        // (A -> A) where A is fully ground = Verum.
+        // Only collapse concrete self-implications like
+        // (forall x. eq(x,x) -> forall x. eq(x,x)) from df-tru/df-fal.
+        // Exclude: Var (wff metavariables must stay structural for instantiation),
+        //          Verum/Falsum (would mismatch frame vs substitution ASTs at ax-mp),
+        //          Literal (error-marker nodes should not be collapsed).
         if (*lhs == *rhs && !any_leaf(*lhs, [](const WffNode& n) {
                 return n.kind == WffNode::Kind::Var ||
                        n.kind == WffNode::Kind::Verum ||
-                       n.kind == WffNode::Kind::Falsum; }))
+                       n.kind == WffNode::Kind::Falsum ||
+                       n.kind == WffNode::Kind::Literal; }))
             return wff_verum();
         return wff_binary(WffNode::Op::Implies, std::move(lhs), std::move(rhs));
     }
@@ -70,7 +73,11 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
         return wff_binary(WffNode::Op::Iff, convert_wff(C[0]), convert_wff(C[1]));
     if (L == "wn" && C.size() == 1) {
         auto child = convert_wff(C[0]);
-        // ~T. = F. (needed for df-fal to be identity biconditional)
+        // ~T. = F. (needed for df-fal to be identity biconditional).
+        // ~F. is intentionally NOT simplified to T.: doing so broke nbfal
+        // because its proof expects a Neg node, and it would also interact
+        // poorly with the wi self-implication check (T. nodes are excluded
+        // from collapse to prevent frame/substitution AST mismatches).
         if (child->kind == WffNode::Kind::Verum) return wff_falsum();
         return wff_neg(std::move(child));
     }
@@ -218,9 +225,10 @@ WffPtr SyntaxToWff::convert_wff(const SyntaxNode& node) {
 
     if (L == "wif" && C.size() == 3) {
         auto ph = convert_wff(C[0]);
+        auto neg_ph = wff_neg(ph);
         return wff_binary(WffNode::Op::Or,
-            wff_binary(WffNode::Op::And, ph, convert_wff(C[1])),
-            wff_binary(WffNode::Op::And, wff_neg(ph), convert_wff(C[2])));
+            wff_binary(WffNode::Op::And, std::move(ph), convert_wff(C[1])),
+            wff_binary(WffNode::Op::And, std::move(neg_ph), convert_wff(C[2])));
     }
 
     // --- Class equality: A = B ---
@@ -502,9 +510,10 @@ WffPtr SyntaxToWff::expand_membership(const std::string& t,
     // Operand order matches df-if: { x | ((x e. A /\ ph) \/ (x e. B /\ -. ph)) }
     if (L == "cif" && C.size() == 3) {
         auto ph = convert_wff(C[0]);
+        auto neg_ph = wff_neg(ph);
         return wff_binary(WffNode::Op::Or,
-            wff_binary(WffNode::Op::And, expand_membership(t, C[1]), ph),
-            wff_binary(WffNode::Op::And, expand_membership(t, C[2]), wff_neg(ph)));
+            wff_binary(WffNode::Op::And, expand_membership(t, C[1]), std::move(ph)),
+            wff_binary(WffNode::Op::And, expand_membership(t, C[2]), std::move(neg_ph)));
     }
 
     // cop(A, B): t ∈ ⟨A,B⟩ → Kuratowski: t ∈ {{A}, {A,B}}
