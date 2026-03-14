@@ -67,6 +67,8 @@ std::string MmTranslator::emit_comprehension_use(
     const FrameInfo& caller_info,
     const std::map<std::string, Expression>& subst,
     const std::vector<std::string>& ess_handles,
+    const std::vector<Expression>& concrete_ess_exprs,
+    const Expression& concrete_conclusion,
     ProofState& state,
     std::string* error) {
 
@@ -77,7 +79,7 @@ std::string MmTranslator::emit_comprehension_use(
     struct Binding {
         std::string wff_var;
         std::string target_set;   // witness or caller's set var
-        std::string iff_handle;   // non-empty if compound
+        std::string forall_iff;   // non-empty if compound
     };
     std::vector<Binding> bindings;
 
@@ -108,7 +110,7 @@ std::string MmTranslator::emit_comprehension_use(
                 if (error) *error = "comprehension failed for " + wff_var + " [" + val_str + "]";
                 return "";
             }
-            bindings.push_back({wff_var, cr.set_var, cr.iff_handle});
+            bindings.push_back({wff_var, cr.set_var, cr.forall_iff});
         }
     }
 
@@ -116,7 +118,7 @@ std::string MmTranslator::emit_comprehension_use(
     std::unordered_map<std::string, WffAtom> atom_map;
     for (const auto& b : bindings) {
         WffAtom wa;
-        wa.iff_handle = b.iff_handle;
+        wa.forall_iff = b.forall_iff;
         wa.elem_str = "elem(" + caller_info.dummy_var + ", " + b.target_set + ")";
         // Compute compound form
         auto sit = subst.find(b.wff_var);
@@ -136,7 +138,7 @@ std::string MmTranslator::emit_comprehension_use(
     // Add T./F. as atoms if they appear in the referenced expression.
     // Verum/Falsum are always in compound form in both claim and target
     // representations (needs_conv ignores them, convert_proof returns h
-    // unchanged), so no witness set or iff_handle is needed — just the
+    // unchanged), so no witness set or forall_iff is needed — just the
     // compound string for the renderers.
     {
         const std::string& d = caller_info.dummy_var;
@@ -220,12 +222,15 @@ std::string MmTranslator::emit_comprehension_use(
 
     // For each essential hyp: convert caller's handle (compound-form)
     // to elem-form via backward conversion, then implies_elim.
+    // Use the ref's generic AST (with setvar rename) — the atom_map is
+    // keyed by ref wff variables, so the AST must use those same variables.
+    // The concrete_ess_exprs are available for future NVQ-aware re-parsing.
     for (size_t ess_idx = 0; ess_idx < ref_info.ess_hyps.size() &&
                               ess_idx < ess_handles.size(); ++ess_idx) {
         WffPtr ess_ast = apply_sv_subst(ref_info.ess_hyps[ess_idx].ast);
         std::string h_elem = convert_proof(
             *ess_ast, ess_handles[ess_idx],
-            atom_map, /*forward=*/false, state);
+            atom_map, /*forward=*/false, caller_info.dummy_var, state);
 
         std::string h_next = state.fresh();
         state.emit(h_next + " = implies_elim " + h + ", " + h_elem);
@@ -236,7 +241,7 @@ std::string MmTranslator::emit_comprehension_use(
     WffPtr conc_ast = apply_sv_subst(ref_info.conclusion_ast);
     std::string h_compound = convert_proof(
         *conc_ast, h,
-        atom_map, /*forward=*/true, state);
+        atom_map, /*forward=*/true, caller_info.dummy_var, state);
 
     return h_compound;
 }
@@ -520,10 +525,10 @@ std::string MmTranslator::emit_comprehension_axioms() {
          "(elem(u, C) <-> (elem(u, A) | elem(u, B)))\n";
     s += "axiom wff_bic: forall A. forall B. exists C. forall u. "
          "(elem(u, C) <-> (elem(u, A) <-> elem(u, B)))\n";
-    s += "axiom wff_true: forall A. exists B. forall u. "
-         "(elem(u, B) <-> (elem(u, A) -> elem(u, A)))\n";
-    s += "axiom wff_false: forall A. exists B. forall u. "
-         "(elem(u, B) <-> ~(elem(u, A) -> elem(u, A)))\n";
+    s += "axiom wff_true: exists B. forall u. "
+         "(elem(u, B) <-> (elem(u, u) -> elem(u, u)))\n";
+    s += "axiom wff_false: exists B. forall u. "
+         "(elem(u, B) <-> ~(elem(u, u) -> elem(u, u)))\n";
     s += "axiom wff_eq: forall x. forall y. exists S. forall u. "
          "(elem(u, S) <-> eq(x, y))\n";
     s += "axiom wff_ne: forall x. forall y. exists S. forall u. "
@@ -570,9 +575,8 @@ void MmTranslator::init_identity_defs() {
 
 bool MmTranslator::is_skipped(const std::string& label) {
     static const std::unordered_set<std::string> skip_labels = {
-        // Non-vacuous quantifier proof mismatch
-        // (bridge df_ex has quantifiers that translator strips as vacuous)
-        "eximal", "ax6evr", "spimedv", "spimfv",
+        // Non-vacuous quantifier: comprehension can't handle quantified bodies yet
+        "eximal", "spimedv", "spimfv",
         "speimfw", "speimfwALT", "spimfw", "2exnaln",
         "spimw", "spimew", "equs4v", "alequexv", "equsv",
         "ax12i", "ax12dgen", "equsalhw", "equsalv",
@@ -596,7 +600,7 @@ bool MmTranslator::is_skipped(const std::string& label) {
         "eldifd", "eldifad", "eldifbd", "velcomp", "eldifi", "eldifn", "neldif",
         "elunant", "elini", "elind",
         // Comprehension failure: quantified formula
-        "drnf1", "axexte",
+        "drnf1", "axexte", "equvinva",
         // Cascade: cleqf not translated
         "eqrd",
     };
@@ -635,6 +639,7 @@ bool MmTranslator::try_bridge_equiv(const std::string& label,
         {"eqcom",    {"eqcom_bridge",   {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
         {"ax6v",     {"ax6v_bridge",    {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
         {"ax6ev",    {"ax6ev_bridge",   {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
+        {"ax6evr",   {"ax6evr_bridge",  {{S::Setvar,0},{S::Setvar,1},{S::Dummy,0}}}},
     };
     auto it = bridge_equiv.find(label);
     if (it == bridge_equiv.end()) return false;

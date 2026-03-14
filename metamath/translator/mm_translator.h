@@ -175,6 +175,8 @@ private:
         const FrameInfo& caller_info,
         const std::map<std::string, Expression>& subst,
         const std::vector<std::string>& ess_handles,
+        const std::vector<Expression>& concrete_ess_exprs,
+        const Expression& concrete_conclusion,
         ProofState& state,
         std::string* error);
 

@@ -449,7 +449,10 @@ std::string MmTranslator::emit_node(
     }
 
     // =================================================================
-    // df-ex: Existential definition bridge
+    // df-ex: Existential definition (inline proof)
+    // Produces: (E.x ph <-> -.A.x -.ph) after SyntaxToWff processing.
+    // Vacuous case (x not free in ph): body <-> ~~body
+    // Non-vacuous case (x free in ph): (exists x. body) <-> ~(forall x. ~body)
     // =================================================================
     if (label == "df-ex") {
         auto ph = subst.find("ph");
@@ -457,12 +460,120 @@ std::string MmTranslator::emit_node(
             if (error) *error = "df-ex: missing ph";
             return "";
         }
-        std::string S_ph = get_wff_set(ph->second, thm_info, state);
-        if (S_ph.empty()) {
-            if (error) *error = "df-ex: cannot resolve wff to set";
+
+        // Parse the result expression to get the exact formula shape
+        // after SyntaxToWff processing (which strips vacuous quantifiers).
+        WffPtr dfex_wff = parse_mm_wff(node.result_expr, 1, thm_info);
+        if (!dfex_wff || dfex_wff->kind != WffNode::Kind::Binary ||
+            dfex_wff->op != WffNode::Op::Iff) {
+            if (error) *error = "df-ex: result not a biconditional";
             return "";
         }
-        h = emit_bridge_use("df_ex", {S_ph, thm_info.dummy_var}, state);
+
+        auto renderer = make_claim_renderer(thm_info);
+        std::string lhs_str = emit_fol(*dfex_wff->left, renderer);
+        std::string rhs_str = emit_fol(*dfex_wff->right, renderer);
+
+        bool is_nv = (dfex_wff->left->kind == WffNode::Kind::Exists);
+
+        if (is_nv) {
+            // Non-vacuous: (exists x. body) <-> ~(forall x. ~body)
+            const WffNode& ex_node = *dfex_wff->left;
+            std::string ev = "_dfexv" + std::to_string(++state.counter);
+            std::string wit = "_dfexw" + std::to_string(++state.counter);
+
+            // Render body with witness/eigenvariable substitutions
+            WffPtr body_ev = wff_subst(ex_node.left, ex_node.name, ev);
+            WffPtr body_wit = wff_subst(ex_node.left, ex_node.name, wit);
+            std::string body_ev_str = emit_fol(*body_ev, renderer);
+            std::string body_wit_str = emit_fol(*body_wit, renderer);
+
+            // forall x. ~body (inner part of rhs)
+            std::string forall_neg_str =
+                emit_fol(*dfex_wff->right->left, renderer);
+
+            // Forward: (exists x. body) -> ~(forall x. ~body)
+            std::string h_ex = state.fresh();
+            state.emit(h_ex + " = assume " + lhs_str);
+            std::string h_all = state.fresh();
+            state.emit(h_all + " = assume " + forall_neg_str);
+            // Open exists scope with witness
+            std::string h_w = state.fresh();
+            state.emit(h_w + " = exists_elim " + h_ex + ", " + wit);
+            // Transport forall into exists scope
+            std::string h_a1 = state.fresh();
+            state.emit(h_a1 + " = assume " + forall_neg_str);
+            std::string h_id1 = state.fresh();
+            state.emit(h_id1 + " = implies_intro " + h_a1);
+            std::string h_all_l = state.fresh();
+            state.emit(h_all_l + " = implies_elim " + h_id1 + ", " + h_all);
+            std::string h_neg_w = state.fresh();
+            state.emit(h_neg_w + " = forall_elim " + h_all_l + ", " + wit);
+            std::string h_bot1 = state.fresh();
+            state.emit(h_bot1 + " = not_elim " + h_neg_w + ", " + h_w);
+            // Close exists scope (bottom has no witness vars)
+            std::string h_bot_out = state.fresh();
+            state.emit(h_bot_out + " = exists_intro " + h_bot1);
+            std::string h_not_all = state.fresh();
+            state.emit(h_not_all + " = not_intro " + h_bot_out);
+            std::string h_fwd = state.fresh();
+            state.emit(h_fwd + " = implies_intro " + h_not_all);
+
+            // Backward: ~(forall x. ~body) -> (exists x. body)
+            std::string h_bwd_h = state.fresh();
+            state.emit(h_bwd_h + " = assume " + rhs_str);
+            std::string h_nex = state.fresh();
+            state.emit(h_nex + " = assume " + neg(lhs_str));
+            state.emit("fix " + ev);
+            std::string h_body = state.fresh();
+            state.emit(h_body + " = assume " + body_ev_str);
+            std::string h_ex2 = state.fresh();
+            state.emit(h_ex2 + " = exists_intro " + h_body + ", " + ev);
+            std::string h_bot2 = state.fresh();
+            state.emit(h_bot2 + " = not_elim " + h_nex + ", " + h_ex2);
+            std::string h_neg_body = state.fresh();
+            state.emit(h_neg_body + " = not_intro " + h_bot2);
+            std::string h_all_neg = state.fresh();
+            state.emit(h_all_neg + " = forall_intro " + h_neg_body);
+            std::string h_bot3 = state.fresh();
+            state.emit(h_bot3 + " = not_elim " + h_bwd_h + ", " + h_all_neg);
+            std::string h_nn_ex = state.fresh();
+            state.emit(h_nn_ex + " = not_intro " + h_bot3);
+            std::string h_ex_res = state.fresh();
+            state.emit(h_ex_res + " = double_neg_elim " + h_nn_ex);
+            std::string h_bwd = state.fresh();
+            state.emit(h_bwd + " = implies_intro " + h_ex_res);
+
+            h = state.fresh();
+            state.emit(h + " = iff_intro " + h_fwd + ", " + h_bwd);
+        } else {
+            // Vacuous: body <-> ~~body (double-negation biconditional)
+            std::string neg_body = neg(lhs_str);
+
+            // Forward: body -> ~~body
+            std::string h_a = state.fresh();
+            state.emit(h_a + " = assume " + lhs_str);
+            std::string h_na = state.fresh();
+            state.emit(h_na + " = assume " + neg_body);
+            std::string h_bot = state.fresh();
+            state.emit(h_bot + " = not_elim " + h_na + ", " + h_a);
+            std::string h_nnb = state.fresh();
+            state.emit(h_nnb + " = not_intro " + h_bot);
+            std::string h_fwd = state.fresh();
+            state.emit(h_fwd + " = implies_intro " + h_nnb);
+
+            // Backward: ~~body -> body
+            std::string h_nn = state.fresh();
+            state.emit(h_nn + " = assume " + rhs_str);
+            std::string h_b = state.fresh();
+            state.emit(h_b + " = double_neg_elim " + h_nn);
+            std::string h_bwd = state.fresh();
+            state.emit(h_bwd + " = implies_intro " + h_b);
+
+            h = state.fresh();
+            state.emit(h + " = iff_intro " + h_fwd + ", " + h_bwd);
+        }
+
         handles[idx] = h;
         return h;
     }
@@ -549,16 +660,59 @@ std::string MmTranslator::emit_node(
         if (is_simple_substitution(*ref, subst, thm_info)) {
             h = emit_simple_use(label, *ref, *ref_info, thm_info,
                                 subst, child_handles, state);
-            if (!h.empty()) {
-                handles[idx] = h;
-                return h;
-            }
         }
 
         // Compound path (comprehension)
-        h = emit_comprehension_use(label, *ref, *ref_info, thm_info,
-                                    subst, child_handles, state, error);
+        if (h.empty()) {
+            // Collect concrete essential hyp expressions from child nodes
+            std::vector<Expression> concrete_ess_exprs;
+            for (size_t ci : node.children) {
+                concrete_ess_exprs.push_back(tree.nodes[ci].result_expr);
+            }
+            h = emit_comprehension_use(label, *ref, *ref_info, thm_info,
+                                        subst, child_handles,
+                                        concrete_ess_exprs,
+                                        node.result_expr,
+                                        state, error);
+        }
+
         if (h.empty()) return "";
+
+        // NVQ compensation: detect leading Exists in the expected result
+        // that were stripped from the ref theorem's conclusion_ast.
+        // This happens when a setvar quantifier was vacuous in the ref's
+        // generic frame (x not free in wff var) but becomes non-vacuous
+        // under this substitution (x free in the concrete body).
+        {
+            WffPtr expected = parse_mm_wff(node.result_expr, 1, thm_info);
+            if (expected) {
+                // Count leading Exists in expected result
+                std::vector<std::string> expected_exists;
+                const WffNode* inner = expected.get();
+                while (inner && inner->kind == WffNode::Kind::Exists) {
+                    expected_exists.push_back(inner->name);
+                    inner = inner->left.get();
+                }
+
+                // Count leading Exists in ref's conclusion_ast
+                size_t ref_exists = 0;
+                const WffNode* ref_inner = ref_info->conclusion_ast.get();
+                while (ref_inner && ref_inner->kind == WffNode::Kind::Exists) {
+                    ref_exists++;
+                    ref_inner = ref_inner->left.get();
+                }
+
+                // Wrap with exists_intro for each stripped quantifier
+                // (innermost first)
+                for (size_t i = expected_exists.size(); i > ref_exists; --i) {
+                    const std::string& var = expected_exists[i - 1];
+                    std::string h_next = state.fresh();
+                    state.emit(h_next + " = exists_intro " + h + ", " + var);
+                    h = h_next;
+                }
+            }
+        }
+
         handles[idx] = h;
         return h;
     }
