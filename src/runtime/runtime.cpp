@@ -331,6 +331,14 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
     std::unordered_map<std::string, FormulaHandle> steps;
     std::unordered_map<std::string, Term> fixed_vars;
 
+    // Build schema var map if this is a schema proof
+    std::unordered_map<std::string, size_t> schema_var_map;
+    if (auto schema = ctx_.find_schema(proof.claim_name)) {
+        for (size_t i = 0; i < schema->var_names.size(); ++i) {
+            schema_var_map[schema->var_names[i]] = i;
+        }
+    }
+
     for (size_t i = 0; i < proof.steps.size(); ++i) {
         const auto& step = proof.steps[i];
         std::string step_desc = "Step " + std::to_string(i + 1);
@@ -354,7 +362,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                 }
                 // Parse formula with fixed variables in scope
                 FormulaHandle assumed = parse_formula_with_vars(
-                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars);
+                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map);
                 FormulaHandle h = pctx.assume(assumed);
                 steps[step.result_name] = h;
                 break;
@@ -366,7 +374,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                 }
                 // Parse formula with fixed variables in scope (don't assume it)
                 FormulaHandle h = parse_formula_with_vars(
-                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars);
+                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map);
                 steps[step.result_name] = h;
                 break;
             }
@@ -401,6 +409,52 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                         fixed_vars[step.args[1]] = iota_term.value();
                     }
                 }
+                break;
+            }
+
+            case ParsedProofStep::Kind::SchemaInst: {
+                auto schema = ctx_.find_schema(step.rule_name);
+                if (!schema.has_value()) {
+                    return MAKE_ERROR << step_desc << ": unknown schema: " << step.rule_name;
+                }
+                if (!ctx_.is_schema_proven(step.rule_name)) {
+                    return MAKE_ERROR << step_desc << ": schema '" << step.rule_name << "' not yet proven";
+                }
+
+                // Resolve named bindings to positional vector
+                std::vector<FormulaHandle> bindings(schema->var_names.size());
+                std::vector<bool> bound(schema->var_names.size(), false);
+                for (const auto& sb : step.schema_bindings) {
+                    // Find the index for this var name
+                    size_t idx = schema->var_names.size();
+                    for (size_t j = 0; j < schema->var_names.size(); ++j) {
+                        if (schema->var_names[j] == sb.var_name) {
+                            idx = j;
+                            break;
+                        }
+                    }
+                    if (idx >= schema->var_names.size()) {
+                        return MAKE_ERROR << step_desc << ": unknown schema variable: " << sb.var_name;
+                    }
+                    if (bound[idx]) {
+                        return MAKE_ERROR << step_desc << ": duplicate binding for: " << sb.var_name;
+                    }
+                    bindings[idx] = parse_formula_with_vars(
+                        sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars);
+                    bound[idx] = true;
+                }
+                for (size_t j = 0; j < bound.size(); ++j) {
+                    if (!bound[j]) {
+                        return MAKE_ERROR << step_desc << ": missing binding for: " << schema->var_names[j];
+                    }
+                }
+
+                auto result = pctx.schema_inst(*schema, bindings);
+                if (!result.ok()) {
+                    return MAKE_ERROR << step_desc << " (schema_inst " << step.rule_name << "): "
+                                      << result.error().to_string();
+                }
+                steps[step.result_name] = result.value();
                 break;
             }
 
@@ -442,8 +496,17 @@ ProofContext Runtime::prove(const std::string& claim_name) {
     if (!claim.has_value()) {
         claim = ctx_.find_known(claim_name);
     }
-    SentenceHandle goal = claim.value_or(SentenceHandle{});
-    return ProofContext(*this, claim_name, goal);
+    if (claim.has_value()) {
+        return ProofContext(*this, claim_name, claim.value());
+    }
+
+    // Try as a schema
+    auto schema = ctx_.find_schema(claim_name);
+    if (schema.has_value() && !ctx_.is_schema_proven(claim_name)) {
+        return ProofContext::for_schema(*this, claim_name, *schema);
+    }
+
+    return ProofContext(*this, claim_name, SentenceHandle{});
 }
 
 ProofContext Runtime::prove(SentenceHandle goal) {
@@ -453,7 +516,19 @@ ProofContext Runtime::prove(SentenceHandle goal) {
 // ========== ProofContext ==========
 
 ProofContext::ProofContext(Runtime& rt, const std::string& name, SentenceHandle goal)
-    : runtime_(rt), stack_(rt.context()), goal_(goal), name_(name) {}
+    : runtime_(rt), stack_(rt.context()), goal_sentence_(goal), name_(name) {
+    if (goal.valid()) {
+        goal_formula_ = stack_.builder().add_sentence(goal);
+    }
+}
+
+ProofContext ProofContext::for_schema(Runtime& rt, const std::string& name,
+                                      const SchemaDefinition& schema) {
+    ProofContext ctx(rt, name, SentenceHandle{});
+    ctx.goal_formula_ = schema.body;
+    ctx.is_schema_ = true;
+    return ctx;
+}
 
 FormulaHandle ProofContext::parse(std::string_view input) {
     SentenceHandle s = parse_sentence(input, runtime_.context());
@@ -548,6 +623,12 @@ FormulaResult ProofContext::eq_subst(FormulaHandle const& eq, FormulaHandle cons
     return stack_.eq_subst(eq, target);
 }
 
+// Schema instantiation
+FormulaResult ProofContext::schema_inst(const SchemaDefinition& schema,
+                                         const std::vector<FormulaHandle>& bindings) {
+    return stack_.schema_inst(schema, bindings);
+}
+
 // Definite descriptions
 FormulaResult ProofContext::iota_elim(FormulaHandle const& f) {
     return stack_.iota_elim(f);
@@ -577,16 +658,22 @@ util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
         return MAKE_ERROR << "qed: formula not derived: " << derived.get().to_string();
     }
 
-    // Check that derived matches goal (by string comparison for now)
-    if (goal_.valid() && derived.get().to_string() != goal_.get().to_string()) {
-        return MAKE_ERROR << "Derived formula doesn't match goal\n"
-                          << "  Expected: " << goal_.get().to_string() << "\n"
-                          << "  Got: " << derived.get().to_string();
+    // Check that derived matches goal (by string comparison)
+    if (goal_formula_.valid()) {
+        if (derived.get().to_string() != goal_formula_.get().to_string()) {
+            return MAKE_ERROR << "Derived formula doesn't match goal\n"
+                              << "  Expected: " << goal_formula_.get().to_string() << "\n"
+                              << "  Got: " << derived.get().to_string();
+        }
     }
 
-    // Register as theorem if named
-    if (!name_.empty() && goal_.valid()) {
-        runtime_.context().add_theorem(name_, goal_);
+    // Register result
+    if (!name_.empty()) {
+        if (is_schema_) {
+            runtime_.context().mark_schema_proven(name_);
+        } else if (goal_sentence_.valid()) {
+            runtime_.context().add_theorem(name_, goal_sentence_);
+        }
     }
 
     completed_ = true;

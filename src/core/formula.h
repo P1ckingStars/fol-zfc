@@ -160,6 +160,13 @@ struct Quantified {
     }
 };
 
+// Schema variable: a formula-level metavariable (placeholder for an arbitrary wff)
+// Identified by positional index; name resolution handled at parser layer.
+struct SchemaVar {
+    size_t id;
+    bool operator==(const SchemaVar&) const = default;
+};
+
 class Formula {
     friend class FormulaBuilder;
     friend class QuantifierBuilder;
@@ -168,7 +175,8 @@ class Formula {
 
     // next_gen_var_idx_ declared first for correct initialization order
     var_index next_gen_var_idx_;
-    std::variant<PredicateInstance, Compound, Quantified, SentenceHandle> data_;
+    bool has_schema_vars_;
+    std::variant<PredicateInstance, Compound, Quantified, SentenceHandle, SchemaVar> data_;
 
     static var_index compute_compound_next_gen(const Compound& c) {
         var_index left_idx = c.left.valid() ? c.left.get().next_gen_var_idx_ : 0;
@@ -192,14 +200,32 @@ class Formula {
         return max_idx;
     }
 
-    explicit Formula(PredicateInstance p) : next_gen_var_idx_(compute_pred_next_gen(p)), data_(std::move(p)) {}
+    static bool compute_pred_has_schema_vars(const PredicateInstance& p) {
+        for (const auto& t : p.args()) {
+            if (t.is_description() && t.as_description().body.get().has_schema_vars_)
+                return true;
+        }
+        return false;
+    }
+
+    explicit Formula(PredicateInstance p) :
+        next_gen_var_idx_(compute_pred_next_gen(p)),
+        has_schema_vars_(compute_pred_has_schema_vars(p)),
+        data_(std::move(p)) {}
     explicit Formula(Compound c) :
         next_gen_var_idx_(compute_compound_next_gen(c)),
+        has_schema_vars_((c.left.valid() && c.left.get().has_schema_vars_) ||
+                         (c.right.valid() && c.right.get().has_schema_vars_)),
         data_(std::move(c)) {}
     explicit Formula(Quantified q) :
         next_gen_var_idx_(q.body.get().next_gen_var_idx_ + 1),
+        has_schema_vars_(q.body.get().has_schema_vars_),
         data_(std::move(q)) {}
     explicit Formula(SentenceHandle s);
+    explicit Formula(SchemaVar sv) :
+        next_gen_var_idx_(0),
+        has_schema_vars_(true),
+        data_(sv) {}
 
 public:
     bool operator==(const Formula& other) const {
@@ -210,11 +236,14 @@ public:
     bool is_compound() const { return std::holds_alternative<Compound>(data_); }
     bool is_quantified() const { return std::holds_alternative<Quantified>(data_); }
     bool is_sentence() const { return std::holds_alternative<SentenceHandle>(data_); }
+    bool is_schema_var() const { return std::holds_alternative<SchemaVar>(data_); }
 
     const PredicateInstance& as_predicate() const { return std::get<PredicateInstance>(data_); }
     const Compound& as_compound() const { return std::get<Compound>(data_); }
     const Quantified& as_quantified() const { return std::get<Quantified>(data_); }
     SentenceHandle as_sentence() const { return std::get<SentenceHandle>(data_); }
+    const SchemaVar& as_schema_var() const { return std::get<SchemaVar>(data_); }
+    bool has_schema_vars() const { return has_schema_vars_; }
     
     var_index get_next_gen_var_idx() {
         return next_gen_var_idx_;
@@ -278,6 +307,12 @@ struct SentenceHandleHash {
     }
 };
 
+// A schema is a formula template parameterized by formula-level metavariables (SchemaVar).
+struct SchemaDefinition {
+    FormulaHandle body;                  // contains SchemaVar nodes
+    std::vector<std::string> var_names;  // var_names[id] = name, e.g. ["ph", "ps"]
+};
+
 class GlobalContext {
     FormulaRegistry formulas_;  // Single shared formula registry
     SentenceRegistry sentences_;
@@ -296,6 +331,10 @@ class GlobalContext {
 
     // Theorems marked UNPROVED (assumed without proof)
     std::unordered_set<std::string> unproved_theorems_;
+
+    // Schema storage
+    std::unordered_map<std::string, SchemaDefinition> named_schemas_;
+    std::unordered_set<std::string> proven_schemas_;
 
 public:
     // Access the shared formula registry
@@ -391,6 +430,22 @@ public:
     const std::unordered_map<std::string, SentenceHandle>& theorems() const {
         return named_theorems_;
     }
+
+    // Schema API
+    void add_schema(const std::string& name, SchemaDefinition def) {
+        named_schemas_[name] = std::move(def);
+    }
+    void mark_schema_proven(const std::string& name) {
+        proven_schemas_.insert(name);
+    }
+    bool is_schema_proven(const std::string& name) const {
+        return proven_schemas_.count(name) > 0;
+    }
+    std::optional<SchemaDefinition> find_schema(const std::string& name) const {
+        auto it = named_schemas_.find(name);
+        if (it != named_schemas_.end()) return it->second;
+        return std::nullopt;
+    }
 };
 
 // FormulaBuilder builds formulas and tracks variable scope.
@@ -444,6 +499,7 @@ public:
     FormulaHandle make_iff(FormulaHandle l, FormulaHandle r) { return add_formula(Formula(Compound{Op::Iff, l, r})); }
     FormulaHandle make_not(FormulaHandle f) { return add_formula(Formula(Compound{Op::Not, f, FormulaHandle{}})); }
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
+    FormulaHandle make_schema_var(size_t id) { return add_formula(Formula(SchemaVar{id})); }
 
     // Add a sentence's root formula to the builder (for using theorems in proofs)
     FormulaHandle add_sentence(SentenceHandle s) {
@@ -469,6 +525,8 @@ public:
     // Returns a new formula handle with the transformation applied
     FormulaHandle translate_term(FormulaHandle const &h, Term const &old_term, Term const &new_term) {
         const Formula& f = h.get();
+
+        if (f.is_schema_var()) return h;
 
         if (f.is_predicate()) {
             const PredicateInstance& p = f.as_predicate();
@@ -509,9 +567,54 @@ public:
         return h;
     }
 
-    // Build sentence if formula is closed
+    // Schema instantiation: replace SchemaVar{id} with bindings[id]
+    FormulaHandle instantiate_schema(FormulaHandle h, const std::vector<FormulaHandle>& bindings) {
+        const Formula& f = h.get();
+        if (f.is_schema_var())
+            return bindings[f.as_schema_var().id];
+        if (!f.has_schema_vars()) return h;  // fast path
+
+        if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            auto nl = c.left.valid() ? instantiate_schema(c.left, bindings) : c.left;
+            auto nr = c.right.valid() ? instantiate_schema(c.right, bindings) : c.right;
+            if (nl != c.left || nr != c.right)
+                return add_formula(Formula(Compound{c.op, nl, nr}));
+            return h;
+        }
+        if (f.is_quantified()) {
+            const auto& q = f.as_quantified();
+            auto nb = instantiate_schema(q.body, bindings);
+            if (nb != q.body)
+                return add_formula(Formula(Quantified{q.op, q.var, nb}));
+            return h;
+        }
+        if (f.is_predicate()) {
+            const auto& p = f.as_predicate();
+            bool changed = false;
+            std::vector<Term> new_args;
+            for (const auto& t : p.args()) {
+                if (t.is_description()) {
+                    auto nb = instantiate_schema(t.as_description().body, bindings);
+                    if (nb != t.as_description().body) {
+                        new_args.push_back(Term::description(t.as_description().bound_var, nb));
+                        changed = true;
+                        continue;
+                    }
+                }
+                new_args.push_back(t);
+            }
+            if (changed)
+                return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+            return h;
+        }
+        return h;
+    }
+
+    // Build sentence if formula is closed (no free vars, no schema vars)
     SentenceHandle build_sentence(FormulaHandle root, var_index start = 0) {
         if (!is_closed_since(start)) return SentenceHandle{};
+        if (root.get().has_schema_vars()) return SentenceHandle{};
         return ctx_.add_sentence(Sentence(root));
     }
 };

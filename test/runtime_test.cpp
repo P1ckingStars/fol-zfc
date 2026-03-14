@@ -1171,6 +1171,239 @@ bool test_iota_elim_capture_avoidance() {
     return true;
 }
 
+// ==================== Schema Tests ====================
+
+bool test_schema_declare_prove_instantiate() {
+    // Declare schema S [ph, ps]: (ph -> (ps -> ph))
+    // Prove it, then schema_inst with concrete formulas
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+
+        proof S:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim test_inst: forall x. forall y. forall a. (eq(x, y) -> (P(a) -> eq(x, y)))
+
+        proof test_inst:
+            fix x
+            fix y
+            fix a
+            h = schema_inst S { ph: eq(x, y), ps: P(a) }
+            h1 = forall_intro h
+            h2 = forall_intro h1
+            h3 = forall_intro h2
+            qed h3
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    // Schema should be proven
+    if (!rt.context().is_schema_proven("S")) {
+        std::cout << "[S not marked as proven] ";
+        return false;
+    }
+
+    // Claim should be proven as theorem
+    if (!rt.context().find_theorem("test_inst").has_value()) {
+        std::cout << "[test_inst not proven] ";
+        return false;
+    }
+
+    std::cout << "[schema declared, proved, instantiated] ";
+    return true;
+}
+
+bool test_schema_inst_before_proof_fails() {
+    // schema_inst before the schema is proved should fail
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph]: (ph -> ph)
+        claim bad: (P -> P)
+
+        proof bad:
+            h = schema_inst S { ph: P }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (exec.ok()) {
+        std::cout << "[SOUNDNESS BUG: schema_inst succeeded before schema was proven] ";
+        return false;
+    }
+
+    std::string err = exec.error().message();
+    if (err.find("not yet proven") == std::string::npos) {
+        std::cout << "[unexpected error: " << err << "] ";
+        return false;
+    }
+
+    std::cout << "[correctly rejected] ";
+    return true;
+}
+
+bool test_schema_missing_binding_fails() {
+    // Missing a binding in schema_inst should fail
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+
+        proof S:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim bad: P
+
+        proof bad:
+            h = schema_inst S { ph: P }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (exec.ok()) {
+        std::cout << "[should have failed with missing binding] ";
+        return false;
+    }
+
+    std::string err = exec.error().message();
+    if (err.find("missing binding") == std::string::npos) {
+        std::cout << "[unexpected error: " << err << "] ";
+        return false;
+    }
+
+    std::cout << "[correctly rejected: missing binding] ";
+    return true;
+}
+
+bool test_schema_to_string() {
+    // Verify SchemaVar serialization
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto schema = rt.context().find_schema("S");
+    if (!schema.has_value()) {
+        std::cout << "[schema S not found] ";
+        return false;
+    }
+
+    std::string body_str = schema->body.get().to_string();
+    std::cout << "[" << body_str << "] ";
+    return body_str == "?0 -> ?1 -> ?0";
+}
+
+bool test_schema_with_quantifiers() {
+    // Schema with quantifiers in body
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema ax1 [ph, ps]: (ph -> (ps -> ph))
+
+        proof ax1:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim inst: forall x. forall y. (eq(x, y) -> (P(x) -> eq(x, y)))
+
+        proof inst:
+            fix x
+            fix y
+            h = schema_inst ax1 { ph: eq(x, y), ps: P(x) }
+            h1 = forall_intro h
+            h2 = forall_intro h1
+            qed h2
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[schema with quantifier instantiation works] ";
+    return true;
+}
+
+bool test_schema_connectives_in_proof() {
+    // Prove a schema using connective rules, then instantiate
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema id [ph]: (ph -> ph)
+
+        proof id:
+            h = assume ph
+            h1 = implies_intro h
+            qed h1
+
+        claim use_id: forall x. (P(x) -> P(x))
+
+        proof use_id:
+            fix x
+            h = schema_inst id { ph: P(x) }
+            h1 = forall_intro h
+            qed h1
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[schema identity proved and instantiated] ";
+    return true;
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -1223,6 +1456,15 @@ int main() {
     run_test("iota term to_string", test_iota_term_to_string);
     run_test("iota term in eq context", test_iota_in_eq_subst);
     run_test("iota_elim capture avoidance", test_iota_elim_capture_avoidance);
+
+    // Schema tests
+    std::cout << "\n── Schema Tests ──\n";
+    run_test("Schema declare, prove, instantiate", test_schema_declare_prove_instantiate);
+    run_test("Schema inst before proof fails", test_schema_inst_before_proof_fails);
+    run_test("Schema missing binding fails", test_schema_missing_binding_fails);
+    run_test("Schema to_string", test_schema_to_string);
+    run_test("Schema with quantifiers", test_schema_with_quantifiers);
+    run_test("Schema connectives in proof", test_schema_connectives_in_proof);
 
     // Integration test
     std::cout << "\n── Integration Test ──\n";

@@ -114,6 +114,9 @@ std::string quantified_to_string(const Quantified& q, int parent_prec) {
 }
 
 std::string formula_to_string_impl(const Formula& f, int parent_prec) {
+    if (f.is_schema_var()) {
+        return "?" + std::to_string(f.as_schema_var().id);
+    }
     if (f.is_predicate()) {
         return predicate_instance_to_string(f.as_predicate());
     }
@@ -133,6 +136,7 @@ std::string formula_to_string_impl(const Formula& f, int parent_prec) {
 
 Formula::Formula(SentenceHandle s):
     next_gen_var_idx_(s.get().root().get().next_gen_var_idx_),
+    has_schema_vars_(false),
     data_(std::move(s)) {}
 
 std::string Formula::to_string() const {

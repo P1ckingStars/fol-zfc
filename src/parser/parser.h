@@ -31,22 +31,30 @@ struct ParsedStatement {
     std::string def_predicate;  // Non-empty if this is a @def axiom
 };
 
+// A named binding for schema instantiation: var_name -> formula AST
+struct SchemaBinding {
+    std::string var_name;
+    std::shared_ptr<ASTNode> formula_ast;
+};
+
 // Represents a single proof step
 struct ParsedProofStep {
     enum class Kind {
-        Fix,      // fix x - introduces eigenvariable
-        Assume,   // h = assume formula
-        Let,      // h = let formula - create formula handle without assuming
-        Use,      // h = use axiom_name
-        Rule,     // h = rule_name args
-        Qed       // qed h - completes proof
+        Fix,         // fix x - introduces eigenvariable
+        Assume,      // h = assume formula
+        Let,         // h = let formula - create formula handle without assuming
+        Use,         // h = use axiom_name
+        Rule,        // h = rule_name args
+        Qed,         // qed h - completes proof
+        SchemaInst   // h = schema_inst name { var: formula, ... }
     };
     Kind kind;
     std::string result_name;          // Name of step result (e.g., "h1")
-    std::string rule_name;            // Rule name for Rule kind, or axiom name for Use
+    std::string rule_name;            // Rule name for Rule kind, or axiom/schema name for Use/SchemaInst
     std::vector<std::string> args;    // Arguments (step names or term identifiers)
     SentenceHandle formula;           // For Assume/Let kind (when no free vars)
     std::shared_ptr<ASTNode> formula_ast;  // For Assume/Let kind (deferred parsing)
+    std::vector<SchemaBinding> schema_bindings;  // For SchemaInst kind
 };
 
 // Parse a formula with external variables (for proof steps)
@@ -54,7 +62,8 @@ FormulaHandle parse_formula_with_vars(
     const ASTNode* ast,
     GlobalContext& ctx,
     FormulaBuilder& builder,
-    const std::unordered_map<std::string, Term>& external_vars);
+    const std::unordered_map<std::string, Term>& external_vars,
+    const std::unordered_map<std::string, size_t>& schema_vars = {});
 
 // Represents a complete proof block
 struct ParsedProof {

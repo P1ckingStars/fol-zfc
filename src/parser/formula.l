@@ -80,6 +80,12 @@ static int col = 1;
 "include"       { return INCLUDE; }
 "@def"          { return DEF; }
 "UNPROVED"      { return UNPROVED; }
+"schema"        { return SCHEMA; }
+"schema_inst"   { return SCHEMA_INST; }
+"["             { return LBRACKET; }
+"]"             { return RBRACKET; }
+"{"             { return LBRACE; }
+"}"             { return RBRACE; }
 
 \"[^"]*\"       {
     // String literal - strip quotes
