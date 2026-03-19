@@ -43,6 +43,8 @@ ScopeDeps ProofStack::deps_of(FormulaHandle const& f) const {
 ScopeDeps ProofStack::compute_var_deps(FormulaHandle const& h) const {
     const Formula& f = h.get();
 
+    if (f.is_schema_var()) return {};
+
     if (f.is_predicate()) {
         ScopeDeps deps;
         for (const Term& t : f.as_predicate().args()) {
@@ -149,6 +151,8 @@ bool ProofStack::is_term_accessible(Term const& t) const {
 
 bool ProofStack::formula_contains_fixed_var(FormulaHandle const& h, var_index var_idx) const {
     const Formula& f = h.get();
+
+    if (f.is_schema_var()) return false;
 
     if (f.is_predicate()) {
         const PredicateInstance& p = f.as_predicate();
@@ -618,6 +622,24 @@ FormulaResult ProofStack::exists_elim(FormulaHandle const &formula) {
 
 // ========== Equality Substitution ==========
 
+FormulaResult ProofStack::schema_inst(const SchemaDefinition& schema,
+                                       const std::vector<FormulaHandle>& bindings) {
+    if (bindings.size() != schema.var_names.size()) {
+        return MAKE_ERROR << "schema_inst: expected " << schema.var_names.size()
+                          << " bindings, got " << bindings.size();
+    }
+    FormulaHandle result = formula_builder_.instantiate_schema(schema.body, bindings);
+    // Note: result may still contain schema vars if bindings contain them
+    // (e.g. when a schema proof instantiates another schema with its own vars).
+    // This is valid — the remaining schema vars belong to the outer schema.
+    ScopeDeps deps;
+    for (const auto& b : bindings) {
+        deps |= compute_var_deps(b);
+    }
+    derive_with_deps(result, deps);
+    return result;
+}
+
 FormulaResult ProofStack::eq_subst(FormulaHandle const &eq_formula, FormulaHandle const &target) {
     if (!is_derived(eq_formula))
         return MAKE_ERROR << "eq_subst: equality not derived: " << eq_formula.get();
@@ -725,6 +747,8 @@ FormulaResult ClassicalProofStack::peirce(FormulaHandle const &a, FormulaHandle 
 
 bool ProofStack::description_body_accessible(FormulaHandle const& h) const {
     const Formula& f = h.get();
+
+    if (f.is_schema_var()) return true;
 
     if (f.is_predicate()) {
         for (const Term& t : f.as_predicate().args()) {

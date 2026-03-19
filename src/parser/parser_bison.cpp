@@ -59,6 +59,11 @@ public:
         external_vars_ = vars;
     }
 
+    // Set schema variable context: name -> positional id
+    void set_schema_vars(const std::unordered_map<std::string, size_t>& vars) {
+        schema_vars_ = vars;
+    }
+
     FormulaHandle convert(const ASTNode* node) {
         switch (node->type) {
             case ASTNode::Bottom:
@@ -104,6 +109,13 @@ public:
             }
 
             case ASTNode::Predicate: {
+                // Check if bare identifier matches a schema variable
+                if (node->args && node->args->empty()) {
+                    auto sv_it = schema_vars_.find(node->name);
+                    if (sv_it != schema_vars_.end()) {
+                        return builder_.make_schema_var(sv_it->second);
+                    }
+                }
                 std::vector<Term> terms;
                 if (node->args) {
                     for (const ASTNode* arg : *node->args) {
@@ -183,6 +195,7 @@ private:
     std::vector<std::pair<std::string, Term>> var_scopes_;
     std::unordered_map<std::string, PredicateHandle> predicates_;
     std::unordered_map<std::string, Term> external_vars_;
+    std::unordered_map<std::string, size_t> schema_vars_;
 };
 
 // ==================== Parser Implementation ====================
@@ -314,6 +327,28 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
             continue;
         }
 
+        // Handle schema statements
+        if (stmt_node->type == ASTNode::SchemaStmt) {
+            std::vector<std::string> var_names;
+            std::unordered_map<std::string, size_t> var_map;
+            if (stmt_node->args) {
+                for (size_t i = 0; i < stmt_node->args->size(); ++i) {
+                    const std::string& vn = (*stmt_node->args)[i]->name;
+                    var_names.push_back(vn);
+                    var_map[vn] = i;
+                }
+            }
+            FormulaBuilder builder(ctx);
+            ASTConverter converter(ctx, builder);
+            converter.set_schema_vars(var_map);
+            FormulaHandle body = converter.convert(stmt_node->body);
+            SchemaDefinition def;
+            def.body = body;
+            def.var_names = std::move(var_names);
+            ctx.add_schema(stmt_node->name, std::move(def));
+            continue;
+        }
+
         ParsedStatement stmt;
 
         // Determine statement kind
@@ -441,6 +476,23 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
             step.args.push_back(step_node->rule_name);  // Handle name
             break;
 
+        case ASTNode::ProofStepSchemaInst:
+            step.kind = ParsedProofStep::Kind::SchemaInst;
+            step.result_name = step_node->name;      // Result name (set by grammar)
+            step.rule_name = step_node->rule_name;    // Schema name
+            // Convert bindings: each step is a Term node with name + body formula
+            if (step_node->steps) {
+                for (const ASTNode* binding : *step_node->steps) {
+                    SchemaBinding sb;
+                    sb.var_name = binding->name;
+                    if (binding->body) {
+                        sb.formula_ast = clone_ast(binding->body);
+                    }
+                    step.schema_bindings.push_back(std::move(sb));
+                }
+            }
+            break;
+
         default:
             throw std::runtime_error("Invalid proof step AST node type");
     }
@@ -507,6 +559,28 @@ ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
         if (stmt_node->type == ASTNode::ProofBlock) {
             // Convert proof block
             result.proofs.push_back(convert_proof_block(stmt_node, ctx));
+        } else if (stmt_node->type == ASTNode::SchemaStmt) {
+            // Convert schema statement: schema name [var1, var2]: formula
+            std::vector<std::string> var_names;
+            std::unordered_map<std::string, size_t> var_map;
+            if (stmt_node->args) {
+                for (size_t i = 0; i < stmt_node->args->size(); ++i) {
+                    const std::string& vn = (*stmt_node->args)[i]->name;
+                    var_names.push_back(vn);
+                    var_map[vn] = i;
+                }
+            }
+
+            // Convert formula body with schema var context
+            FormulaBuilder builder(ctx);
+            ASTConverter converter(ctx, builder);
+            converter.set_schema_vars(var_map);
+            FormulaHandle body = converter.convert(stmt_node->body);
+
+            SchemaDefinition def;
+            def.body = body;
+            def.var_names = std::move(var_names);
+            ctx.add_schema(stmt_node->name, std::move(def));
         } else if (stmt_node->type == ASTNode::IncludeStmt) {
             // Convert include statement
             ParsedInclude inc;
@@ -591,10 +665,14 @@ FormulaHandle parse_formula_with_vars(
     const ASTNode* ast,
     GlobalContext& ctx,
     FormulaBuilder& builder,
-    const std::unordered_map<std::string, Term>& external_vars) {
+    const std::unordered_map<std::string, Term>& external_vars,
+    const std::unordered_map<std::string, size_t>& schema_vars) {
 
     ASTConverter converter(ctx, builder);
     converter.set_external_vars(external_vars);
+    if (!schema_vars.empty()) {
+        converter.set_schema_vars(schema_vars);
+    }
     return converter.convert(ast);
 }
 

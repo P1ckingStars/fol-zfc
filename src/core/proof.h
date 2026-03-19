@@ -218,6 +218,10 @@ public:
     // From eq(a, b) and φ(a), derive φ(b) by replacing a with b
     FormulaResult eq_subst(FormulaHandle const &eq_formula, FormulaHandle const &target);
 
+    // Schema instantiation: substitute schema vars with bindings
+    FormulaResult schema_inst(const SchemaDefinition& schema,
+                              const std::vector<FormulaHandle>& bindings);
+
     // Access formula builder for creating formulas
     FormulaBuilder& builder() { return formula_builder_; }
 };

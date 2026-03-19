@@ -72,13 +72,19 @@ public:
 class ProofContext {
     Runtime& runtime_;
     ClassicalProofStack stack_;
-    SentenceHandle goal_;
+    FormulaHandle goal_formula_;     // for qed comparison (always set for schemas)
+    SentenceHandle goal_sentence_;   // for add_theorem (regular proofs only)
     std::string name_;
     bool completed_ = false;
+    bool is_schema_ = false;
     std::unordered_set<std::string> used_names_;
 
 public:
     ProofContext(Runtime& rt, const std::string& name, SentenceHandle goal);
+
+    // Factory for schema proofs
+    static ProofContext for_schema(Runtime& rt, const std::string& name,
+                                   const SchemaDefinition& schema);
 
     // Access formula builder for creating formulas
     FormulaBuilder& builder() { return stack_.builder(); }
@@ -130,6 +136,10 @@ public:
     // ========== Equality ==========
     FormulaResult eq_subst(FormulaHandle const& eq_formula, FormulaHandle const& target);
 
+    // ========== Schema Instantiation ==========
+    FormulaResult schema_inst(const SchemaDefinition& schema,
+                              const std::vector<FormulaHandle>& bindings);
+
     // ========== Classical Extensions ==========
     FormulaResult double_neg_elim(FormulaHandle const& double_neg);
     FormulaResult excluded_middle(FormulaHandle const& formula);
@@ -145,7 +155,7 @@ public:
     util::ResultStatus qed(FormulaHandle const& derived);
 
     // Get proof goal
-    SentenceHandle goal() const { return goal_; }
+    SentenceHandle goal() const { return goal_sentence_; }
     const std::string& name() const { return name_; }
     bool is_completed() const { return completed_; }
     const std::unordered_set<std::string>& used() const { return used_names_; }
