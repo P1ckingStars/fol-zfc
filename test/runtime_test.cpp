@@ -1413,7 +1413,12 @@ bool test_predicate_schema_arity1() {
         schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
 
         proof allE:
-            UNPROVED
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
 
         claim test: forall a. (forall x. elem(x, x)) -> elem(a, a)
 
@@ -1440,18 +1445,24 @@ bool test_predicate_schema_arity1() {
 }
 
 bool test_predicate_schema_arity2() {
-    // R(2) is a binary predicate
+    // R(2) is a binary predicate — test with a provable schema
     Runtime rt;
     auto result = rt.load_with_proofs(R"(
-        schema sym [R(2)]: forall x. forall y. (R(x, y) -> R(y, x))
+        schema refl2 [R(2)]: forall x. forall y. (R(x, y) -> R(x, y))
 
-        proof sym:
-            UNPROVED
+        proof refl2:
+            fix x
+            fix y
+            h = assume R(x, y)
+            h1 = implies_intro h
+            h2 = forall_intro h1
+            h3 = forall_intro h2
+            qed h3
 
-        claim test_eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
+        claim test: forall x. forall y. (eq(x, y) -> eq(x, y))
 
-        proof test_eq_sym:
-            h = schema_inst sym { R: \x y. eq(x, y) }
+        proof test:
+            h = schema_inst refl2 { R: \x y. eq(x, y) }
             qed h
     )");
 
@@ -1470,14 +1481,19 @@ bool test_predicate_schema_arity2() {
 
 bool test_predicate_schema_mixed_arity() {
     // Mix arity-0 (formula) and arity-1 (predicate) in one schema
+    // Schema: (forall x. P(x)) -> ph -> (forall x. P(x))
     Runtime rt;
     auto result = rt.load_with_proofs(R"(
-        schema mixed [ph, P(1)]: ph -> forall x. P(x)
+        schema mixed [ph, P(1)]: (forall x. P(x)) -> ph -> (forall x. P(x))
 
         proof mixed:
-            UNPROVED
+            h1 = assume forall x. P(x)
+            h2 = assume ph
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
 
-        claim test: Q -> forall x. R(x)
+        claim test: (forall x. R(x)) -> Q -> (forall x. R(x))
 
         proof test:
             h = schema_inst mixed { ph: Q, P: \x. R(x) }
