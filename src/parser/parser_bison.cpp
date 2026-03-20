@@ -64,6 +64,11 @@ public:
         schema_vars_ = vars;
     }
 
+    // Set schema variable arities: name -> arity (0 = formula, N = N-arg predicate)
+    void set_schema_arities(const std::unordered_map<std::string, size_t>& arities) {
+        schema_arities_ = arities;
+    }
+
     FormulaHandle convert(const ASTNode* node) {
         switch (node->type) {
             case ASTNode::Bottom:
@@ -109,18 +114,35 @@ public:
             }
 
             case ASTNode::Predicate: {
-                // Check if bare identifier matches a schema variable
-                if (node->args && node->args->empty()) {
-                    auto sv_it = schema_vars_.find(node->name);
-                    if (sv_it != schema_vars_.end()) {
+                // Check if identifier matches a schema variable
+                auto sv_it = schema_vars_.find(node->name);
+                if (sv_it != schema_vars_.end()) {
+                    size_t arity = 0;
+                    auto ar_it = schema_arities_.find(node->name);
+                    if (ar_it != schema_arities_.end()) arity = ar_it->second;
+                    size_t nargs = (node->args) ? node->args->size() : 0;
+                    if (arity == 0 && nargs == 0) {
+                        // Arity-0: bare schema variable (formula placeholder)
                         return builder_.make_schema_var(sv_it->second);
                     }
+                    if (arity > 0 && nargs == arity) {
+                        // Arity-N: schema var applied to N terms
+                        std::vector<Term> terms;
+                        for (const ASTNode* arg : *node->args)
+                            terms.push_back(convert_term(arg));
+                        return builder_.make_schema_var(sv_it->second, std::move(terms));
+                    }
+                    if (arity > 0 && nargs != arity) {
+                        throw std::runtime_error(
+                            "Schema variable '" + node->name + "' expects " +
+                            std::to_string(arity) + " arguments, got " + std::to_string(nargs));
+                    }
+                    // arity==0 but nargs>0: not a schema var use, fall through to predicate
                 }
                 std::vector<Term> terms;
                 if (node->args) {
-                    for (const ASTNode* arg : *node->args) {
+                    for (const ASTNode* arg : *node->args)
                         terms.push_back(convert_term(arg));
-                    }
                 }
                 PredicateHandle pred = get_or_create_predicate(node->name, terms.size());
                 return builder_.predicate(pred, std::move(terms));
@@ -196,6 +218,7 @@ private:
     std::unordered_map<std::string, PredicateHandle> predicates_;
     std::unordered_map<std::string, Term> external_vars_;
     std::unordered_map<std::string, size_t> schema_vars_;
+    std::unordered_map<std::string, size_t> schema_arities_;
 };
 
 // ==================== Parser Implementation ====================
@@ -330,21 +353,28 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
         // Handle schema statements
         if (stmt_node->type == ASTNode::SchemaStmt) {
             std::vector<std::string> var_names;
+            std::vector<size_t> var_arities;
             std::unordered_map<std::string, size_t> var_map;
+            std::unordered_map<std::string, size_t> arity_map;
             if (stmt_node->args) {
                 for (size_t i = 0; i < stmt_node->args->size(); ++i) {
-                    const std::string& vn = (*stmt_node->args)[i]->name;
-                    var_names.push_back(vn);
-                    var_map[vn] = i;
+                    const auto* vnode = (*stmt_node->args)[i];
+                    var_names.push_back(vnode->name);
+                    size_t arity = vnode->rule_name.empty() ? 0 : std::stoul(vnode->rule_name);
+                    var_arities.push_back(arity);
+                    var_map[vnode->name] = i;
+                    arity_map[vnode->name] = arity;
                 }
             }
             FormulaBuilder builder(ctx);
             ASTConverter converter(ctx, builder);
             converter.set_schema_vars(var_map);
+            converter.set_schema_arities(arity_map);
             FormulaHandle body = converter.convert(stmt_node->body);
             SchemaDefinition def;
             def.body = body;
             def.var_names = std::move(var_names);
+            def.var_arities = std::move(var_arities);
             ctx.add_schema(stmt_node->name, std::move(def));
             continue;
         }
@@ -478,15 +508,18 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
 
         case ASTNode::ProofStepSchemaInst:
             step.kind = ParsedProofStep::Kind::SchemaInst;
-            step.result_name = step_node->name;      // Result name (set by grammar)
-            step.rule_name = step_node->rule_name;    // Schema name
-            // Convert bindings: each step is a Term node with name + body formula
+            step.result_name = step_node->name;
+            step.rule_name = step_node->rule_name;
             if (step_node->steps) {
                 for (const ASTNode* binding : *step_node->steps) {
                     SchemaBinding sb;
                     sb.var_name = binding->name;
-                    if (binding->body) {
+                    if (binding->body)
                         sb.formula_ast = clone_ast(binding->body);
+                    // Lambda params from \x y. syntax (stored in binding->args)
+                    if (binding->args) {
+                        for (const ASTNode* param : *binding->args)
+                            sb.lambda_params.push_back(param->name);
                     }
                     step.schema_bindings.push_back(std::move(sb));
                 }
@@ -560,26 +593,29 @@ ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
             // Convert proof block
             result.proofs.push_back(convert_proof_block(stmt_node, ctx));
         } else if (stmt_node->type == ASTNode::SchemaStmt) {
-            // Convert schema statement: schema name [var1, var2]: formula
             std::vector<std::string> var_names;
+            std::vector<size_t> var_arities;
             std::unordered_map<std::string, size_t> var_map;
+            std::unordered_map<std::string, size_t> arity_map;
             if (stmt_node->args) {
                 for (size_t i = 0; i < stmt_node->args->size(); ++i) {
-                    const std::string& vn = (*stmt_node->args)[i]->name;
-                    var_names.push_back(vn);
-                    var_map[vn] = i;
+                    const auto* vnode = (*stmt_node->args)[i];
+                    var_names.push_back(vnode->name);
+                    size_t arity = vnode->rule_name.empty() ? 0 : std::stoul(vnode->rule_name);
+                    var_arities.push_back(arity);
+                    var_map[vnode->name] = i;
+                    arity_map[vnode->name] = arity;
                 }
             }
-
-            // Convert formula body with schema var context
             FormulaBuilder builder(ctx);
             ASTConverter converter(ctx, builder);
             converter.set_schema_vars(var_map);
+            converter.set_schema_arities(arity_map);
             FormulaHandle body = converter.convert(stmt_node->body);
-
             SchemaDefinition def;
             def.body = body;
             def.var_names = std::move(var_names);
+            def.var_arities = std::move(var_arities);
             ctx.add_schema(stmt_node->name, std::move(def));
         } else if (stmt_node->type == ASTNode::IncludeStmt) {
             // Convert include statement
@@ -666,12 +702,14 @@ FormulaHandle parse_formula_with_vars(
     GlobalContext& ctx,
     FormulaBuilder& builder,
     const std::unordered_map<std::string, Term>& external_vars,
-    const std::unordered_map<std::string, size_t>& schema_vars) {
+    const std::unordered_map<std::string, size_t>& schema_vars,
+    const std::unordered_map<std::string, size_t>& schema_arities) {
 
     ASTConverter converter(ctx, builder);
     converter.set_external_vars(external_vars);
     if (!schema_vars.empty()) {
         converter.set_schema_vars(schema_vars);
+        converter.set_schema_arities(schema_arities);
     }
     return converter.convert(ast);
 }

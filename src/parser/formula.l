@@ -82,6 +82,7 @@ static int col = 1;
 "UNPROVED"      { return UNPROVED; }
 "schema"        { return SCHEMA; }
 "schema_inst"   { return SCHEMA_INST; }
+"\\"            { return BACKSLASH; }
 "["             { return LBRACKET; }
 "]"             { return RBRACKET; }
 "{"             { return LBRACE; }
@@ -91,6 +92,11 @@ static int col = 1;
     // String literal - strip quotes
     yylval->str = new std::string(yytext + 1, yyleng - 2);
     return STRING_LITERAL;
+}
+
+[0-9]+  {
+    yylval->str = new std::string(yytext);
+    return NUMBER;
 }
 
 [a-zA-Z_][a-zA-Z0-9_]*  {

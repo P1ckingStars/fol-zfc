@@ -310,7 +310,8 @@ FormulaResult Runtime::execute_schema_inst(
         ProofContext& pctx,
         const ParsedProofStep& step,
         const std::unordered_map<std::string, Term>& fixed_vars,
-        const std::unordered_map<std::string, size_t>& schema_var_map) {
+        const std::unordered_map<std::string, size_t>& schema_var_map,
+        const std::unordered_map<std::string, size_t>& schema_arity_map) {
     auto schema = ctx_.find_schema(step.rule_name);
     if (!schema.has_value())
         return MAKE_ERROR << "unknown schema: " << step.rule_name;
@@ -333,7 +334,7 @@ FormulaResult Runtime::execute_schema_inst(
         size_t arity = (schema->var_arities.size() > idx) ? schema->var_arities[idx] : 0;
         if (arity == 0) {
             bindings[idx] = SchemaBind(parse_formula_with_vars(
-                sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map));
+                sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map, schema_arity_map));
         } else {
             if (sb.lambda_params.size() != arity)
                 return MAKE_ERROR << "schema var '" << sb.var_name
@@ -347,7 +348,7 @@ FormulaResult Runtime::execute_schema_inst(
                 param_indices.push_back(vi);
             }
             auto body = parse_formula_with_vars(
-                sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, schema_var_map);
+                sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, schema_var_map, schema_arity_map);
             for (size_t k = 0; k < arity; ++k)
                 pctx.builder().exit_scope();
             bindings[idx] = SchemaBind(std::move(param_indices), body);
@@ -392,11 +393,14 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
     std::unordered_map<std::string, FormulaHandle> steps;
     std::unordered_map<std::string, Term> fixed_vars;
 
-    // Build schema var map if this is a schema proof
+    // Build schema var map and arity map if this is a schema proof
     std::unordered_map<std::string, size_t> schema_var_map;
+    std::unordered_map<std::string, size_t> schema_arity_map;
     if (auto schema = ctx_.find_schema(proof.claim_name)) {
         for (size_t i = 0; i < schema->var_names.size(); ++i) {
             schema_var_map[schema->var_names[i]] = i;
+            if (i < schema->var_arities.size())
+                schema_arity_map[schema->var_names[i]] = schema->var_arities[i];
         }
     }
 
@@ -423,7 +427,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                 }
                 // Parse formula with fixed variables in scope
                 FormulaHandle assumed = parse_formula_with_vars(
-                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map);
+                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map, schema_arity_map);
                 FormulaHandle h = pctx.assume(assumed);
                 steps[step.result_name] = h;
                 break;
@@ -433,9 +437,8 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                 if (!step.formula_ast) {
                     return MAKE_ERROR << step_desc << ": let requires formula";
                 }
-                // Parse formula with fixed variables in scope (don't assume it)
                 FormulaHandle h = parse_formula_with_vars(
-                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map);
+                    step.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map, schema_arity_map);
                 steps[step.result_name] = h;
                 break;
             }
@@ -474,7 +477,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
             }
 
             case ParsedProofStep::Kind::SchemaInst: {
-                auto result = execute_schema_inst(pctx, step, fixed_vars, schema_var_map);
+                auto result = execute_schema_inst(pctx, step, fixed_vars, schema_var_map, schema_arity_map);
                 if (!result.ok()) {
                     return MAKE_ERROR << step_desc << " (schema_inst " << step.rule_name << "): "
                                       << result.error().to_string();

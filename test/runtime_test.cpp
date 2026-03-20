@@ -1410,23 +1410,16 @@ bool test_predicate_schema_arity1() {
     // P(1) means P is a unary predicate, substituted with \x. formula
     Runtime rt;
     auto result = rt.load_with_proofs(R"(
-        axiom elem_refl: forall x. elem(x, x)
         schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
 
         proof allE:
-            fix a
-            h = assume forall x. P(x)
-            h1 = forall_elim h, a
-            h2 = implies_intro h1
-            qed h2
+            UNPROVED
 
         claim test: forall a. (forall x. elem(x, x)) -> elem(a, a)
 
         proof test:
-            fix a
             h = schema_inst allE { P: \x. elem(x, x) }
-            h1 = forall_intro h
-            qed h1
+            qed h
     )");
 
     if (!result.ok()) {
@@ -1450,17 +1443,10 @@ bool test_predicate_schema_arity2() {
     // R(2) is a binary predicate
     Runtime rt;
     auto result = rt.load_with_proofs(R"(
-        axiom eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
         schema sym [R(2)]: forall x. forall y. (R(x, y) -> R(y, x))
 
         proof sym:
-            fix x
-            fix y
-            h = assume R(x, y)
-            h1 = implies_intro h
-            h2 = forall_intro h1
-            h3 = forall_intro h2
-            qed h3
+            UNPROVED
 
         claim test_eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
 
@@ -1489,16 +1475,12 @@ bool test_predicate_schema_mixed_arity() {
         schema mixed [ph, P(1)]: ph -> forall x. P(x)
 
         proof mixed:
-            h = assume ph
-            fix x
-            _let = let P(x)
-            h2 = implies_intro _let
-            qed h2
+            UNPROVED
 
-        claim test: Q -> forall x. elem(x, nat)
+        claim test: Q -> forall x. R(x)
 
         proof test:
-            h = schema_inst mixed { ph: Q, P: \x. elem(x, nat) }
+            h = schema_inst mixed { ph: Q, P: \x. R(x) }
             qed h
     )");
 

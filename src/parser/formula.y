@@ -48,13 +48,15 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %token IOTA_ELIM IOTA
 %token UNPROVED
 %token SCHEMA SCHEMA_INST LBRACKET RBRACKET LBRACE RBRACE
+%token BACKSLASH
+%token <str> NUMBER
 
 %type <node> formula iff_formula implies_formula or_formula and_formula
 %type <node> unary_formula atom predicate term
 %type <node> statement proof_block proof_step rule_call
-%type <node> schema_binding
+%type <node> schema_binding schema_var_decl
 %type <node_list> term_list statement_list proof_step_list id_list unproved_deps
-%type <node_list> schema_binding_list
+%type <node_list> schema_binding_list schema_var_list lambda_params
 
 /* Precedence: lowest to highest */
 %left IFF
@@ -64,6 +66,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %precedence NOT FORALL EXISTS
 
 %destructor { delete $$; } <str>
+%destructor { delete $$; } schema_var_decl
 %destructor { delete $$; } <node>
 %destructor { for (auto* n : *$$) delete n; delete $$; } <node_list>
 
@@ -100,7 +103,7 @@ statement
         $$ = ASTNode::make_statement(ASTNode::ClaimStmt, *$2, $4);
         delete $2;
     }
-    | SCHEMA IDENTIFIER LBRACKET id_list RBRACKET COLON formula {
+    | SCHEMA IDENTIFIER LBRACKET schema_var_list RBRACKET COLON formula {
         $$ = ASTNode::make_schema_stmt(*$2, $4, $7);
         delete $2;
     }
@@ -385,12 +388,58 @@ schema_binding_list
     }
     ;
 
+schema_var_list
+    : schema_var_decl {
+        $$ = new std::vector<ASTNode*>();
+        $$->push_back($1);
+    }
+    | schema_var_list COMMA schema_var_decl {
+        $$ = $1;
+        $$->push_back($3);
+    }
+    ;
+
+schema_var_decl
+    : IDENTIFIER {
+        /* Arity 0 (formula-level, backward compatible) */
+        $$ = new ASTNode(ASTNode::Term, *$1);
+        $$->rule_name = "0";
+        delete $1;
+    }
+    | IDENTIFIER LPAREN NUMBER RPAREN {
+        /* Arity N (predicate-level): P(1), R(2), etc. */
+        $$ = new ASTNode(ASTNode::Term, *$1);
+        $$->rule_name = *$3;
+        delete $1; delete $3;
+    }
+    ;
+
 schema_binding
     : IDENTIFIER COLON formula {
-        /* Binding: var_name: formula — store name in name field, formula in body */
+        /* Arity-0 binding: var_name: formula */
         $$ = new ASTNode(ASTNode::Term, *$1);
         $$->body = $3;
         delete $1;
+    }
+    | IDENTIFIER COLON BACKSLASH lambda_params DOT formula {
+        /* Arity-N binding: var_name: \x y. formula */
+        $$ = new ASTNode(ASTNode::Term, *$1);
+        $$->body = $6;
+        $$->args = $4;
+        delete $1;
+    }
+    ;
+
+lambda_params
+    : IDENTIFIER {
+        $$ = new std::vector<ASTNode*>();
+        $$->push_back(new ASTNode(ASTNode::Term, *$1));
+        delete $1;
+    }
+    | lambda_params IDENTIFIER {
+        $$ = $1;
+        $$->push_back(new ASTNode(ASTNode::Term, *$2));
+        delete $2;
     }
     ;
 

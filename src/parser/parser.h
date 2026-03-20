@@ -65,7 +65,8 @@ FormulaHandle parse_formula_with_vars(
     GlobalContext& ctx,
     FormulaBuilder& builder,
     const std::unordered_map<std::string, Term>& external_vars,
-    const std::unordered_map<std::string, size_t>& schema_vars = {});
+    const std::unordered_map<std::string, size_t>& schema_vars = {},
+    const std::unordered_map<std::string, size_t>& schema_arities = {});
 
 // Represents a complete proof block
 struct ParsedProof {

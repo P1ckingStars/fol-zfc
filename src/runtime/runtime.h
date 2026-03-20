@@ -44,7 +44,8 @@ private:
         ProofContext& pctx,
         const ParsedProofStep& step,
         const std::unordered_map<std::string, Term>& fixed_vars,
-        const std::unordered_map<std::string, size_t>& schema_var_map);
+        const std::unordered_map<std::string, size_t>& schema_var_map,
+        const std::unordered_map<std::string, size_t>& schema_arity_map);
 
 public:
 
