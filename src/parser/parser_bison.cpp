@@ -89,25 +89,14 @@ public:
             case ASTNode::Iff:
                 return builder_.make_iff(convert(node->left), convert(node->right));
 
-            case ASTNode::Forall: {
-                FormulaHandle result;
-                {
-                    QuantifierBuilder qb(builder_, Op::Forall, result);
-                    var_scopes_.push_back({node->name, qb.var()});
-                    FormulaHandle body = convert(node->body);
-                    qb.set_body(body);
-                    var_scopes_.pop_back();
-                }
-                return result;
-            }
-
+            case ASTNode::Forall:
             case ASTNode::Exists: {
+                Op op = (node->type == ASTNode::Forall) ? Op::Forall : Op::Exists;
                 FormulaHandle result;
                 {
-                    QuantifierBuilder qb(builder_, Op::Exists, result);
+                    QuantifierBuilder qb(builder_, op, result);
                     var_scopes_.push_back({node->name, qb.var()});
-                    FormulaHandle body = convert(node->body);
-                    qb.set_body(body);
+                    qb.set_body(convert(node->body));
                     var_scopes_.pop_back();
                 }
                 return result;
@@ -223,55 +212,21 @@ private:
 
 // ==================== Parser Implementation ====================
 
+// Forward declaration
+static ParseContext run_parser(std::string_view input);
+
 SentenceHandle parse_sentence(std::string_view input, GlobalContext& ctx) {
-    // Initialize scanner
-    yyscan_t scanner;
-    if (yylex_init(&scanner) != 0) {
-        throw std::runtime_error("Failed to initialize lexer");
-    }
+    ParseContext parse_ctx = run_parser(input);
+    if (!parse_ctx.result)
+        throw std::runtime_error("Expected a formula, got statements");
 
-    // Set up input buffer
-    std::string input_str(input);
-    YY_BUFFER_STATE buffer = yy_scan_string(input_str.c_str(), scanner);
-
-    // Parse
-    ParseContext parse_ctx;
-    yypstate* ps = yypstate_new();
-
-    int status;
-    YYSTYPE yylval;
-    YYLTYPE yylloc = {1, 1, 1, 1};
-
-    do {
-        int token = yylex(&yylval, &yylloc, scanner);
-        status = yypush_parse(ps, token, &yylval, &yylloc, scanner, &parse_ctx);
-    } while (status == YYPUSH_MORE);
-
-    yypstate_delete(ps);
-    yy_delete_buffer(buffer, scanner);
-    yylex_destroy(scanner);
-
-    if (status != 0 || !parse_ctx.result) {
-        std::ostringstream oss;
-        oss << "Parse error at column " << parse_ctx.error_col << ": " << parse_ctx.error;
-        oss << "\n  Input: " << input;
-        if (parse_ctx.error_col > 0 && parse_ctx.error_col <= static_cast<int>(input.size())) {
-            oss << "\n         " << std::string(parse_ctx.error_col - 1, ' ') << "^";
-        }
-        throw std::runtime_error(oss.str());
-    }
-
-    // Convert AST to Formula using FormulaBuilder
     FormulaBuilder builder(ctx);
     ASTConverter converter(ctx, builder);
     FormulaHandle root = converter.convert(parse_ctx.result);
 
-    // Build sentence - this checks for free variables
     SentenceHandle sh = builder.build_sentence(root);
-    if (!sh.valid()) {
+    if (!sh.valid())
         throw std::runtime_error("Formula has free variables, not a valid sentence");
-    }
-
     return sh;
 }
 
@@ -331,7 +286,7 @@ static ParseContext run_parser(std::string_view input) {
     yy_delete_buffer(buffer, scanner);
     yylex_destroy(scanner);
 
-    if (status != 0 || !parse_ctx.statements) {
+    if (status != 0) {
         std::ostringstream oss;
         oss << "Parse error at column " << parse_ctx.error_col << ": " << parse_ctx.error;
         oss << "\n  Input: " << input;
