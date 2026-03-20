@@ -623,18 +623,15 @@ FormulaResult ProofStack::exists_elim(FormulaHandle const &formula) {
 // ========== Equality Substitution ==========
 
 FormulaResult ProofStack::schema_inst(const SchemaDefinition& schema,
-                                       const std::vector<FormulaHandle>& bindings) {
+                                       const std::vector<SchemaBind>& bindings) {
     if (bindings.size() != schema.var_names.size()) {
         return MAKE_ERROR << "schema_inst: expected " << schema.var_names.size()
                           << " bindings, got " << bindings.size();
     }
     FormulaHandle result = formula_builder_.instantiate_schema(schema.body, bindings);
-    // Note: result may still contain schema vars if bindings contain them
-    // (e.g. when a schema proof instantiates another schema with its own vars).
-    // This is valid — the remaining schema vars belong to the outer schema.
     ScopeDeps deps;
     for (const auto& b : bindings) {
-        deps |= compute_var_deps(b);
+        deps |= compute_var_deps(b.body);
     }
     derive_with_deps(result, deps);
     return result;

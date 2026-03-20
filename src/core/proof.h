@@ -220,7 +220,7 @@ public:
 
     // Schema instantiation: substitute schema vars with bindings
     FormulaResult schema_inst(const SchemaDefinition& schema,
-                              const std::vector<FormulaHandle>& bindings);
+                              const std::vector<SchemaBind>& bindings);
 
     // Access formula builder for creating formulas
     FormulaBuilder& builder() { return formula_builder_; }

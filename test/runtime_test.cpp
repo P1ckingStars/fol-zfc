@@ -1404,6 +1404,171 @@ bool test_schema_connectives_in_proof() {
     return true;
 }
 
+// ==================== Predicate Schema Tests ====================
+
+bool test_predicate_schema_arity1() {
+    // P(1) means P is a unary predicate, substituted with \x. formula
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        axiom elem_refl: forall x. elem(x, x)
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            qed h2
+
+        claim test: forall a. (forall x. elem(x, x)) -> elem(a, a)
+
+        proof test:
+            fix a
+            h = schema_inst allE { P: \x. elem(x, x) }
+            h1 = forall_intro h
+            qed h1
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    if (!rt.context().find_theorem("test").has_value()) {
+        std::cout << "[test not proven] ";
+        return false;
+    }
+    std::cout << "[arity-1 predicate schema works] ";
+    return true;
+}
+
+bool test_predicate_schema_arity2() {
+    // R(2) is a binary predicate
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        axiom eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
+        schema sym [R(2)]: forall x. forall y. (R(x, y) -> R(y, x))
+
+        proof sym:
+            fix x
+            fix y
+            h = assume R(x, y)
+            h1 = implies_intro h
+            h2 = forall_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim test_eq_sym: forall x. forall y. (eq(x, y) -> eq(y, x))
+
+        proof test_eq_sym:
+            h = schema_inst sym { R: \x y. eq(x, y) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    std::cout << "[arity-2 predicate schema works] ";
+    return true;
+}
+
+bool test_predicate_schema_mixed_arity() {
+    // Mix arity-0 (formula) and arity-1 (predicate) in one schema
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema mixed [ph, P(1)]: ph -> forall x. P(x)
+
+        proof mixed:
+            h = assume ph
+            fix x
+            _let = let P(x)
+            h2 = implies_intro _let
+            qed h2
+
+        claim test: Q -> forall x. elem(x, nat)
+
+        proof test:
+            h = schema_inst mixed { ph: Q, P: \x. elem(x, nat) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    std::cout << "[mixed arity schema works] ";
+    return true;
+}
+
+bool test_predicate_schema_to_string() {
+    // Verify SchemaVar with args prints correctly
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema S [P(1)]: forall x. P(x)
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto schema = rt.context().find_schema("S");
+    if (!schema.has_value()) {
+        std::cout << "[schema not found] ";
+        return false;
+    }
+    std::string s = schema->body.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should contain ?0 applied to a generalized var
+    return s.find("?0") != std::string::npos;
+}
+
+bool test_predicate_schema_backward_compat() {
+    // Existing arity-0 syntax must still work unchanged
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+
+        proof S:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim test: (P -> (Q -> P))
+
+        proof test:
+            h = schema_inst S { ph: P, ps: Q }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    std::cout << "[backward compatible] ";
+    return true;
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -1465,6 +1630,14 @@ int main() {
     run_test("Schema to_string", test_schema_to_string);
     run_test("Schema with quantifiers", test_schema_with_quantifiers);
     run_test("Schema connectives in proof", test_schema_connectives_in_proof);
+
+    // Predicate schema tests
+    std::cout << "\n── Predicate Schema Tests ──\n";
+    run_test("Predicate schema arity-1", test_predicate_schema_arity1);
+    run_test("Predicate schema arity-2", test_predicate_schema_arity2);
+    run_test("Predicate schema mixed arity", test_predicate_schema_mixed_arity);
+    run_test("Predicate schema to_string", test_predicate_schema_to_string);
+    run_test("Predicate schema backward compat", test_predicate_schema_backward_compat);
 
     // Integration test
     std::cout << "\n── Integration Test ──\n";

@@ -32,9 +32,11 @@ struct ParsedStatement {
 };
 
 // A named binding for schema instantiation: var_name -> formula AST
+// For predicate bindings, lambda_params holds parameter names (\x y. body).
 struct SchemaBinding {
     std::string var_name;
     std::shared_ptr<ASTNode> formula_ast;
+    std::vector<std::string> lambda_params;  // non-empty for predicate bindings
 };
 
 // Represents a single proof step

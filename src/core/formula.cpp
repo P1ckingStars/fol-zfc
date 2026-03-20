@@ -115,7 +115,17 @@ std::string quantified_to_string(const Quantified& q, int parent_prec) {
 
 std::string formula_to_string_impl(const Formula& f, int parent_prec) {
     if (f.is_schema_var()) {
-        return "?" + std::to_string(f.as_schema_var().id);
+        const auto& sv = f.as_schema_var();
+        std::string s = "?" + std::to_string(sv.id);
+        if (!sv.args.empty()) {
+            s += "(";
+            for (size_t i = 0; i < sv.args.size(); ++i) {
+                if (i > 0) s += ", ";
+                s += term_to_string(sv.args[i]);
+            }
+            s += ")";
+        }
+        return s;
     }
     if (f.is_predicate()) {
         return predicate_instance_to_string(f.as_predicate());

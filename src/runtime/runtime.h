@@ -138,7 +138,7 @@ public:
 
     // ========== Schema Instantiation ==========
     FormulaResult schema_inst(const SchemaDefinition& schema,
-                              const std::vector<FormulaHandle>& bindings);
+                              const std::vector<SchemaBind>& bindings);
 
     // ========== Classical Extensions ==========
     FormulaResult double_neg_elim(FormulaHandle const& double_neg);

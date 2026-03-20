@@ -160,10 +160,13 @@ struct Quantified {
     }
 };
 
-// Schema variable: a formula-level metavariable (placeholder for an arbitrary wff)
+// Schema variable: a metavariable for formula or predicate substitution.
+// Arity 0 (args empty): formula placeholder — substituted with a formula.
+// Arity N (args has N terms): predicate placeholder — substituted with a lambda.
 // Identified by positional index; name resolution handled at parser layer.
 struct SchemaVar {
     size_t id;
+    std::vector<Term> args;  // empty for formula vars, [t1,...,tN] for predicate vars
     bool operator==(const SchemaVar&) const = default;
 };
 
@@ -222,10 +225,21 @@ class Formula {
         has_schema_vars_(q.body.get().has_schema_vars_),
         data_(std::move(q)) {}
     explicit Formula(SentenceHandle s);
+    static var_index compute_schema_var_next_gen(const SchemaVar& sv) {
+        var_index max_idx = 0;
+        for (const auto& t : sv.args) {
+            if (t.is_description()) {
+                const auto& d = t.as_description();
+                max_idx = std::max(max_idx, std::max(d.body.get().next_gen_var_idx_, d.bound_var + 1));
+            }
+        }
+        return max_idx;
+    }
+
     explicit Formula(SchemaVar sv) :
-        next_gen_var_idx_(0),
+        next_gen_var_idx_(compute_schema_var_next_gen(sv)),
         has_schema_vars_(true),
-        data_(sv) {}
+        data_(std::move(sv)) {}
 
 public:
     bool operator==(const Formula& other) const {
@@ -307,10 +321,25 @@ struct SentenceHandleHash {
     }
 };
 
-// A schema is a formula template parameterized by formula-level metavariables (SchemaVar).
+// A schema binding: either a formula (arity 0) or a lambda predicate (arity N).
+// For arity 0, body is the substituted formula and params is empty.
+// For arity N, body contains fixed vars from params; at instantiation,
+// each SchemaVar arg is substituted for the corresponding param.
+struct SchemaBind {
+    FormulaHandle body;
+    std::vector<var_index> params;  // lambda parameter indices (empty for arity 0)
+
+    explicit SchemaBind() = default;
+    explicit SchemaBind(FormulaHandle f) : body(f) {}
+    SchemaBind(std::vector<var_index> p, FormulaHandle f) : body(f), params(std::move(p)) {}
+};
+
+// A schema is a formula template parameterized by metavariables (SchemaVar).
+// Variables can be arity 0 (formula substitution) or arity N (predicate substitution).
 struct SchemaDefinition {
     FormulaHandle body;                  // contains SchemaVar nodes
-    std::vector<std::string> var_names;  // var_names[id] = name, e.g. ["ph", "ps"]
+    std::vector<std::string> var_names;  // var_names[id] = name
+    std::vector<size_t> var_arities;     // var_arities[id] = arity (0 = formula, N = N-arg predicate)
 };
 
 class GlobalContext {
@@ -499,7 +528,12 @@ public:
     FormulaHandle make_iff(FormulaHandle l, FormulaHandle r) { return add_formula(Formula(Compound{Op::Iff, l, r})); }
     FormulaHandle make_not(FormulaHandle f) { return add_formula(Formula(Compound{Op::Not, f, FormulaHandle{}})); }
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
-    FormulaHandle make_schema_var(size_t id) { return add_formula(Formula(SchemaVar{id})); }
+    FormulaHandle make_schema_var(size_t id, std::vector<Term> args = {}) {
+        for (const auto& t : args) {
+            if (!t.is_description()) use_var(t.as_variable());
+        }
+        return add_formula(Formula(SchemaVar{id, std::move(args)}));
+    }
 
     // Add a sentence's root formula to the builder (for using theorems in proofs)
     FormulaHandle add_sentence(SentenceHandle s) {
@@ -526,7 +560,19 @@ public:
     FormulaHandle translate_term(FormulaHandle const &h, Term const &old_term, Term const &new_term) {
         const Formula& f = h.get();
 
-        if (f.is_schema_var()) return h;
+        if (f.is_schema_var()) {
+            const auto& sv = f.as_schema_var();
+            if (sv.args.empty()) return h;
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : sv.args) {
+                Term nt = translate_in_term(t, old_term, new_term);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+            return h;
+        }
 
         if (f.is_predicate()) {
             const PredicateInstance& p = f.as_predicate();
@@ -567,11 +613,35 @@ public:
         return h;
     }
 
-    // Schema instantiation: replace SchemaVar{id} with bindings[id]
-    FormulaHandle instantiate_schema(FormulaHandle h, const std::vector<FormulaHandle>& bindings) {
+    // Helper: instantiate schema vars within a term (for description bodies)
+    Term instantiate_schema_in_term(const Term& t, const std::vector<SchemaBind>& bindings) {
+        if (!t.is_description()) return t;
+        const auto& d = t.as_description();
+        auto nb = instantiate_schema(d.body, bindings);
+        if (nb != d.body) return Term::description(d.bound_var, nb);
+        return t;
+    }
+
+    // Schema instantiation: replace SchemaVar nodes with bindings.
+    // Arity-0 bindings: direct formula substitution.
+    // Arity-N bindings: lambda substitution — replace lambda params with actual args.
+    FormulaHandle instantiate_schema(FormulaHandle h, const std::vector<SchemaBind>& bindings) {
         const Formula& f = h.get();
-        if (f.is_schema_var())
-            return bindings[f.as_schema_var().id];
+        if (f.is_schema_var()) {
+            const auto& sv = f.as_schema_var();
+            const auto& bind = bindings[sv.id];
+            if (bind.params.empty()) {
+                // Arity-0: direct formula substitution
+                return bind.body;
+            }
+            // Arity-N: apply lambda — substitute each param with corresponding arg
+            FormulaHandle result = bind.body;
+            for (size_t i = 0; i < bind.params.size() && i < sv.args.size(); ++i) {
+                Term arg = instantiate_schema_in_term(sv.args[i], bindings);
+                result = translate_term(result, Term::fixed(bind.params[i]), arg);
+            }
+            return result;
+        }
         if (!f.has_schema_vars()) return h;  // fast path
 
         if (f.is_compound()) {
@@ -594,15 +664,9 @@ public:
             bool changed = false;
             std::vector<Term> new_args;
             for (const auto& t : p.args()) {
-                if (t.is_description()) {
-                    auto nb = instantiate_schema(t.as_description().body, bindings);
-                    if (nb != t.as_description().body) {
-                        new_args.push_back(Term::description(t.as_description().bound_var, nb));
-                        changed = true;
-                        continue;
-                    }
-                }
-                new_args.push_back(t);
+                Term nt = instantiate_schema_in_term(t, bindings);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
             }
             if (changed)
                 return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));

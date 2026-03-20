@@ -427,7 +427,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                 }
 
                 // Resolve named bindings to positional vector
-                std::vector<FormulaHandle> bindings(schema->var_names.size());
+                std::vector<SchemaBind> bindings(schema->var_names.size());
                 std::vector<bool> bound(schema->var_names.size(), false);
                 for (const auto& sb : step.schema_bindings) {
                     // Find the index for this var name
@@ -444,8 +444,32 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
                     if (bound[idx]) {
                         return MAKE_ERROR << step_desc << ": duplicate binding for: " << sb.var_name;
                     }
-                    bindings[idx] = parse_formula_with_vars(
-                        sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map);
+                    size_t expected_arity = (schema->var_arities.size() > idx) ?
+                        schema->var_arities[idx] : 0;
+                    if (expected_arity == 0) {
+                        // Arity-0: parse as formula
+                        bindings[idx] = SchemaBind(parse_formula_with_vars(
+                            sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map));
+                    } else {
+                        // Arity-N: parse lambda params, then body with params as fixed vars
+                        if (sb.lambda_params.size() != expected_arity) {
+                            return MAKE_ERROR << step_desc << ": schema var '" << sb.var_name
+                                << "' expects " << expected_arity << " lambda params, got "
+                                << sb.lambda_params.size();
+                        }
+                        auto lambda_vars = fixed_vars;
+                        std::vector<var_index> param_indices;
+                        for (const auto& param : sb.lambda_params) {
+                            var_index vi = pctx.builder().enter_scope();
+                            lambda_vars[param] = Term::fixed(vi);
+                            param_indices.push_back(vi);
+                        }
+                        auto body = parse_formula_with_vars(
+                            sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, schema_var_map);
+                        for (size_t k = 0; k < expected_arity; ++k)
+                            pctx.builder().exit_scope();
+                        bindings[idx] = SchemaBind(std::move(param_indices), body);
+                    }
                     bound[idx] = true;
                 }
                 for (size_t j = 0; j < bound.size(); ++j) {
@@ -630,7 +654,7 @@ FormulaResult ProofContext::eq_subst(FormulaHandle const& eq, FormulaHandle cons
 
 // Schema instantiation
 FormulaResult ProofContext::schema_inst(const SchemaDefinition& schema,
-                                         const std::vector<FormulaHandle>& bindings) {
+                                         const std::vector<SchemaBind>& bindings) {
     return stack_.schema_inst(schema, bindings);
 }
 
