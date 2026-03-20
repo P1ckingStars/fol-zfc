@@ -302,20 +302,19 @@ static bool ast_contains_predicate(const ASTNode* node, const std::string& pred_
     return false;
 }
 
-// ==================== Statement Parser Implementation ====================
+// ==================== Shared Parser Helpers ====================
 
-std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalContext& ctx) {
-    // Initialize scanner
+// Run the Bison push-parser on input and return the resulting ParseContext.
+// Throws on parse failure.
+static ParseContext run_parser(std::string_view input) {
     yyscan_t scanner;
     if (yylex_init(&scanner) != 0) {
         throw std::runtime_error("Failed to initialize lexer");
     }
 
-    // Set up input buffer
     std::string input_str(input);
     YY_BUFFER_STATE buffer = yy_scan_string(input_str.c_str(), scanner);
 
-    // Parse
     ParseContext parse_ctx;
     yypstate* ps = yypstate_new();
 
@@ -342,100 +341,111 @@ std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalCont
         throw std::runtime_error(oss.str());
     }
 
-    // Convert statement AST nodes to ParsedStatements
+    return parse_ctx;
+}
+
+// Register a schema statement in the GlobalContext.
+static void process_schema_stmt(const ASTNode* stmt_node, GlobalContext& ctx) {
+    std::vector<std::string> var_names;
+    std::vector<size_t> var_arities;
+    std::unordered_map<std::string, size_t> var_map;
+    std::unordered_map<std::string, size_t> arity_map;
+    if (stmt_node->args) {
+        for (size_t i = 0; i < stmt_node->args->size(); ++i) {
+            const auto* vnode = (*stmt_node->args)[i];
+            var_names.push_back(vnode->name);
+            size_t arity = vnode->rule_name.empty() ? 0 : std::stoul(vnode->rule_name);
+            var_arities.push_back(arity);
+            var_map[vnode->name] = i;
+            arity_map[vnode->name] = arity;
+        }
+    }
+    FormulaBuilder builder(ctx);
+    ASTConverter converter(ctx, builder);
+    converter.set_schema_vars(var_map);
+    converter.set_schema_arities(arity_map);
+    FormulaHandle body = converter.convert(stmt_node->body);
+    SchemaDefinition def;
+    def.body = body;
+    def.var_names = std::move(var_names);
+    def.var_arities = std::move(var_arities);
+    ctx.add_schema(stmt_node->name, std::move(def));
+}
+
+// Convert an axiom, claim, or @def AST node to a ParsedStatement and register it.
+static ParsedStatement process_axiom_claim_stmt(const ASTNode* stmt_node, GlobalContext& ctx) {
+    ParsedStatement stmt;
+
+    switch (stmt_node->type) {
+        case ASTNode::AxiomStmt:
+            stmt.kind = ParsedStatement::Kind::Axiom;
+            break;
+        case ASTNode::DefStmt:
+            stmt.kind = ParsedStatement::Kind::Axiom;
+            stmt.def_predicate = stmt_node->def_predicate;
+            break;
+        case ASTNode::ClaimStmt:
+            stmt.kind = ParsedStatement::Kind::Claim;
+            break;
+        default:
+            throw std::runtime_error("Invalid statement AST node type");
+    }
+
+    stmt.name = stmt_node->name;
+
+    // Validate @def annotations before converting formula
+    if (!stmt.def_predicate.empty()) {
+        if (ctx.is_defined(stmt.def_predicate) &&
+            !ctx.is_same_definition(stmt.def_predicate, stmt.name)) {
+            throw std::runtime_error("Predicate '" + stmt.def_predicate +
+                "' is already defined (in @def axiom '" + stmt.name + "')");
+        }
+        if (!ast_contains_predicate(stmt_node->body, stmt.def_predicate)) {
+            throw std::runtime_error("@def(" + stmt.def_predicate +
+                ") axiom '" + stmt.name + "' does not mention predicate '" +
+                stmt.def_predicate + "'");
+        }
+    }
+
+    // Convert the formula body
+    FormulaBuilder builder(ctx);
+    ASTConverter converter(ctx, builder);
+    FormulaHandle root = converter.convert(stmt_node->body);
+
+    SentenceHandle sh = builder.build_sentence(root);
+    if (!sh.valid()) {
+        throw std::runtime_error("Statement '" + stmt.name + "' formula has free variables");
+    }
+
+    stmt.formula = sh;
+
+    // Register statements in GlobalContext
+    if (!stmt.def_predicate.empty()) {
+        ctx.add_definition(stmt.def_predicate, stmt.name, stmt.formula);
+    } else if (stmt.kind == ParsedStatement::Kind::Axiom) {
+        ctx.add_axiom(stmt.name, stmt.formula);
+    } else if (stmt.kind == ParsedStatement::Kind::Claim) {
+        ctx.add_claim(stmt.name, stmt.formula);
+    }
+
+    return stmt;
+}
+
+// ==================== Statement Parser Implementation ====================
+
+std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalContext& ctx) {
+    ParseContext parse_ctx = run_parser(input);
+
     std::vector<ParsedStatement> result;
     for (const ASTNode* stmt_node : *parse_ctx.statements) {
-        // Skip proof blocks in this function (use parse_with_proofs for proofs)
         if (stmt_node->type == ASTNode::ProofBlock) {
             continue;
         }
-
-        // Handle schema statements
         if (stmt_node->type == ASTNode::SchemaStmt) {
-            std::vector<std::string> var_names;
-            std::vector<size_t> var_arities;
-            std::unordered_map<std::string, size_t> var_map;
-            std::unordered_map<std::string, size_t> arity_map;
-            if (stmt_node->args) {
-                for (size_t i = 0; i < stmt_node->args->size(); ++i) {
-                    const auto* vnode = (*stmt_node->args)[i];
-                    var_names.push_back(vnode->name);
-                    size_t arity = vnode->rule_name.empty() ? 0 : std::stoul(vnode->rule_name);
-                    var_arities.push_back(arity);
-                    var_map[vnode->name] = i;
-                    arity_map[vnode->name] = arity;
-                }
-            }
-            FormulaBuilder builder(ctx);
-            ASTConverter converter(ctx, builder);
-            converter.set_schema_vars(var_map);
-            converter.set_schema_arities(arity_map);
-            FormulaHandle body = converter.convert(stmt_node->body);
-            SchemaDefinition def;
-            def.body = body;
-            def.var_names = std::move(var_names);
-            def.var_arities = std::move(var_arities);
-            ctx.add_schema(stmt_node->name, std::move(def));
+            process_schema_stmt(stmt_node, ctx);
             continue;
         }
-
-        ParsedStatement stmt;
-
-        // Determine statement kind
-        switch (stmt_node->type) {
-            case ASTNode::AxiomStmt:
-                stmt.kind = ParsedStatement::Kind::Axiom;
-                break;
-            case ASTNode::DefStmt:
-                stmt.kind = ParsedStatement::Kind::Axiom;
-                stmt.def_predicate = stmt_node->def_predicate;
-                break;
-            case ASTNode::ClaimStmt:
-                stmt.kind = ParsedStatement::Kind::Claim;
-                break;
-            default:
-                throw std::runtime_error("Invalid statement AST node type");
-        }
-
-        stmt.name = stmt_node->name;
-
-        // Validate @def annotations before converting formula
-        if (!stmt.def_predicate.empty()) {
-            if (ctx.is_defined(stmt.def_predicate) &&
-                !ctx.is_same_definition(stmt.def_predicate, stmt.name)) {
-                throw std::runtime_error("Predicate '" + stmt.def_predicate +
-                    "' is already defined (in @def axiom '" + stmt.name + "')");
-            }
-            if (!ast_contains_predicate(stmt_node->body, stmt.def_predicate)) {
-                throw std::runtime_error("@def(" + stmt.def_predicate +
-                    ") axiom '" + stmt.name + "' does not mention predicate '" +
-                    stmt.def_predicate + "'");
-            }
-        }
-
-        // Convert the formula body
-        FormulaBuilder builder(ctx);
-        ASTConverter converter(ctx, builder);
-        FormulaHandle root = converter.convert(stmt_node->body);
-
-        // Build sentence - this checks for free variables
-        SentenceHandle sh = builder.build_sentence(root);
-        if (!sh.valid()) {
-            throw std::runtime_error("Statement '" + stmt.name + "' formula has free variables");
-        }
-
-        stmt.formula = sh;
-
-        // Register statements in GlobalContext
-        if (!stmt.def_predicate.empty()) {
-            ctx.add_definition(stmt.def_predicate, stmt.name, stmt.formula);
-        } else if (stmt.kind == ParsedStatement::Kind::Axiom) {
-            ctx.add_axiom(stmt.name, stmt.formula);
-        } else if (stmt.kind == ParsedStatement::Kind::Claim) {
-            ctx.add_claim(stmt.name, stmt.formula);
-        }
-
-        result.push_back(std::move(stmt));
+        result.push_back(process_axiom_claim_stmt(stmt_node, ctx));
     }
 
     return result;
@@ -454,20 +464,19 @@ std::vector<ParsedStatement> try_parse_statements(std::string_view input, Global
 // ==================== Proof Parser Implementation ====================
 
 // Helper to convert proof step AST to ParsedProofStep
-ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx) {
+static ParsedProofStep convert_proof_step(const ASTNode* step_node) {
     ParsedProofStep step;
 
     switch (step_node->type) {
         case ASTNode::ProofStepFix:
             step.kind = ParsedProofStep::Kind::Fix;
-            step.result_name = step_node->rule_name;  // Variable name stored in rule_name
+            step.result_name = step_node->rule_name;
             step.args.push_back(step_node->rule_name);
             break;
 
         case ASTNode::ProofStepAssume:
             step.kind = ParsedProofStep::Kind::Assume;
             step.result_name = step_node->name;
-            // Store AST for deferred parsing (will be parsed during execution with fixed vars)
             if (step_node->body) {
                 step.formula_ast = clone_ast(step_node->body);
             }
@@ -476,7 +485,6 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
         case ASTNode::ProofStepLet:
             step.kind = ParsedProofStep::Kind::Let;
             step.result_name = step_node->name;
-            // Store AST for deferred parsing (will be parsed during execution with fixed vars)
             if (step_node->body) {
                 step.formula_ast = clone_ast(step_node->body);
             }
@@ -485,7 +493,7 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
         case ASTNode::ProofStepUse:
             step.kind = ParsedProofStep::Kind::Use;
             step.result_name = step_node->name;
-            step.rule_name = step_node->rule_name;  // Axiom/theorem name
+            step.rule_name = step_node->rule_name;
             step.args.push_back(step_node->rule_name);
             break;
 
@@ -493,7 +501,6 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
             step.kind = ParsedProofStep::Kind::Rule;
             step.result_name = step_node->name;
             step.rule_name = step_node->rule_name;
-            // Convert args (Term nodes with names)
             if (step_node->args) {
                 for (const ASTNode* arg : *step_node->args) {
                     step.args.push_back(arg->name);
@@ -503,7 +510,7 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
 
         case ASTNode::ProofStepQed:
             step.kind = ParsedProofStep::Kind::Qed;
-            step.args.push_back(step_node->rule_name);  // Handle name
+            step.args.push_back(step_node->rule_name);
             break;
 
         case ASTNode::ProofStepSchemaInst:
@@ -516,7 +523,6 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
                     sb.var_name = binding->name;
                     if (binding->body)
                         sb.formula_ast = clone_ast(binding->body);
-                    // Lambda params from \x y. syntax (stored in binding->args)
                     if (binding->args) {
                         for (const ASTNode* param : *binding->args)
                             sb.lambda_params.push_back(param->name);
@@ -534,14 +540,14 @@ ParsedProofStep convert_proof_step(const ASTNode* step_node, GlobalContext& ctx)
 }
 
 // Convert proof block AST to ParsedProof
-ParsedProof convert_proof_block(const ASTNode* proof_node, GlobalContext& ctx) {
+static ParsedProof convert_proof_block(const ASTNode* proof_node) {
     ParsedProof proof;
     proof.claim_name = proof_node->name;
     proof.unproved = (proof_node->rule_name == "UNPROVED");
 
     if (proof_node->steps) {
         for (const ASTNode* step_node : *proof_node->steps) {
-            proof.steps.push_back(convert_proof_step(step_node, ctx));
+            proof.steps.push_back(convert_proof_step(step_node));
         }
     }
 
@@ -549,136 +555,20 @@ ParsedProof convert_proof_block(const ASTNode* proof_node, GlobalContext& ctx) {
 }
 
 ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
-    // Initialize scanner
-    yyscan_t scanner;
-    if (yylex_init(&scanner) != 0) {
-        throw std::runtime_error("Failed to initialize lexer");
-    }
+    ParseContext parse_ctx = run_parser(input);
 
-    // Set up input buffer
-    std::string input_str(input);
-    YY_BUFFER_STATE buffer = yy_scan_string(input_str.c_str(), scanner);
-
-    // Parse
-    ParseContext parse_ctx;
-    yypstate* ps = yypstate_new();
-
-    int status;
-    YYSTYPE yylval;
-    YYLTYPE yylloc = {1, 1, 1, 1};
-
-    do {
-        int token = yylex(&yylval, &yylloc, scanner);
-        status = yypush_parse(ps, token, &yylval, &yylloc, scanner, &parse_ctx);
-    } while (status == YYPUSH_MORE);
-
-    yypstate_delete(ps);
-    yy_delete_buffer(buffer, scanner);
-    yylex_destroy(scanner);
-
-    if (status != 0 || !parse_ctx.statements) {
-        std::ostringstream oss;
-        oss << "Parse error at column " << parse_ctx.error_col << ": " << parse_ctx.error;
-        oss << "\n  Input: " << input;
-        if (parse_ctx.error_col > 0 && parse_ctx.error_col <= static_cast<int>(input.size())) {
-            oss << "\n         " << std::string(parse_ctx.error_col - 1, ' ') << "^";
-        }
-        throw std::runtime_error(oss.str());
-    }
-
-    // Convert statement AST nodes
     ParseResult result;
     for (const ASTNode* stmt_node : *parse_ctx.statements) {
         if (stmt_node->type == ASTNode::ProofBlock) {
-            // Convert proof block
-            result.proofs.push_back(convert_proof_block(stmt_node, ctx));
+            result.proofs.push_back(convert_proof_block(stmt_node));
         } else if (stmt_node->type == ASTNode::SchemaStmt) {
-            std::vector<std::string> var_names;
-            std::vector<size_t> var_arities;
-            std::unordered_map<std::string, size_t> var_map;
-            std::unordered_map<std::string, size_t> arity_map;
-            if (stmt_node->args) {
-                for (size_t i = 0; i < stmt_node->args->size(); ++i) {
-                    const auto* vnode = (*stmt_node->args)[i];
-                    var_names.push_back(vnode->name);
-                    size_t arity = vnode->rule_name.empty() ? 0 : std::stoul(vnode->rule_name);
-                    var_arities.push_back(arity);
-                    var_map[vnode->name] = i;
-                    arity_map[vnode->name] = arity;
-                }
-            }
-            FormulaBuilder builder(ctx);
-            ASTConverter converter(ctx, builder);
-            converter.set_schema_vars(var_map);
-            converter.set_schema_arities(arity_map);
-            FormulaHandle body = converter.convert(stmt_node->body);
-            SchemaDefinition def;
-            def.body = body;
-            def.var_names = std::move(var_names);
-            def.var_arities = std::move(var_arities);
-            ctx.add_schema(stmt_node->name, std::move(def));
+            process_schema_stmt(stmt_node, ctx);
         } else if (stmt_node->type == ASTNode::IncludeStmt) {
-            // Convert include statement
             ParsedInclude inc;
             inc.path = stmt_node->name;
             result.includes.push_back(std::move(inc));
         } else {
-            // Convert axiom/claim/def statement
-            ParsedStatement stmt;
-
-            switch (stmt_node->type) {
-                case ASTNode::AxiomStmt:
-                    stmt.kind = ParsedStatement::Kind::Axiom;
-                    break;
-                case ASTNode::DefStmt:
-                    stmt.kind = ParsedStatement::Kind::Axiom;
-                    stmt.def_predicate = stmt_node->def_predicate;
-                    break;
-                case ASTNode::ClaimStmt:
-                    stmt.kind = ParsedStatement::Kind::Claim;
-                    break;
-                default:
-                    throw std::runtime_error("Invalid statement AST node type");
-            }
-
-            stmt.name = stmt_node->name;
-
-            // Validate @def annotations before converting formula
-            if (!stmt.def_predicate.empty()) {
-                if (ctx.is_defined(stmt.def_predicate) &&
-                    !ctx.is_same_definition(stmt.def_predicate, stmt.name)) {
-                    throw std::runtime_error("Predicate '" + stmt.def_predicate +
-                        "' is already defined (in @def axiom '" + stmt.name + "')");
-                }
-                if (!ast_contains_predicate(stmt_node->body, stmt.def_predicate)) {
-                    throw std::runtime_error("@def(" + stmt.def_predicate +
-                        ") axiom '" + stmt.name + "' does not mention predicate '" +
-                        stmt.def_predicate + "'");
-                }
-            }
-
-            // Convert the formula body
-            FormulaBuilder builder(ctx);
-            ASTConverter converter(ctx, builder);
-            FormulaHandle root = converter.convert(stmt_node->body);
-
-            SentenceHandle sh = builder.build_sentence(root);
-            if (!sh.valid()) {
-                throw std::runtime_error("Statement '" + stmt.name + "' formula has free variables");
-            }
-
-            stmt.formula = sh;
-
-            // Register statements in GlobalContext
-            if (!stmt.def_predicate.empty()) {
-                ctx.add_definition(stmt.def_predicate, stmt.name, stmt.formula);
-            } else if (stmt.kind == ParsedStatement::Kind::Axiom) {
-                ctx.add_axiom(stmt.name, stmt.formula);
-            } else if (stmt.kind == ParsedStatement::Kind::Claim) {
-                ctx.add_claim(stmt.name, stmt.formula);
-            }
-
-            result.statements.push_back(std::move(stmt));
+            result.statements.push_back(process_axiom_claim_stmt(stmt_node, ctx));
         }
     }
 
