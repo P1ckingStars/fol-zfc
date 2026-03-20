@@ -108,8 +108,9 @@ public:
     const std::string& get_name() const { return name_; }
     size_t get_num_args() const { return num_args_; }
 
-    // Key for KeyedRegistry - predicates are keyed by name
-    std::string get_key() const { return name_; }
+    // Key for KeyedRegistry - predicates are keyed by name + arity.
+    // In standard FOL, P/1 and P/2 are different predicate symbols.
+    std::string get_key() const { return name_ + "/" + std::to_string(num_args_); }
 };
 
 struct PredicateHash {
