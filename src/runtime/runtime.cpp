@@ -305,6 +305,62 @@ static FormulaResult execute_rule(
     return MAKE_ERROR << "Unknown rule: " << rule;
 }
 
+// Execute a schema_inst proof step: resolve bindings and instantiate.
+FormulaResult Runtime::execute_schema_inst(
+        ProofContext& pctx,
+        const ParsedProofStep& step,
+        const std::unordered_map<std::string, Term>& fixed_vars,
+        const std::unordered_map<std::string, size_t>& schema_var_map) {
+    auto schema = ctx_.find_schema(step.rule_name);
+    if (!schema.has_value())
+        return MAKE_ERROR << "unknown schema: " << step.rule_name;
+    if (!ctx_.is_schema_proven(step.rule_name))
+        return MAKE_ERROR << "schema '" << step.rule_name << "' not yet proven";
+
+    // Resolve named bindings to positional vector
+    std::vector<SchemaBind> bindings(schema->var_names.size());
+    std::vector<bool> bound(schema->var_names.size(), false);
+    for (const auto& sb : step.schema_bindings) {
+        size_t idx = schema->var_names.size();
+        for (size_t j = 0; j < schema->var_names.size(); ++j) {
+            if (schema->var_names[j] == sb.var_name) { idx = j; break; }
+        }
+        if (idx >= schema->var_names.size())
+            return MAKE_ERROR << "unknown schema variable: " << sb.var_name;
+        if (bound[idx])
+            return MAKE_ERROR << "duplicate binding for: " << sb.var_name;
+
+        size_t arity = (schema->var_arities.size() > idx) ? schema->var_arities[idx] : 0;
+        if (arity == 0) {
+            bindings[idx] = SchemaBind(parse_formula_with_vars(
+                sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map));
+        } else {
+            if (sb.lambda_params.size() != arity)
+                return MAKE_ERROR << "schema var '" << sb.var_name
+                    << "' expects " << arity << " lambda params, got "
+                    << sb.lambda_params.size();
+            auto lambda_vars = fixed_vars;
+            std::vector<var_index> param_indices;
+            for (const auto& param : sb.lambda_params) {
+                var_index vi = pctx.builder().enter_scope();
+                lambda_vars[param] = Term::fixed(vi);
+                param_indices.push_back(vi);
+            }
+            auto body = parse_formula_with_vars(
+                sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, schema_var_map);
+            for (size_t k = 0; k < arity; ++k)
+                pctx.builder().exit_scope();
+            bindings[idx] = SchemaBind(std::move(param_indices), body);
+        }
+        bound[idx] = true;
+    }
+    for (size_t j = 0; j < bound.size(); ++j) {
+        if (!bound[j])
+            return MAKE_ERROR << "missing binding for: " << schema->var_names[j];
+    }
+    return pctx.schema_inst(*schema, bindings);
+}
+
 util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
     // Handle UNPROVED proofs: register claim/schema as unproved
     if (proof.unproved) {
@@ -418,67 +474,7 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
             }
 
             case ParsedProofStep::Kind::SchemaInst: {
-                auto schema = ctx_.find_schema(step.rule_name);
-                if (!schema.has_value()) {
-                    return MAKE_ERROR << step_desc << ": unknown schema: " << step.rule_name;
-                }
-                if (!ctx_.is_schema_proven(step.rule_name)) {
-                    return MAKE_ERROR << step_desc << ": schema '" << step.rule_name << "' not yet proven";
-                }
-
-                // Resolve named bindings to positional vector
-                std::vector<SchemaBind> bindings(schema->var_names.size());
-                std::vector<bool> bound(schema->var_names.size(), false);
-                for (const auto& sb : step.schema_bindings) {
-                    // Find the index for this var name
-                    size_t idx = schema->var_names.size();
-                    for (size_t j = 0; j < schema->var_names.size(); ++j) {
-                        if (schema->var_names[j] == sb.var_name) {
-                            idx = j;
-                            break;
-                        }
-                    }
-                    if (idx >= schema->var_names.size()) {
-                        return MAKE_ERROR << step_desc << ": unknown schema variable: " << sb.var_name;
-                    }
-                    if (bound[idx]) {
-                        return MAKE_ERROR << step_desc << ": duplicate binding for: " << sb.var_name;
-                    }
-                    size_t expected_arity = (schema->var_arities.size() > idx) ?
-                        schema->var_arities[idx] : 0;
-                    if (expected_arity == 0) {
-                        // Arity-0: parse as formula
-                        bindings[idx] = SchemaBind(parse_formula_with_vars(
-                            sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map));
-                    } else {
-                        // Arity-N: parse lambda params, then body with params as fixed vars
-                        if (sb.lambda_params.size() != expected_arity) {
-                            return MAKE_ERROR << step_desc << ": schema var '" << sb.var_name
-                                << "' expects " << expected_arity << " lambda params, got "
-                                << sb.lambda_params.size();
-                        }
-                        auto lambda_vars = fixed_vars;
-                        std::vector<var_index> param_indices;
-                        for (const auto& param : sb.lambda_params) {
-                            var_index vi = pctx.builder().enter_scope();
-                            lambda_vars[param] = Term::fixed(vi);
-                            param_indices.push_back(vi);
-                        }
-                        auto body = parse_formula_with_vars(
-                            sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, schema_var_map);
-                        for (size_t k = 0; k < expected_arity; ++k)
-                            pctx.builder().exit_scope();
-                        bindings[idx] = SchemaBind(std::move(param_indices), body);
-                    }
-                    bound[idx] = true;
-                }
-                for (size_t j = 0; j < bound.size(); ++j) {
-                    if (!bound[j]) {
-                        return MAKE_ERROR << step_desc << ": missing binding for: " << schema->var_names[j];
-                    }
-                }
-
-                auto result = pctx.schema_inst(*schema, bindings);
+                auto result = execute_schema_inst(pctx, step, fixed_vars, schema_var_map);
                 if (!result.ok()) {
                     return MAKE_ERROR << step_desc << " (schema_inst " << step.rule_name << "): "
                                       << result.error().to_string();

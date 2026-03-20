@@ -38,6 +38,16 @@ public:
     // Execute a parsed proof and verify it
     util::ResultStatus execute_proof(const ParsedProof& proof);
 
+private:
+    // Execute a schema_inst step (extracted from execute_proof)
+    FormulaResult execute_schema_inst(
+        ProofContext& pctx,
+        const ParsedProofStep& step,
+        const std::unordered_map<std::string, Term>& fixed_vars,
+        const std::unordered_map<std::string, size_t>& schema_var_map);
+
+public:
+
     // Execute all proofs from a ParseResult
     util::ResultStatus execute_all_proofs(const ParseResult& result);
 
