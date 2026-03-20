@@ -351,13 +351,22 @@ FormulaResult Runtime::execute_schema_inst(
                         binding_ar_map[schema->var_names[j]] = schema->var_arities[j];
                 }
             }
-            if (sb.lambda_params.size() != arity)
+            // Determine lambda params: explicit from parser, or auto-generated
+            auto lambda_param_names = sb.lambda_params;
+            if (lambda_param_names.empty()) {
+                // No explicit lambda — auto-wrap: the formula IS the predicate,
+                // applied to fresh params. E.g., schema expects P(1), binding is
+                // "elem" → treat as \x. elem(x).
+                for (size_t a = 0; a < arity; a++)
+                    lambda_param_names.push_back("_lam" + std::to_string(a));
+            }
+            if (lambda_param_names.size() != arity)
                 return MAKE_ERROR << "schema var '" << sb.var_name
                     << "' expects " << arity << " lambda params, got "
-                    << sb.lambda_params.size();
+                    << lambda_param_names.size();
             auto lambda_vars = fixed_vars;
             std::vector<var_index> param_indices;
-            for (const auto& param : sb.lambda_params) {
+            for (const auto& param : lambda_param_names) {
                 var_index vi = pctx.builder().enter_scope();
                 lambda_vars[param] = Term::fixed(vi);
                 param_indices.push_back(vi);
