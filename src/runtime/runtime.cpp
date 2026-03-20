@@ -332,10 +332,25 @@ FormulaResult Runtime::execute_schema_inst(
             return MAKE_ERROR << "duplicate binding for: " << sb.var_name;
 
         size_t arity = (schema->var_arities.size() > idx) ? schema->var_arities[idx] : 0;
+
         if (arity == 0) {
+            // Arity-0: parse as concrete formula. Don't inject target schema
+            // vars — binding value P should be a predicate, not a schema ref.
             bindings[idx] = SchemaBind(parse_formula_with_vars(
                 sb.formula_ast.get(), ctx_, pctx.builder(), fixed_vars, schema_var_map, schema_arity_map));
         } else {
+            // Arity-N: lambda body may reference OTHER schema vars from the
+            // target schema (e.g., \x. P(x) where P is a schema var).
+            // Merge target schema vars so they're recognized as SchemaVars.
+            auto binding_sv_map = schema_var_map;
+            auto binding_ar_map = schema_arity_map;
+            for (size_t j = 0; j < schema->var_names.size(); ++j) {
+                if (!binding_sv_map.count(schema->var_names[j])) {
+                    binding_sv_map[schema->var_names[j]] = j;
+                    if (j < schema->var_arities.size())
+                        binding_ar_map[schema->var_names[j]] = schema->var_arities[j];
+                }
+            }
             if (sb.lambda_params.size() != arity)
                 return MAKE_ERROR << "schema var '" << sb.var_name
                     << "' expects " << arity << " lambda params, got "
@@ -348,7 +363,7 @@ FormulaResult Runtime::execute_schema_inst(
                 param_indices.push_back(vi);
             }
             auto body = parse_formula_with_vars(
-                sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, schema_var_map, schema_arity_map);
+                sb.formula_ast.get(), ctx_, pctx.builder(), lambda_vars, binding_sv_map, binding_ar_map);
             for (size_t k = 0; k < arity; ++k)
                 pctx.builder().exit_scope();
             bindings[idx] = SchemaBind(std::move(param_indices), body);
