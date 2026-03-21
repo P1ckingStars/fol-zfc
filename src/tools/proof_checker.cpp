@@ -108,11 +108,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Execute all proofs
-    auto exec_result = rt.execute_all_proofs(proof_result);
-    if (!exec_result.ok()) {
-        std::cerr << "ERROR: " << exec_result.error().to_string() << "\n";
-        return 1;
+    // Execute all proofs (continue on error to get full results)
+    int proof_errors = 0;
+    for (const auto& proof : proof_result.proofs) {
+        auto status = rt.execute_proof(proof);
+        if (!status.ok()) {
+            proof_errors++;
+            // Only print first few errors to avoid flooding
+            if (proof_errors <= 10)
+                std::cerr << "WARNING: " << proof.claim_name << ": "
+                          << status.error().to_string() << "\n";
+            else if (proof_errors == 11)
+                std::cerr << "WARNING: ... more errors suppressed\n";
+        }
     }
 
     // Classify each NEW claim (from the main header, not deps)
