@@ -389,16 +389,18 @@ FormulaResult Runtime::execute_schema_inst(
 util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
     // Handle UNPROVED proofs: register claim/schema as unproved
     if (proof.unproved) {
+        // If this name is also a schema, mark it proven for schema_inst
+        if (ctx_.find_schema(proof.claim_name).has_value())
+            ctx_.mark_schema_proven(proof.claim_name);
+
         auto claim = ctx_.find_claim(proof.claim_name);
         if (!claim.has_value()) {
             claim = ctx_.find_known(proof.claim_name);
         }
         if (!claim.has_value()) {
-            // Check if it's a schema — schemas can also be UNPROVED (trusted)
-            if (ctx_.find_schema(proof.claim_name).has_value()) {
-                ctx_.mark_schema_proven(proof.claim_name);
+            // Schema-only (no claim): already handled above
+            if (ctx_.is_schema_proven(proof.claim_name))
                 return util::Ok();
-            }
             return MAKE_ERROR << "UNPROVED: unknown claim '" << proof.claim_name << "'";
         }
         ctx_.add_unproved_theorem(proof.claim_name, claim.value());
