@@ -111,13 +111,21 @@ int main(int argc, char* argv[]) {
     // Execute all proofs (continue on error to get full results)
     int proof_errors = 0;
     for (const auto& proof : proof_result.proofs) {
-        auto status = rt.execute_proof(proof);
-        if (!status.ok()) {
+        try {
+            auto status = rt.execute_proof(proof);
+            if (!status.ok()) {
+                proof_errors++;
+                if (proof_errors <= 10)
+                    std::cerr << "WARNING: " << proof.claim_name << ": "
+                              << status.error().to_string() << "\n";
+                else if (proof_errors == 11)
+                    std::cerr << "WARNING: ... more errors suppressed\n";
+            }
+        } catch (const std::exception& e) {
             proof_errors++;
-            // Only print first few errors to avoid flooding
             if (proof_errors <= 10)
-                std::cerr << "WARNING: " << proof.claim_name << ": "
-                          << status.error().to_string() << "\n";
+                std::cerr << "WARNING: " << proof.claim_name << ": exception: "
+                          << e.what() << "\n";
             else if (proof_errors == 11)
                 std::cerr << "WARNING: ... more errors suppressed\n";
         }
