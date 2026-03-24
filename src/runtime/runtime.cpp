@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "../library/library.h"
 
 #include <filesystem>
 #include <fstream>
@@ -48,7 +49,8 @@ util::Result<ParseResult> Runtime::load_file_with_proofs(const std::string& path
 }
 
 util::Result<ParseResult> Runtime::load_file_recursive(const std::string& path) {
-    std::unordered_set<std::string> loaded;
+    // Seed with paths from previously loaded libraries (#pragma once across boundaries)
+    std::unordered_set<std::string> loaded(loaded_paths_);
     std::filesystem::path abs_path = std::filesystem::absolute(path);
     std::string base_dir = abs_path.parent_path().string();
     return load_file_impl(abs_path.string(), base_dir, loaded);
@@ -733,5 +735,22 @@ util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
     completed_ = true;
     return util::Ok();
 }
+
+// ========== Library I/O ==========
+
+util::ResultStatus Runtime::load_library(const std::string& path) {
+    auto result = FolLibrary::load(ctx_, path);
+    if (!result.ok()) return result.error();
+
+    // Consume metadata
+    for (auto& [name, deps] : result.value().metadata.proof_deps) {
+        proof_deps_[name] = std::move(deps);
+    }
+    for (auto& p : result.value().metadata.source_files) {
+        loaded_paths_.insert(std::move(p));
+    }
+    return util::Ok();
+}
+
 
 }  // namespace logic

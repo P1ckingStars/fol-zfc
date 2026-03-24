@@ -153,6 +153,76 @@ std::string Formula::to_string() const {
     return formula_to_string_impl(*this, 0);
 }
 
+// ==================== Content Hash ====================
+
+namespace {
+
+// Combine hash values (boost-style)
+inline size_t hash_combine(size_t seed, size_t value) {
+    return seed ^ (value + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+}
+
+size_t term_content_hash(const Term& t) {
+    if (t.is_generalized()) {
+        return hash_combine(0, t.as_variable());
+    } else if (t.is_fixed()) {
+        return hash_combine(1, t.as_variable());
+    } else {
+        const auto& d = t.as_description();
+        size_t h = hash_combine(2, d.bound_var);
+        return hash_combine(h, d.body.get().content_hash());
+    }
+}
+
+size_t compute_content_hash(const Formula& f) {
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        size_t h = std::hash<std::string>{}(p.predicate().get().get_name());
+        h = hash_combine(h, p.predicate().get().get_num_args());
+        for (const auto& arg : p.args()) {
+            h = hash_combine(h, term_content_hash(arg));
+        }
+        return h;
+    }
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        size_t h = hash_combine(0x10, static_cast<size_t>(c.op));
+        if (c.left.valid()) h = hash_combine(h, c.left.get().content_hash());
+        if (c.right.valid()) h = hash_combine(h, c.right.get().content_hash());
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        size_t h = hash_combine(0x20, static_cast<size_t>(q.op));
+        h = hash_combine(h, q.var);
+        h = hash_combine(h, q.body.get().content_hash());
+        return h;
+    }
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        size_t h = hash_combine(0x30, sv.id);
+        for (const auto& arg : sv.args) {
+            h = hash_combine(h, term_content_hash(arg));
+        }
+        return h;
+    }
+    if (f.is_sentence()) {
+        return f.as_sentence().get().root().get().content_hash();
+    }
+    return 0;
+}
+
+}  // anonymous namespace
+
+size_t Formula::content_hash() const {
+    if (content_hash_ == 0) {
+        content_hash_ = compute_content_hash(*this);
+        // Avoid 0 as a cached value (it means "not computed")
+        if (content_hash_ == 0) content_hash_ = 1;
+    }
+    return content_hash_;
+}
+
 // ==================== Sentence ====================
 
 std::string Sentence::to_string() const {

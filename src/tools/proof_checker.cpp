@@ -1,3 +1,4 @@
+#include "../library/library.h"
 #include "../runtime/runtime.h"
 #include "src/util/profiler.h"
 
@@ -39,20 +40,30 @@ int main(int argc, char* argv[]) {
     Runtime rt;
 
     // Load dependency headers first (in order)
+    // Supports both .fol.def (text) and .fol.lib (compiled binary)
     for (const auto& dep_path : dep_header_paths) {
         PROFILE_SCOPE("load_dep_header");
-        auto result = rt.load_file_recursive(dep_path);
-        if (!result.ok()) {
-            std::cerr << "ERROR: Failed to load dependency " << dep_path << ": "
-                      << result.error().to_string() << "\n";
-            return 1;
-        }
-        // Execute any proofs from dependencies (they become available as theorems)
-        auto exec = rt.execute_all_proofs(result.value());
-        if (!exec.ok()) {
-            std::cerr << "ERROR: Failed to execute proofs in dependency " << dep_path << ": "
-                      << exec.error().to_string() << "\n";
-            return 1;
+        if (dep_path.size() >= 8 && dep_path.substr(dep_path.size() - 8) == ".fol.lib") {
+            auto status = rt.load_library(dep_path);
+            if (!status.ok()) {
+                std::cerr << "ERROR: Failed to load library " << dep_path << ": "
+                          << status.error().to_string() << "\n";
+                return 1;
+            }
+        } else {
+            auto result = rt.load_file_recursive(dep_path);
+            if (!result.ok()) {
+                std::cerr << "ERROR: Failed to load dependency " << dep_path << ": "
+                          << result.error().to_string() << "\n";
+                return 1;
+            }
+            // Execute any proofs from dependencies (they become available as theorems)
+            auto exec = rt.execute_all_proofs(result.value());
+            if (!exec.ok()) {
+                std::cerr << "ERROR: Failed to execute proofs in dependency " << dep_path << ": "
+                          << exec.error().to_string() << "\n";
+                return 1;
+            }
         }
     }
 

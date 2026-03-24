@@ -176,10 +176,12 @@ class Formula {
     friend class QuantifierBuilder;
     friend class DescriptionBuilder;
     friend class Sentence;
+    friend class FolLibrary;
 
     // next_gen_var_idx_ declared first for correct initialization order
     var_index next_gen_var_idx_;
     bool has_schema_vars_;
+    mutable size_t content_hash_ = 0;  // Lazy-computed structural hash, cached
     std::variant<PredicateInstance, Compound, Quantified, SentenceHandle, SchemaVar> data_;
 
     static var_index compute_compound_next_gen(const Compound& c) {
@@ -266,6 +268,10 @@ public:
 
     std::string to_string() const;
 
+    // Deterministic structural hash, computed lazily and cached.
+    // Used by FormulaHash for O(1) registry dedup instead of to_string().
+    size_t content_hash() const;
+
     friend std::ostream& operator<<(std::ostream& os, const Formula& f) {
         return os << f.to_string();
     }
@@ -273,7 +279,7 @@ public:
 
 struct FormulaHash {
     size_t operator()(const Formula& f) const {
-        return std::hash<std::string>{}(f.to_string());
+        return f.content_hash();
     }
 };
 
@@ -344,6 +350,8 @@ struct SchemaDefinition {
 };
 
 class GlobalContext {
+    friend class FolLibrary;
+
     FormulaRegistry formulas_;  // Single shared formula registry
     SentenceRegistry sentences_;
     PredicateRegistry predicates_;

@@ -19,6 +19,8 @@ class ProofContext;
 class Runtime {
     GlobalContext ctx_;
     std::unordered_map<std::string, std::unordered_set<std::string>> proof_deps_;
+    // Source files loaded from libraries (for #pragma once across lib/source boundaries)
+    std::unordered_set<std::string> loaded_paths_;
 
 public:
     Runtime() = default;
@@ -73,6 +75,9 @@ public:
     const std::unordered_map<std::string, std::unordered_set<std::string>>& proof_deps() const {
         return proof_deps_;
     }
+
+    // Load a compiled library (fast binary deserialization + link)
+    util::ResultStatus load_library(const std::string& path);
 
     // Create a proof context for proving a claim
     ProofContext prove(const std::string& claim_name);

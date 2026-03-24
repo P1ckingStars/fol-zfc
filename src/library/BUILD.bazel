@@ -1,15 +1,12 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 cc_library(
-    name = "runtime",
-    srcs = ["runtime.cpp"],
-    hdrs = ["runtime.h"],
+    name = "library",
+    srcs = ["library.cpp"],
+    hdrs = ["library.h"],
     visibility = ["//visibility:public"],
     deps = [
         "//src/core:formula",
-        "//src/core:proof",
-        "//src/library",
-        "//src/parser",
         "//src/util:error",
     ],
 )

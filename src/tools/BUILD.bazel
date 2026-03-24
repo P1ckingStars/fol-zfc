@@ -9,7 +9,18 @@ cc_binary(
     }),
     visibility = ["//visibility:public"],
     deps = [
+        "//src/library",
         "//src/runtime",
         "//src/util:profiler",
+    ],
+)
+
+cc_binary(
+    name = "fol_compiler",
+    srcs = ["fol_compiler.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/library",
+        "//src/runtime",
     ],
 )
