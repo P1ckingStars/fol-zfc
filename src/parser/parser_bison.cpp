@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "formula_ast.h"
+#include "src/util/profiler.h"
 
 // Generated headers
 #include "formula_parser.tab.h"
@@ -365,9 +366,11 @@ static ParsedStatement process_axiom_claim_stmt(const ASTNode* stmt_node, Global
     // Convert the formula body
     FormulaBuilder builder(ctx);
     ASTConverter converter(ctx, builder);
-    FormulaHandle root = converter.convert(stmt_node->body);
+    FormulaHandle root;
+    { PROFILE_SCOPE("ast_convert"); root = converter.convert(stmt_node->body); }
 
-    SentenceHandle sh = builder.build_sentence(root);
+    SentenceHandle sh;
+    { PROFILE_SCOPE("build_sentence"); sh = builder.build_sentence(root); }
     if (!sh.valid()) {
         throw std::runtime_error("Statement '" + stmt.name + "' formula has free variables");
     }
@@ -375,12 +378,14 @@ static ParsedStatement process_axiom_claim_stmt(const ASTNode* stmt_node, Global
     stmt.formula = sh;
 
     // Register statements in GlobalContext
+    { PROFILE_SCOPE("register_stmt");
     if (!stmt.def_predicate.empty()) {
         ctx.add_definition(stmt.def_predicate, stmt.name, stmt.formula);
     } else if (stmt.kind == ParsedStatement::Kind::Axiom) {
         ctx.add_axiom(stmt.name, stmt.formula);
     } else if (stmt.kind == ParsedStatement::Kind::Claim) {
         ctx.add_claim(stmt.name, stmt.formula);
+    }
     }
 
     return stmt;
@@ -510,19 +515,22 @@ static ParsedProof convert_proof_block(const ASTNode* proof_node) {
 }
 
 ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
-    ParseContext parse_ctx = run_parser(input);
+    ParseContext parse_ctx = ([&]() { PROFILE_SCOPE("parse_bison"); return run_parser(input); })();
 
     ParseResult result;
     for (const ASTNode* stmt_node : *parse_ctx.statements) {
         if (stmt_node->type == ASTNode::ProofBlock) {
+            PROFILE_SCOPE("convert_proof_block");
             result.proofs.push_back(convert_proof_block(stmt_node));
         } else if (stmt_node->type == ASTNode::SchemaStmt) {
+            PROFILE_SCOPE("process_schema");
             process_schema_stmt(stmt_node, ctx);
         } else if (stmt_node->type == ASTNode::IncludeStmt) {
             ParsedInclude inc;
             inc.path = stmt_node->name;
             result.includes.push_back(std::move(inc));
         } else {
+            PROFILE_SCOPE("process_axiom_claim");
             result.statements.push_back(process_axiom_claim_stmt(stmt_node, ctx));
         }
     }
