@@ -283,6 +283,9 @@ struct FormulaHash {
     }
 };
 
+// Alpha-equivalence: equal up to renaming of quantifier-bound variables.
+bool alpha_equiv(const Formula& a, const Formula& b);
+
 // Registry type aliases using the new handle-based registries
 // Note: Id parameter in KeyedRegistry is vestigial but kept for compatibility
 using FormulaRegistry = util::Registry<Formula, FormulaHash>;
@@ -537,6 +540,11 @@ public:
     FormulaHandle make_iff(FormulaHandle l, FormulaHandle r) { return add_formula(Formula(Compound{Op::Iff, l, r})); }
     FormulaHandle make_not(FormulaHandle f) { return add_formula(Formula(Compound{Op::Not, f, FormulaHandle{}})); }
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
+    // Build quantified formula with explicit var_index (for testing alpha-equivalence).
+    FormulaHandle make_quantified(Op op, var_index var, FormulaHandle body) {
+        return add_formula(Formula(Quantified{op, var, body}));
+    }
+
     FormulaHandle make_schema_var(size_t id, std::vector<Term> args = {}) {
         for (const auto& t : args) {
             if (!t.is_description()) use_var(t.as_variable());

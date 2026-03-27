@@ -714,9 +714,9 @@ util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
         return MAKE_ERROR << "qed: formula not derived: " << derived.get().to_string();
     }
 
-    // Check that derived matches goal (by string comparison)
+    // Check that derived matches goal (up to alpha-equivalence of bound vars)
     if (goal_formula_.valid()) {
-        if (derived.get().to_string() != goal_formula_.get().to_string()) {
+        if (!alpha_equiv(derived.get(), goal_formula_.get())) {
             return MAKE_ERROR << "Derived formula doesn't match goal\n"
                               << "  Expected: " << goal_formula_.get().to_string() << "\n"
                               << "  Got: " << derived.get().to_string();

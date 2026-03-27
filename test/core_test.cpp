@@ -588,6 +588,157 @@ bool test_parse_ordered_pair_proof() {
     }
 }
 
+// ==================== Alpha-Equivalence Tests ====================
+
+// Helper: build forall/exists with explicit var_index.
+static FormulaHandle make_quant(FormulaBuilder& b, Op op, var_index var, FormulaHandle body) {
+    return b.make_quantified(op, var, body);
+}
+
+bool test_alpha_identical() {
+    // forall x_0. P(x_0)  ==  forall x_0. P(x_0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto f = make_quant(b, Op::Forall, 0, b.predicate(P, {Term::generalized(0)}));
+    return alpha_equiv(f.get(), f.get());
+}
+
+bool test_alpha_renamed_bound_var() {
+    // forall x_0. P(x_0)  ==  forall x_5. P(x_5)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto f1 = make_quant(b, Op::Forall, 0, b.predicate(P, {Term::generalized(0)}));
+    auto f2 = make_quant(b, Op::Forall, 5, b.predicate(P, {Term::generalized(5)}));
+    return alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_forall_vs_exists() {
+    // forall x_0. P(x_0)  !=  exists x_0. P(x_0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto f1 = make_quant(b, Op::Forall, 0, b.predicate(P, {Term::generalized(0)}));
+    auto f2 = make_quant(b, Op::Exists, 0, b.predicate(P, {Term::generalized(0)}));
+    return !alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_nested_renamed() {
+    // forall x_0. exists x_1. R(x_0, x_1)  ==  forall x_3. exists x_7. R(x_3, x_7)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto f1 = make_quant(b, Op::Forall, 0,
+        make_quant(b, Op::Exists, 1, b.predicate(R, {Term::generalized(0), Term::generalized(1)})));
+    auto f2 = make_quant(b, Op::Forall, 3,
+        make_quant(b, Op::Exists, 7, b.predicate(R, {Term::generalized(3), Term::generalized(7)})));
+    return alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_swapped_args_not_equiv() {
+    // forall x_0. exists x_1. R(x_0, x_1)  !=  forall x_0. exists x_1. R(x_1, x_0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto f1 = make_quant(b, Op::Forall, 0,
+        make_quant(b, Op::Exists, 1, b.predicate(R, {Term::generalized(0), Term::generalized(1)})));
+    auto f2 = make_quant(b, Op::Forall, 0,
+        make_quant(b, Op::Exists, 1, b.predicate(R, {Term::generalized(1), Term::generalized(0)})));
+    return !alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_swapped_quantifiers_not_equiv() {
+    // forall x_0. exists x_1. R(x_0, x_1)  !=  exists x_0. forall x_1. R(x_0, x_1)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto body = b.predicate(R, {Term::generalized(0), Term::generalized(1)});
+    auto f1 = make_quant(b, Op::Forall, 0, make_quant(b, Op::Exists, 1, body));
+    auto f2 = make_quant(b, Op::Exists, 0, make_quant(b, Op::Forall, 1, body));
+    return !alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_shadowing() {
+    // forall x_0. (P(x_0) & exists x_0. Q(x_0))
+    //   ==
+    // forall x_1. (P(x_1) & exists x_2. Q(x_2))
+    //
+    // Inner x_0 shadows outer x_0 in the left formula.
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = make_quant(b, Op::Forall, 0,
+        b.make_and(
+            b.predicate(P, {Term::generalized(0)}),
+            make_quant(b, Op::Exists, 0, b.predicate(Q, {Term::generalized(0)}))));
+    auto f2 = make_quant(b, Op::Forall, 1,
+        b.make_and(
+            b.predicate(P, {Term::generalized(1)}),
+            make_quant(b, Op::Exists, 2, b.predicate(Q, {Term::generalized(2)}))));
+    return alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_shadowing_not_equiv() {
+    // forall x_0. (P(x_0) & exists x_0. Q(x_0))
+    //   !=
+    // forall x_1. (P(x_1) & exists x_2. Q(x_1))   ← inner Q uses outer var
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = make_quant(b, Op::Forall, 0,
+        b.make_and(
+            b.predicate(P, {Term::generalized(0)}),
+            make_quant(b, Op::Exists, 0, b.predicate(Q, {Term::generalized(0)}))));
+    auto f2 = make_quant(b, Op::Forall, 1,
+        b.make_and(
+            b.predicate(P, {Term::generalized(1)}),
+            make_quant(b, Op::Exists, 2, b.predicate(Q, {Term::generalized(1)}))));
+    return !alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_fixed_vars_must_match() {
+    // forall x_0. R(x_0, f_3)  ==  forall x_5. R(x_5, f_3)   (same fixed var)
+    // forall x_0. R(x_0, f_3)  !=  forall x_5. R(x_5, f_4)   (different fixed var)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto f1 = make_quant(b, Op::Forall, 0, b.predicate(R, {Term::generalized(0), Term::fixed(3)}));
+    auto f2 = make_quant(b, Op::Forall, 5, b.predicate(R, {Term::generalized(5), Term::fixed(3)}));
+    auto f3 = make_quant(b, Op::Forall, 5, b.predicate(R, {Term::generalized(5), Term::fixed(4)}));
+    return alpha_equiv(f1.get(), f2.get()) && !alpha_equiv(f1.get(), f3.get());
+}
+
+bool test_alpha_different_predicate() {
+    // forall x_0. P(x_0)  !=  forall x_0. Q(x_0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = make_quant(b, Op::Forall, 0, b.predicate(P, {Term::generalized(0)}));
+    auto f2 = make_quant(b, Op::Forall, 0, b.predicate(Q, {Term::generalized(0)}));
+    return !alpha_equiv(f1.get(), f2.get());
+}
+
+bool test_alpha_compound() {
+    // (forall x_0. P(x_0)) -> (exists x_1. Q(x_1))
+    //   ==
+    // (forall x_9. P(x_9)) -> (exists x_8. Q(x_8))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = b.make_implies(
+        make_quant(b, Op::Forall, 0, b.predicate(P, {Term::generalized(0)})),
+        make_quant(b, Op::Exists, 1, b.predicate(Q, {Term::generalized(1)})));
+    auto f2 = b.make_implies(
+        make_quant(b, Op::Forall, 9, b.predicate(P, {Term::generalized(9)})),
+        make_quant(b, Op::Exists, 8, b.predicate(Q, {Term::generalized(8)})));
+    return alpha_equiv(f1.get(), f2.get());
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -634,6 +785,20 @@ int main() {
     run_test("Capture avoidance: lambda param vs quantifier var", test_capture_avoidance);
     run_test("Instantiate arity-1 with complex body", test_instantiate_complex_body);
     run_test("Lambda param unused in body", test_lambda_param_unused);
+
+    // Alpha-equivalence tests
+    std::cout << "\n── Alpha-Equivalence Tests ──\n";
+    run_test("Identical formulas", test_alpha_identical);
+    run_test("Renamed bound variable", test_alpha_renamed_bound_var);
+    run_test("Forall != exists", test_alpha_forall_vs_exists);
+    run_test("Nested renamed", test_alpha_nested_renamed);
+    run_test("Swapped args != equiv", test_alpha_swapped_args_not_equiv);
+    run_test("Swapped quantifiers != equiv", test_alpha_swapped_quantifiers_not_equiv);
+    run_test("Shadowing equiv", test_alpha_shadowing);
+    run_test("Shadowing not equiv", test_alpha_shadowing_not_equiv);
+    run_test("Fixed vars must match", test_alpha_fixed_vars_must_match);
+    run_test("Different predicate != equiv", test_alpha_different_predicate);
+    run_test("Compound with renamed vars", test_alpha_compound);
 
     // ZFC axioms test
     std::cout << "\n── ZFC Axioms Test ──\n";

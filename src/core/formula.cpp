@@ -223,6 +223,97 @@ size_t Formula::content_hash() const {
     return content_hash_;
 }
 
+// ==================== Alpha-Equivalence ====================
+
+namespace {
+
+struct AlphaCtx {
+    std::unordered_map<var_index, size_t> lhs, rhs;
+    size_t next_id = 0;
+};
+
+// RAII: binds two quantifier variables to the same canonical id,
+// restores previous bindings on destruction (handles shadowing).
+struct ScopedBind {
+    AlphaCtx& ctx;
+    var_index l, r;
+    std::optional<size_t> prev_l, prev_r;
+
+    ScopedBind(AlphaCtx& c, var_index l, var_index r) : ctx(c), l(l), r(r) {
+        auto li = ctx.lhs.find(l), ri = ctx.rhs.find(r);
+        prev_l = li != ctx.lhs.end() ? std::optional(li->second) : std::nullopt;
+        prev_r = ri != ctx.rhs.end() ? std::optional(ri->second) : std::nullopt;
+        size_t id = ctx.next_id++;
+        ctx.lhs[l] = id;
+        ctx.rhs[r] = id;
+    }
+    ~ScopedBind() {
+        if (prev_l) ctx.lhs[l] = *prev_l; else ctx.lhs.erase(l);
+        if (prev_r) ctx.rhs[r] = *prev_r; else ctx.rhs.erase(r);
+    }
+};
+
+bool formula_eq(const Formula& a, const Formula& b, AlphaCtx& ctx);
+
+bool term_eq(const Term& a, const Term& b, AlphaCtx& ctx) {
+    if (a.is_generalized() && b.is_generalized()) {
+        auto ai = ctx.lhs.find(a.as_variable()), bi = ctx.rhs.find(b.as_variable());
+        bool ab = ai != ctx.lhs.end(), bb = bi != ctx.rhs.end();
+        if (ab && bb) return ai->second == bi->second;
+        return !ab && !bb && a.as_variable() == b.as_variable();
+    }
+    if (a.is_fixed() && b.is_fixed())
+        return a.as_variable() == b.as_variable();
+    if (a.is_description() && b.is_description()) {
+        ScopedBind bind(ctx, a.as_description().bound_var, b.as_description().bound_var);
+        return formula_eq(a.as_description().body.get(), b.as_description().body.get(), ctx);
+    }
+    return false;
+}
+
+bool terms_eq(const std::vector<Term>& a, const std::vector<Term>& b, AlphaCtx& ctx) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i)
+        if (!term_eq(a[i], b[i], ctx)) return false;
+    return true;
+}
+
+bool formula_eq(const Formula& a, const Formula& b, AlphaCtx& ctx) {
+    if (a.is_predicate() && b.is_predicate()) {
+        const auto &pa = a.as_predicate(), &pb = b.as_predicate();
+        return pa.predicate() == pb.predicate() && terms_eq(pa.args(), pb.args(), ctx);
+    }
+    if (a.is_compound() && b.is_compound()) {
+        const auto &ca = a.as_compound(), &cb = b.as_compound();
+        return ca.op == cb.op
+            && ca.left.valid() == cb.left.valid() && ca.right.valid() == cb.right.valid()
+            && (!ca.left.valid() || formula_eq(ca.left.get(), cb.left.get(), ctx))
+            && (!ca.right.valid() || formula_eq(ca.right.get(), cb.right.get(), ctx));
+    }
+    if (a.is_quantified() && b.is_quantified()) {
+        const auto &qa = a.as_quantified(), &qb = b.as_quantified();
+        if (qa.op != qb.op) return false;
+        ScopedBind bind(ctx, qa.var, qb.var);
+        return formula_eq(qa.body.get(), qb.body.get(), ctx);
+    }
+    if (a.is_sentence() && b.is_sentence())
+        return formula_eq(a.as_sentence().get().root().get(),
+                          b.as_sentence().get().root().get(), ctx);
+    if (a.is_schema_var() && b.is_schema_var()) {
+        const auto &sa = a.as_schema_var(), &sb = b.as_schema_var();
+        return sa.id == sb.id && terms_eq(sa.args, sb.args, ctx);
+    }
+    return false;
+}
+
+}  // namespace
+
+bool alpha_equiv(const Formula& a, const Formula& b) {
+    if (&a == &b || a == b) return true;
+    AlphaCtx ctx;
+    return formula_eq(a, b, ctx);
+}
+
 // ==================== Sentence ====================
 
 std::string Sentence::to_string() const {
