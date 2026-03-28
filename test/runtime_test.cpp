@@ -1567,6 +1567,127 @@ bool test_predicate_schema_backward_compat() {
     return true;
 }
 
+// ==================== Schema Capture Avoidance Tests ====================
+
+bool test_predicate_schema_capture_avoidance() {
+    // When a lambda binding body contains quantifiers, the lambda param
+    // substitution must not let inner quantifiers capture the schema arg.
+    //
+    // Schema: forall a. (forall x. P(x)) -> P(a)
+    // Binding: P: \x. forall y. R(x, y)
+    // Expected: forall a. (forall x. forall y. R(x, y)) -> forall y. R(a, y)
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim correct: forall a. (forall x. forall y. R(x, y)) -> forall y. R(a, y)
+
+        proof correct:
+            h = schema_inst allE { P: \x. forall y. R(x, y) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[capture avoidance works] ";
+    return true;
+}
+
+bool test_predicate_schema_capture_nested() {
+    // Lambda body with nested quantifiers: \x. forall y. forall z. S(x, y, z)
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim nested: forall a. (forall x. forall y. forall z. S(x, y, z)) -> forall y. forall z. S(a, y, z)
+
+        proof nested:
+            h = schema_inst allE { P: \x. forall y. forall z. S(x, y, z) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[nested capture avoidance works] ";
+    return true;
+}
+
+bool test_predicate_schema_capture_with_forall_intro() {
+    // Schema inst result wrapped in forall_intro — tests that subsequent
+    // generalization doesn't collide with renamed internal indices.
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim wrapped: forall w. forall a. (forall x. forall y. R(x, y)) -> forall y. R(a, y)
+
+        proof wrapped:
+            fix w
+            h = schema_inst allE { P: \x. forall y. R(x, y) }
+            h1 = forall_intro h
+            qed h1
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[capture + forall_intro works] ";
+    return true;
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -1636,6 +1757,12 @@ int main() {
     run_test("Predicate schema mixed arity", test_predicate_schema_mixed_arity);
     run_test("Predicate schema to_string", test_predicate_schema_to_string);
     run_test("Predicate schema backward compat", test_predicate_schema_backward_compat);
+
+    // Schema capture avoidance tests
+    std::cout << "\n── Schema Capture Avoidance Tests ──\n";
+    run_test("Capture avoidance arity-N", test_predicate_schema_capture_avoidance);
+    run_test("Capture avoidance nested", test_predicate_schema_capture_nested);
+    run_test("Capture avoidance + forall_intro", test_predicate_schema_capture_with_forall_intro);
 
     // Integration test
     std::cout << "\n── Integration Test ──\n";

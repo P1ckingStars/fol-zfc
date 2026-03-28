@@ -558,6 +558,36 @@ public:
         return s.get().root();
     }
 
+    // Compute the true maximum generalized var index + 1 in a formula subtree.
+    // Unlike next_gen_var_idx_ (which skips gen vars in predicate args by design),
+    // this counts ALL generalized vars. Used for capture-safe alpha-renaming.
+    static var_index true_next_gen_var(FormulaHandle h) {
+        const Formula& f = h.get();
+        var_index m = 0;
+
+        auto check_term = [&](const Term& t) {
+            if (t.is_generalized()) m = std::max(m, t.as_variable() + 1);
+            if (t.is_description()) {
+                m = std::max(m, t.as_description().bound_var + 1);
+                m = std::max(m, true_next_gen_var(t.as_description().body));
+            }
+        };
+
+        if (f.is_predicate()) {
+            for (const auto& t : f.as_predicate().args()) check_term(t);
+        } else if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            if (c.left.valid()) m = std::max(m, true_next_gen_var(c.left));
+            if (c.right.valid()) m = std::max(m, true_next_gen_var(c.right));
+        } else if (f.is_quantified()) {
+            m = std::max(m, f.as_quantified().var + 1);
+            m = std::max(m, true_next_gen_var(f.as_quantified().body));
+        } else if (f.is_schema_var()) {
+            for (const auto& t : f.as_schema_var().args) check_term(t);
+        }
+        return m;
+    }
+
     // Translate within a term: handles DescriptionTag recursion with capture avoidance
     Term translate_in_term(const Term& t, const Term& old_term, const Term& new_term) {
         if (t == old_term) return new_term;
@@ -567,6 +597,17 @@ public:
         // skip — k is locally bound here, not free. Fixed-var substitutions never need
         // this guard because FixedVarTag and GeneralizedVarTag are distinct types.
         if (old_term.is_generalized() && old_term.as_variable() == d.bound_var) return t;
+        // Capture avoidance for new_term: if substituting IN generalized(k) and this
+        // description binds k, alpha-rename the description to a fresh index first.
+        if (new_term.is_generalized() && new_term.as_variable() == d.bound_var) {
+            // true_next_gen_var(d.body) >= bound_var + 1 for non-vacuous descriptions
+            // (Gen(bound_var) appears in body). The max with bound_var + 1 guards against
+            // vacuous descriptions where the bound var doesn't appear in the body,
+            // which would make fresh == bound_var and cause infinite recursion.
+            var_index fresh = std::max(true_next_gen_var(d.body), d.bound_var + 1);
+            FormulaHandle renamed_body = translate_term(d.body, Term::generalized(d.bound_var), Term::generalized(fresh));
+            return translate_in_term(Term::description(fresh, renamed_body), old_term, new_term);
+        }
         FormulaHandle new_body = translate_term(d.body, old_term, new_term);
         if (new_body != d.body) return Term::description(d.bound_var, new_body);
         return t;
@@ -620,6 +661,14 @@ public:
             // binds k, skip — k is locally bound here. This matters when description
             // bodies contain quantifiers that reuse the same generalized index.
             if (old_term.is_generalized() && old_term.as_variable() == q.var) return h;
+            // Capture avoidance for new_term: if substituting IN generalized(k) and this
+            // quantifier binds k, alpha-rename the quantifier to a fresh index first.
+            if (new_term.is_generalized() && new_term.as_variable() == q.var) {
+                var_index fresh = true_next_gen_var(h);
+                FormulaHandle renamed_body = translate_term(q.body, Term::generalized(q.var), Term::generalized(fresh));
+                FormulaHandle renamed = add_formula(Formula(Quantified{q.op, fresh, renamed_body}));
+                return translate_term(renamed, old_term, new_term);
+            }
             FormulaHandle new_body = translate_term(q.body, old_term, new_term);
             if (new_body != q.body) {
                 return add_formula(Formula(Quantified{q.op, q.var, new_body}));
