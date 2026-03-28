@@ -361,7 +361,9 @@ FormulaResult ProofStack::implies_elim(FormulaHandle const &implication, Formula
         return MAKE_ERROR << "implies_elim: expected Implies, got: " << f;
     }
     if (c.left != antecedent) {
-        return MAKE_ERROR << "implies_elim: antecedent doesn't match implication's left side";
+        return MAKE_ERROR << "implies_elim: antecedent doesn't match implication's left side"
+            << "\n  impl.left: " << c.left.get()
+            << "\n  antecedent: " << antecedent.get();
     }
 
     derive_with_deps(c.right, deps_of(implication) | deps_of(antecedent));
@@ -548,8 +550,8 @@ FormulaResult ProofStack::forall_elim(FormulaHandle const &formula, Term const& 
     if (!is_term_accessible(var)) {
         return MAKE_ERROR << "forall_elim: term is not accessible in current scope";
     }
-    auto generalized_term = formula->as_quantified().get_var_term();
-    auto f = formula_builder_.translate_term(formula->as_quantified().body, generalized_term, var);
+    // De Bruijn: instantiate Gen(0) with the provided term, shift remaining down
+    auto f = formula_builder_.instantiate_gen(formula->as_quantified().body, var);
     // compute_var_deps(f) automatically picks up var's scope
     derive_with_deps(f, deps_of(formula));
     return f;
@@ -608,12 +610,12 @@ FormulaResult ProofStack::exists_elim(FormulaHandle const &formula) {
     if (!(formula->is_quantified() && formula->as_quantified().op == Op::Exists)) {
         return MAKE_ERROR << "exists_elim: formula op is not a exists quantifier";
     }
-    auto generalized_term = formula->as_quantified().get_var_term();
     int bit = scopes.size();
     scopes.push_back(FixVarScope(formula_builder_, Op::Exists, bit));
     Term var = std::get<FixVarScope>(scopes.back()).var_term();
     last_witness_var_ = var;
-    auto f = formula_builder_.translate_term(formula->as_quantified().body, generalized_term, var);
+    // De Bruijn: instantiate Gen(0) with the fresh witness var
+    auto f = formula_builder_.instantiate_gen(formula->as_quantified().body, var);
 
     // compute_var_deps(f) will pick up the witness var's scope automatically
     derive_with_deps(f, deps_of(formula));
@@ -778,8 +780,10 @@ FormulaResult ClassicalProofStack::iota_elim(FormulaHandle const &exists_formula
     if (!description_body_accessible(q.body)) {
         return MAKE_ERROR << "iota_elim: existential body contains fixed variables from closed scopes";
     }
-    Term iota_term = Term::description(q.var, q.body);
-    auto result = formula_builder_.translate_term(q.body, q.get_var_term(), iota_term);
+    // De Bruijn: description body is q.body with Gen(0) = described var
+    Term iota_term = Term::description(q.body);
+    // Instantiate Gen(0) in body with the iota term, shift remaining down
+    auto result = formula_builder_.instantiate_gen(q.body, iota_term);
     last_iota_term_ = iota_term;
     derive_with_deps(result, deps_of(exists_formula));
     return result;

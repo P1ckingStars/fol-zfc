@@ -716,7 +716,8 @@ util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
 
     // Check that derived matches goal (up to alpha-equivalence of bound vars)
     if (goal_formula_.valid()) {
-        if (!alpha_equiv(derived.get(), goal_formula_.get())) {
+        // De Bruijn: structural equality = alpha-equivalence
+        if (derived != goal_formula_) {
             return MAKE_ERROR << "Derived formula doesn't match goal\n"
                               << "  Expected: " << goal_formula_.get().to_string() << "\n"
                               << "  Got: " << derived.get().to_string();

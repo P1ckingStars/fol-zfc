@@ -62,8 +62,8 @@ struct GeneralizedVarTag { var_index idx; bool operator==(const GeneralizedVarTa
 
 // Definite description: ιx.φ(x) — "the x such that φ(x)"
 // A term-forming operator that produces a term from a formula.
+// De Bruijn: Gen(0) in body is the described variable. No explicit bound_var needed.
 struct DescriptionTag {
-    var_index bound_var;
     FormulaHandle body;
     bool operator==(const DescriptionTag&) const = default;
 };
@@ -74,8 +74,8 @@ struct Term {
 
     static Term generalized(var_index idx) { return Term{GeneralizedVarTag{idx}}; }
     static Term fixed(var_index idx) { return Term{FixedVarTag{idx}}; }
-    static Term description(var_index bound_var, FormulaHandle body) {
-        return Term{DescriptionTag{bound_var, body}};
+    static Term description(FormulaHandle body) {
+        return Term{DescriptionTag{body}};
     }
 
     bool is_generalized() const { return std::holds_alternative<GeneralizedVarTag>(data); }
@@ -149,15 +149,13 @@ struct Compound {
 };
 
 // Quantified formula: ∀x.φ or ∃x.φ
-// Binds variable at index `var` in the body formula
+// De Bruijn: Gen(0) in body is the bound variable. No explicit var field needed.
 struct Quantified {
     Op op;  // Forall or Exists
-    var_index var;  // The variable index being bound
     FormulaHandle body;
 
-    Term get_var_term() const { return Term::generalized(var); }
     bool operator==(const Quantified& other) const {
-        return op == other.op && var == other.var && body == other.body;
+        return op == other.op && body == other.body;
     }
 };
 
@@ -178,32 +176,32 @@ class Formula {
     friend class Sentence;
     friend class FolLibrary;
 
-    // next_gen_var_idx_ declared first for correct initialization order
-    var_index next_gen_var_idx_;
+    // max_free_debruijn_: max De Bruijn index + 1 among free Gen vars in subtree.
+    // 0 means no free Gen vars (closed wrt generalized variables).
+    var_index max_free_debruijn_;
     bool has_schema_vars_;
     mutable size_t content_hash_ = 0;  // Lazy-computed structural hash, cached
     std::variant<PredicateInstance, Compound, Quantified, SentenceHandle, SchemaVar> data_;
 
-    static var_index compute_compound_next_gen(const Compound& c) {
-        var_index left_idx = c.left.valid() ? c.left.get().next_gen_var_idx_ : 0;
-        var_index right_idx = c.right.valid() ? c.right.get().next_gen_var_idx_ : 0;
-        return std::max(left_idx, right_idx);
+    // Decrement De Bruijn depth by 1, clamping at 0 (binder absorbs one free level)
+    static var_index dec_free(var_index x) { return x > 0 ? x - 1 : 0; }
+
+    static var_index compute_compound_max_free(const Compound& c) {
+        var_index l = c.left.valid() ? c.left.get().max_free_debruijn_ : 0;
+        var_index r = c.right.valid() ? c.right.get().max_free_debruijn_ : 0;
+        return std::max(l, r);
     }
 
-    // Compute next_gen_var_idx_ for predicates containing DescriptionTag args
-    // Only descriptions need handling: they bind variables without a wrapping Quantified node.
-    // Generalized vars in predicate args are always inside a Quantified that already
-    // increments next_gen_var_idx_, so they don't need to be counted here.
-    static var_index compute_pred_next_gen(const PredicateInstance& p) {
-        var_index max_idx = 0;
+    // Compute max free De Bruijn index for predicates.
+    // Counts ALL Gen vars in args (unlike old compute_pred_next_gen which skipped them).
+    // Description args bind one variable, so their contribution is dec_free(body.max_free).
+    static var_index compute_pred_max_free(const PredicateInstance& p) {
+        var_index m = 0;
         for (const auto& t : p.args()) {
-            if (t.is_description()) {
-                const auto& d = t.as_description();
-                var_index body_idx = d.body.get().next_gen_var_idx_;
-                max_idx = std::max(max_idx, std::max(body_idx, d.bound_var + 1));
-            }
+            if (t.is_generalized()) m = std::max(m, t.as_variable() + 1);
+            if (t.is_description()) m = std::max(m, dec_free(t.as_description().body.get().max_free_debruijn_));
         }
-        return max_idx;
+        return m;
     }
 
     static bool compute_pred_has_schema_vars(const PredicateInstance& p) {
@@ -214,33 +212,32 @@ class Formula {
         return false;
     }
 
+    static var_index compute_schema_var_max_free(const SchemaVar& sv) {
+        var_index m = 0;
+        for (const auto& t : sv.args) {
+            if (t.is_generalized()) m = std::max(m, t.as_variable() + 1);
+            if (t.is_description()) m = std::max(m, dec_free(t.as_description().body.get().max_free_debruijn_));
+        }
+        return m;
+    }
+
     explicit Formula(PredicateInstance p) :
-        next_gen_var_idx_(compute_pred_next_gen(p)),
+        max_free_debruijn_(compute_pred_max_free(p)),
         has_schema_vars_(compute_pred_has_schema_vars(p)),
         data_(std::move(p)) {}
     explicit Formula(Compound c) :
-        next_gen_var_idx_(compute_compound_next_gen(c)),
+        max_free_debruijn_(compute_compound_max_free(c)),
         has_schema_vars_((c.left.valid() && c.left.get().has_schema_vars_) ||
                          (c.right.valid() && c.right.get().has_schema_vars_)),
         data_(std::move(c)) {}
     explicit Formula(Quantified q) :
-        next_gen_var_idx_(q.body.get().next_gen_var_idx_ + 1),
+        max_free_debruijn_(dec_free(q.body.get().max_free_debruijn_)),
         has_schema_vars_(q.body.get().has_schema_vars_),
         data_(std::move(q)) {}
     explicit Formula(SentenceHandle s);
-    static var_index compute_schema_var_next_gen(const SchemaVar& sv) {
-        var_index max_idx = 0;
-        for (const auto& t : sv.args) {
-            if (t.is_description()) {
-                const auto& d = t.as_description();
-                max_idx = std::max(max_idx, std::max(d.body.get().next_gen_var_idx_, d.bound_var + 1));
-            }
-        }
-        return max_idx;
-    }
 
     explicit Formula(SchemaVar sv) :
-        next_gen_var_idx_(compute_schema_var_next_gen(sv)),
+        max_free_debruijn_(compute_schema_var_max_free(sv)),
         has_schema_vars_(true),
         data_(std::move(sv)) {}
 
@@ -261,10 +258,8 @@ public:
     SentenceHandle as_sentence() const { return std::get<SentenceHandle>(data_); }
     const SchemaVar& as_schema_var() const { return std::get<SchemaVar>(data_); }
     bool has_schema_vars() const { return has_schema_vars_; }
-    
-    var_index get_next_gen_var_idx() {
-        return next_gen_var_idx_;
-    }
+
+    var_index max_free_debruijn() const { return max_free_debruijn_; }
 
     std::string to_string() const;
 
@@ -282,9 +277,6 @@ struct FormulaHash {
         return f.content_hash();
     }
 };
-
-// Alpha-equivalence: equal up to renaming of quantifier-bound variables.
-bool alpha_equiv(const Formula& a, const Formula& b);
 
 // Registry type aliases using the new handle-based registries
 // Note: Id parameter in KeyedRegistry is vestigial but kept for compatibility
@@ -540,9 +532,9 @@ public:
     FormulaHandle make_iff(FormulaHandle l, FormulaHandle r) { return add_formula(Formula(Compound{Op::Iff, l, r})); }
     FormulaHandle make_not(FormulaHandle f) { return add_formula(Formula(Compound{Op::Not, f, FormulaHandle{}})); }
     FormulaHandle make_bottom() { return add_formula(Formula(Compound{Op::Bottom, FormulaHandle{}, FormulaHandle{}})); }
-    // Build quantified formula with explicit var_index (for testing alpha-equivalence).
-    FormulaHandle make_quantified(Op op, var_index var, FormulaHandle body) {
-        return add_formula(Formula(Quantified{op, var, body}));
+    // Build quantified formula with De Bruijn body (Gen(0) = bound var).
+    FormulaHandle make_quantified(Op op, FormulaHandle body) {
+        return add_formula(Formula(Quantified{op, body}));
     }
 
     FormulaHandle make_schema_var(size_t id, std::vector<Term> args = {}) {
@@ -554,67 +546,282 @@ public:
 
     // Add a sentence's root formula to the builder (for using theorems in proofs)
     FormulaHandle add_sentence(SentenceHandle s) {
-        // Just return the sentence's root - it's already in the global registry
         return s.get().root();
     }
 
-    // Compute the true maximum generalized var index + 1 in a formula subtree.
-    // Unlike next_gen_var_idx_ (which skips gen vars in predicate args by design),
-    // this counts ALL generalized vars. Used for capture-safe alpha-renaming.
-    static var_index true_next_gen_var(FormulaHandle h) {
-        const Formula& f = h.get();
-        var_index m = 0;
+    // ========== De Bruijn Operations ==========
 
-        auto check_term = [&](const Term& t) {
-            if (t.is_generalized()) m = std::max(m, t.as_variable() + 1);
-            if (t.is_description()) {
-                m = std::max(m, t.as_description().bound_var + 1);
-                m = std::max(m, true_next_gen_var(t.as_description().body));
-            }
-        };
-
-        if (f.is_predicate()) {
-            for (const auto& t : f.as_predicate().args()) check_term(t);
-        } else if (f.is_compound()) {
-            const auto& c = f.as_compound();
-            if (c.left.valid()) m = std::max(m, true_next_gen_var(c.left));
-            if (c.right.valid()) m = std::max(m, true_next_gen_var(c.right));
-        } else if (f.is_quantified()) {
-            m = std::max(m, f.as_quantified().var + 1);
-            m = std::max(m, true_next_gen_var(f.as_quantified().body));
-        } else if (f.is_schema_var()) {
-            for (const auto& t : f.as_schema_var().args) check_term(t);
+    // Shift free De Bruijn indices in a term. Gen(k) → Gen(k+delta) if k >= cutoff.
+    // Description bodies are binders: recurse with cutoff+1.
+    Term shift_term(const Term& t, int cutoff, int delta) {
+        if (t.is_generalized()) {
+            var_index k = t.as_variable();
+            if (static_cast<int>(k) >= cutoff)
+                return Term::generalized(static_cast<var_index>(static_cast<int>(k) + delta));
+            return t;
         }
-        return m;
+        if (t.is_description()) {
+            const auto& d = t.as_description();
+            FormulaHandle nb = shift_formula(d.body, cutoff + 1, delta);
+            if (nb != d.body) return Term::description(nb);
+            return t;
+        }
+        return t;  // fixed vars unaffected
     }
 
-    // Translate within a term: handles DescriptionTag recursion with capture avoidance
+    // Shift free De Bruijn indices in a formula. Gen(k) → Gen(k+delta) if k >= cutoff.
+    FormulaHandle shift_formula(FormulaHandle h, int cutoff, int delta) {
+        if (delta == 0) return h;
+        const Formula& f = h.get();
+
+        if (f.is_predicate()) {
+            const auto& p = f.as_predicate();
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : p.args()) {
+                Term nt = shift_term(t, cutoff, delta);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+            return h;
+        }
+        if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            auto nl = c.left.valid() ? shift_formula(c.left, cutoff, delta) : c.left;
+            auto nr = c.right.valid() ? shift_formula(c.right, cutoff, delta) : c.right;
+            if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+            return h;
+        }
+        if (f.is_quantified()) {
+            const auto& q = f.as_quantified();
+            auto nb = shift_formula(q.body, cutoff + 1, delta);
+            if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+            return h;
+        }
+        if (f.is_schema_var()) {
+            const auto& sv = f.as_schema_var();
+            if (sv.args.empty()) return h;
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : sv.args) {
+                Term nt = shift_term(t, cutoff, delta);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+            return h;
+        }
+        return h;
+    }
+
+    // Abstract: replace fixed(fixed_var) with Gen(depth) and shift existing free Gen up.
+    // Single traversal. Used by QuantifierBuilder/DescriptionBuilder to close a binder.
+    Term abstract_var_in_term(const Term& t, var_index fixed_var, int depth) {
+        if (t.is_fixed() && t.as_variable() == fixed_var)
+            return Term::generalized(static_cast<var_index>(depth));
+        if (t.is_generalized()) {
+            var_index k = t.as_variable();
+            return (static_cast<int>(k) >= depth) ? Term::generalized(k + 1) : t;
+        }
+        if (t.is_description()) {
+            const auto& d = t.as_description();
+            FormulaHandle nb = abstract_var_impl(d.body, fixed_var, depth + 1);
+            if (nb != d.body) return Term::description(nb);
+            return t;
+        }
+        return t;  // other fixed vars unchanged
+    }
+
+    FormulaHandle abstract_var_impl(FormulaHandle h, var_index fixed_var, int depth) {
+        const Formula& f = h.get();
+
+        if (f.is_predicate()) {
+            const auto& p = f.as_predicate();
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : p.args()) {
+                Term nt = abstract_var_in_term(t, fixed_var, depth);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+            return h;
+        }
+        if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            auto nl = c.left.valid() ? abstract_var_impl(c.left, fixed_var, depth) : c.left;
+            auto nr = c.right.valid() ? abstract_var_impl(c.right, fixed_var, depth) : c.right;
+            if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+            return h;
+        }
+        if (f.is_quantified()) {
+            const auto& q = f.as_quantified();
+            auto nb = abstract_var_impl(q.body, fixed_var, depth + 1);
+            if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+            return h;
+        }
+        if (f.is_schema_var()) {
+            const auto& sv = f.as_schema_var();
+            if (sv.args.empty()) return h;
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : sv.args) {
+                Term nt = abstract_var_in_term(t, fixed_var, depth);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+            return h;
+        }
+        return h;
+    }
+
+    // Public entry point: abstract fixed_var into Gen(0), shifting existing Gen up.
+    FormulaHandle abstract_var(FormulaHandle body, var_index fixed_var) {
+        return abstract_var_impl(body, fixed_var, 0);
+    }
+
+    // Instantiate: replace Gen(0) with term, shift remaining Gen down.
+    // Used by forall_elim, exists_elim, iota_elim.
+    Term instantiate_gen_in_term(const Term& t, const Term& replacement, int depth) {
+        if (t.is_generalized()) {
+            var_index k = t.as_variable();
+            if (static_cast<int>(k) == depth)
+                return shift_term(replacement, 0, depth);
+            if (static_cast<int>(k) > depth)
+                return Term::generalized(k - 1);
+            return t;
+        }
+        if (t.is_description()) {
+            const auto& d = t.as_description();
+            FormulaHandle nb = instantiate_gen_impl(d.body, replacement, depth + 1);
+            if (nb != d.body) return Term::description(nb);
+            return t;
+        }
+        return t;  // fixed vars unchanged
+    }
+
+    FormulaHandle instantiate_gen_impl(FormulaHandle h, const Term& replacement, int depth) {
+        const Formula& f = h.get();
+
+        if (f.is_predicate()) {
+            const auto& p = f.as_predicate();
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : p.args()) {
+                Term nt = instantiate_gen_in_term(t, replacement, depth);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+            return h;
+        }
+        if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            auto nl = c.left.valid() ? instantiate_gen_impl(c.left, replacement, depth) : c.left;
+            auto nr = c.right.valid() ? instantiate_gen_impl(c.right, replacement, depth) : c.right;
+            if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+            return h;
+        }
+        if (f.is_quantified()) {
+            const auto& q = f.as_quantified();
+            auto nb = instantiate_gen_impl(q.body, replacement, depth + 1);
+            if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+            return h;
+        }
+        if (f.is_schema_var()) {
+            const auto& sv = f.as_schema_var();
+            if (sv.args.empty()) return h;
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : sv.args) {
+                Term nt = instantiate_gen_in_term(t, replacement, depth);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+            return h;
+        }
+        return h;
+    }
+
+    // Public entry point: instantiate Gen(0) with replacement, shift remaining down.
+    FormulaHandle instantiate_gen(FormulaHandle body, const Term& replacement) {
+        return instantiate_gen_impl(body, replacement, 0);
+    }
+
+    // Depth-aware fixed→term substitution. Used for schema arity-N lambda application
+    // where replacement may be Gen(k). Shifts replacement when entering binders.
+    Term subst_fixed_in_term(const Term& t, var_index fixed_var, const Term& replacement, int depth) {
+        if (t.is_fixed() && t.as_variable() == fixed_var)
+            return shift_term(replacement, 0, depth);
+        if (t.is_description()) {
+            const auto& d = t.as_description();
+            FormulaHandle nb = subst_fixed_impl(d.body, fixed_var, replacement, depth + 1);
+            if (nb != d.body) return Term::description(nb);
+            return t;
+        }
+        return t;  // gen vars and other fixed vars unchanged
+    }
+
+    FormulaHandle subst_fixed_impl(FormulaHandle h, var_index fixed_var, const Term& replacement, int depth) {
+        const Formula& f = h.get();
+
+        if (f.is_predicate()) {
+            const auto& p = f.as_predicate();
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : p.args()) {
+                Term nt = subst_fixed_in_term(t, fixed_var, replacement, depth);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+            return h;
+        }
+        if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            auto nl = c.left.valid() ? subst_fixed_impl(c.left, fixed_var, replacement, depth) : c.left;
+            auto nr = c.right.valid() ? subst_fixed_impl(c.right, fixed_var, replacement, depth) : c.right;
+            if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+            return h;
+        }
+        if (f.is_quantified()) {
+            const auto& q = f.as_quantified();
+            auto nb = subst_fixed_impl(q.body, fixed_var, replacement, depth + 1);
+            if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+            return h;
+        }
+        if (f.is_schema_var()) {
+            const auto& sv = f.as_schema_var();
+            if (sv.args.empty()) return h;
+            std::vector<Term> new_args;
+            bool changed = false;
+            for (const auto& t : sv.args) {
+                Term nt = subst_fixed_in_term(t, fixed_var, replacement, depth);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
+            }
+            if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+            return h;
+        }
+        return h;
+    }
+
+    // ========== Simple term substitution (no Gen interaction) ==========
+    // Used by eq_subst: replaces one term with another throughout a formula.
+    // Only used for fixed→fixed or fixed→description (proof-level terms have no free Gen vars).
+
     Term translate_in_term(const Term& t, const Term& old_term, const Term& new_term) {
         if (t == old_term) return new_term;
         if (!t.is_description()) return t;
         const auto& d = t.as_description();
-        // Capture avoidance: if substituting generalized(k) and this description binds k,
-        // skip — k is locally bound here, not free. Fixed-var substitutions never need
-        // this guard because FixedVarTag and GeneralizedVarTag are distinct types.
-        if (old_term.is_generalized() && old_term.as_variable() == d.bound_var) return t;
-        // Capture avoidance for new_term: if substituting IN generalized(k) and this
-        // description binds k, alpha-rename the description to a fresh index first.
-        if (new_term.is_generalized() && new_term.as_variable() == d.bound_var) {
-            // true_next_gen_var(d.body) >= bound_var + 1 for non-vacuous descriptions
-            // (Gen(bound_var) appears in body). The max with bound_var + 1 guards against
-            // vacuous descriptions where the bound var doesn't appear in the body,
-            // which would make fresh == bound_var and cause infinite recursion.
-            var_index fresh = std::max(true_next_gen_var(d.body), d.bound_var + 1);
-            FormulaHandle renamed_body = translate_term(d.body, Term::generalized(d.bound_var), Term::generalized(fresh));
-            return translate_in_term(Term::description(fresh, renamed_body), old_term, new_term);
-        }
         FormulaHandle new_body = translate_term(d.body, old_term, new_term);
-        if (new_body != d.body) return Term::description(d.bound_var, new_body);
+        if (new_body != d.body) return Term::description(new_body);
         return t;
     }
 
-    // Generalize a fixed variable: replace Term::fixed(var_idx) with Term::generalized(var_idx)
-    // Returns a new formula handle with the transformation applied
     FormulaHandle translate_term(FormulaHandle const &h, Term const &old_term, Term const &new_term) {
         const Formula& f = h.get();
 
@@ -633,78 +840,57 @@ public:
         }
 
         if (f.is_predicate()) {
-            const PredicateInstance& p = f.as_predicate();
+            const auto& p = f.as_predicate();
             std::vector<Term> new_args;
             bool changed = false;
-            for (const Term& t : p.args()) {
-                Term new_t = translate_in_term(t, old_term, new_term);
-                new_args.push_back(new_t);
-                if (!(new_t == t)) changed = true;
+            for (const auto& t : p.args()) {
+                Term nt = translate_in_term(t, old_term, new_term);
+                new_args.push_back(nt);
+                if (!(nt == t)) changed = true;
             }
-            if (changed) {
-                return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
-            }
+            if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
             return h;
         }
-        else if (f.is_compound()) {
-            const Compound& c = f.as_compound();
-            FormulaHandle new_left = c.left.valid() ? translate_term(c.left, old_term, new_term) : c.left;
-            FormulaHandle new_right = c.right.valid() ? translate_term(c.right, old_term, new_term) : c.right;
-            if (new_left != c.left || new_right != c.right) {
-                return add_formula(Formula(Compound{c.op, new_left, new_right}));
-            }
+        if (f.is_compound()) {
+            const auto& c = f.as_compound();
+            auto nl = c.left.valid() ? translate_term(c.left, old_term, new_term) : c.left;
+            auto nr = c.right.valid() ? translate_term(c.right, old_term, new_term) : c.right;
+            if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
             return h;
         }
-        else if (f.is_quantified()) {
-            const Quantified& q = f.as_quantified();
-            // Capture avoidance: if substituting generalized(k) and this quantifier
-            // binds k, skip — k is locally bound here. This matters when description
-            // bodies contain quantifiers that reuse the same generalized index.
-            if (old_term.is_generalized() && old_term.as_variable() == q.var) return h;
-            // Capture avoidance for new_term: if substituting IN generalized(k) and this
-            // quantifier binds k, alpha-rename the quantifier to a fresh index first.
-            if (new_term.is_generalized() && new_term.as_variable() == q.var) {
-                var_index fresh = true_next_gen_var(h);
-                FormulaHandle renamed_body = translate_term(q.body, Term::generalized(q.var), Term::generalized(fresh));
-                FormulaHandle renamed = add_formula(Formula(Quantified{q.op, fresh, renamed_body}));
-                return translate_term(renamed, old_term, new_term);
-            }
-            FormulaHandle new_body = translate_term(q.body, old_term, new_term);
-            if (new_body != q.body) {
-                return add_formula(Formula(Quantified{q.op, q.var, new_body}));
-            }
+        if (f.is_quantified()) {
+            const auto& q = f.as_quantified();
+            auto nb = translate_term(q.body, old_term, new_term);
+            if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
             return h;
         }
-        // Already a sentence reference - no transformation needed
         return h;
     }
 
-    // Helper: instantiate schema vars within a term (for description bodies)
+    // ========== Schema Instantiation ==========
+
     Term instantiate_schema_in_term(const Term& t, const std::vector<SchemaBind>& bindings) {
         if (!t.is_description()) return t;
         const auto& d = t.as_description();
         auto nb = instantiate_schema(d.body, bindings);
-        if (nb != d.body) return Term::description(d.bound_var, nb);
+        if (nb != d.body) return Term::description(nb);
         return t;
     }
 
-    // Schema instantiation: replace SchemaVar nodes with bindings.
-    // Arity-0 bindings: direct formula substitution.
-    // Arity-N bindings: lambda substitution — replace lambda params with actual args.
     FormulaHandle instantiate_schema(FormulaHandle h, const std::vector<SchemaBind>& bindings) {
         const Formula& f = h.get();
         if (f.is_schema_var()) {
             const auto& sv = f.as_schema_var();
             const auto& bind = bindings[sv.id];
             if (bind.params.empty()) {
-                // Arity-0: direct formula substitution
+                // Arity-0: direct formula substitution (binding is closed wrt Gen vars)
                 return bind.body;
             }
-            // Arity-N: apply lambda — substitute each param with corresponding arg
+            // Arity-N: apply lambda with depth-aware substitution
             FormulaHandle result = bind.body;
             for (size_t i = 0; i < bind.params.size() && i < sv.args.size(); ++i) {
                 Term arg = instantiate_schema_in_term(sv.args[i], bindings);
-                result = translate_term(result, Term::fixed(bind.params[i]), arg);
+                result = subst_fixed_impl(result, bind.params[i], arg, 0);
             }
             return result;
         }
@@ -722,7 +908,7 @@ public:
             const auto& q = f.as_quantified();
             auto nb = instantiate_schema(q.body, bindings);
             if (nb != q.body)
-                return add_formula(Formula(Quantified{q.op, q.var, nb}));
+                return add_formula(Formula(Quantified{q.op, nb}));
             return h;
         }
         if (f.is_predicate()) {
@@ -741,21 +927,22 @@ public:
         return h;
     }
 
-    // Build sentence if formula is closed (no free vars, no schema vars)
+    // Build sentence if formula is closed (no free fixed vars AND no free Gen vars)
     SentenceHandle build_sentence(FormulaHandle root, var_index start = 0) {
         if (!is_closed_since(start)) return SentenceHandle{};
         if (root.get().has_schema_vars()) return SentenceHandle{};
+        if (root.get().max_free_debruijn_ != 0) return SentenceHandle{};
         return ctx_.add_sentence(Sentence(root));
     }
 };
 
 // RAII scope for quantifiers. Creates bound variable on construction,
-// builds quantified formula on destruction.
+// builds quantified formula on destruction using De Bruijn abstraction.
 // Usage:
 //   QuantifierBuilder forall(builder, Op::Forall);
 //   FormulaHandle body = builder.predicate(P, {forall.var()});
 //   forall.set_body(body);
-//   // destructor creates the quantified formula
+//   // destructor abstracts fixed var → Gen(0) and wraps in Quantified
 class QuantifierBuilder {
     FormulaBuilder& builder_;
     Op op_;
@@ -773,20 +960,16 @@ public:
     ~QuantifierBuilder() {
         builder_.exit_scope();
         if (body_.valid()) {
-            // Generalize the fixed var in body before creating quantified formula
-            // gen_idx is the generalized index for this quantifier's bound variable
-            var_index gen_idx = body_.get().next_gen_var_idx_;
-            FormulaHandle generalized_body = builder_.translate_term(body_, var(), Term::generalized(gen_idx));
-            handle_ = builder_.add_formula(Formula(Quantified{op_, gen_idx, generalized_body}));
-            // If this is a closed formula (sentence), register it but keep handle_ as the formula
-            // Don't wrap in SentenceHandle - the formula itself is what we work with
+            // De Bruijn: abstract the fixed var to Gen(0), shifting existing Gen up
+            FormulaHandle abstracted = builder_.abstract_var(body_, var_);
+            handle_ = builder_.add_formula(Formula(Quantified{op_, abstracted}));
             builder_.build_sentence(handle_, start_depth_);
         }
     }
 
     Op get_op() const { return op_; }
 
-    // Get bound variable as Term (fixed/instantiated during proof construction)
+    // Get bound variable as Term (fixed during proof construction)
     Term var() const { return Term::fixed(var_); }
     var_index var_idx() const { return var_; }
 
@@ -798,7 +981,7 @@ public:
 };
 
 // RAII scope for definite descriptions. Creates bound variable on construction,
-// builds DescriptionTag term on destruction.
+// builds DescriptionTag term on destruction using De Bruijn abstraction.
 // Usage:
 //   Term result;
 //   {
@@ -806,7 +989,7 @@ public:
 //       FormulaHandle body = builder.predicate(P, {db.var()});
 //       db.set_body(body);
 //   }
-//   // result is now Term::description(gen_idx, generalized_body)
+//   // result is now Term::description(abstracted_body) with Gen(0) = described var
 class DescriptionBuilder {
     FormulaBuilder& builder_;
     var_index var_;
@@ -822,9 +1005,8 @@ public:
     ~DescriptionBuilder() {
         builder_.exit_scope();
         if (body_.valid()) {
-            var_index gen_idx = body_.get().next_gen_var_idx_;
-            FormulaHandle gen_body = builder_.translate_term(body_, var(), Term::generalized(gen_idx));
-            result_ = Term::description(gen_idx, gen_body);
+            FormulaHandle abstracted = builder_.abstract_var(body_, var_);
+            result_ = Term::description(abstracted);
         }
     }
 

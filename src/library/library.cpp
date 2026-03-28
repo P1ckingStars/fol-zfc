@@ -14,7 +14,7 @@ size_t handle_id(const util::Handle<T>& h) { return h.hash_value(); }
 
 // Binary format constants
 constexpr char kMagic[8] = {'F','O','L','L','I','B',0,0};
-constexpr uint32_t kFormatVersion = 1;
+constexpr uint32_t kFormatVersion = 2;  // De Bruijn: no var/bound_var/next_gen
 constexpr size_t kHeaderSize = 16;       // 8 magic + 4 version + 4 section_count
 constexpr size_t kSectionEntrySize = 20; // 4 type + 8 offset + 8 size
 constexpr size_t kMaxSectionCount = 64;
@@ -89,7 +89,7 @@ void FolLibrary::write_term(
     } else if (t.is_description()) {
         write_u8(buf, static_cast<uint8_t>(TermTag::Description));
         const auto& d = t.as_description();
-        write_u32(buf, static_cast<uint32_t>(d.bound_var));
+        // De Bruijn: no bound_var to write
         size_t body_global_id = handle_id(d.body);
         auto it = formula_id_map.find(body_global_id);
         if (it == formula_id_map.end()) {
@@ -110,11 +110,11 @@ Term FolLibrary::read_term(Reader& r, const std::vector<FormulaHandle>& formula_
         case TermTag::GeneralizedVar:
             return Term::generalized(r.read_u32());
         case TermTag::Description: {
-            uint32_t bound_var = r.read_u32();
+            // De Bruijn: no bound_var
             uint32_t body_id = r.read_u32();
             if (body_id == 0 || body_id > formula_map.size())
                 throw std::runtime_error("invalid formula ref in description term");
-            return Term::description(bound_var, formula_map[body_id - 1]);
+            return Term::description(formula_map[body_id - 1]);
         }
         default:
             throw std::runtime_error("unknown term tag");
@@ -311,7 +311,8 @@ util::ResultStatus FolLibrary::write_formula_section(
 
         write_u32(buf, local_id);
         write_u64(buf, static_cast<uint64_t>(f.content_hash()));
-        write_u32(buf, static_cast<uint32_t>(f.next_gen_var_idx_));
+        // De Bruijn: write max_free_debruijn_ instead of next_gen_var_idx_
+        write_u32(buf, static_cast<uint32_t>(f.max_free_debruijn_));
         write_u8(buf, f.has_schema_vars_ ? 1 : 0);
 
         if (f.is_predicate()) {
@@ -349,7 +350,7 @@ util::ResultStatus FolLibrary::write_formula_section(
             write_u8(buf, static_cast<uint8_t>(FormulaTag::Quantified));
             const auto& q = f.as_quantified();
             write_u8(buf, static_cast<uint8_t>(q.op));
-            write_u32(buf, static_cast<uint32_t>(q.var));
+            // De Bruijn: no var to write
             size_t body_gid = handle_id(q.body);
             auto it = delta.formula_id_map.find(body_gid);
             write_u32(buf, (it != delta.formula_id_map.end()) ? it->second : 0);
@@ -657,7 +658,7 @@ util::Result<std::vector<FormulaHandle>> FolLibrary::link_formulas(
     for (uint32_t i = 0; i < count; ++i) {
         r.read_u32();  // local_id
         uint64_t content_hash = r.read_u64();
-        r.read_u32();  // next_gen (recomputed by Formula constructors)
+        r.read_u32();  // max_free_debruijn (recomputed by Formula constructors)
         r.read_u8();   // has_schema (recomputed by Formula constructors)
         auto tag = static_cast<FormulaTag>(r.read_u8());
 
@@ -704,12 +705,12 @@ util::Result<std::vector<FormulaHandle>> FolLibrary::link_formulas(
             }
             case FormulaTag::Quantified: {
                 auto op = static_cast<Op>(r.read_u8());
-                uint32_t var = r.read_u32();
+                // De Bruijn: no var field
                 uint32_t body_id = r.read_u32();
                 FormulaHandle body_h;
                 if (body_id > 0 && body_id <= formula_map.size())
                     body_h = formula_map[body_id - 1];
-                Formula f(Quantified{op, static_cast<var_index>(var), body_h});
+                Formula f(Quantified{op, body_h});
                 f.content_hash_ = static_cast<size_t>(content_hash);
                 fh = ctx.formulas_.register_item(std::move(f));
                 break;

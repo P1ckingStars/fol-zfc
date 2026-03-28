@@ -1022,7 +1022,7 @@ bool test_iota_elim_nested_quantifier() {
 
     // Verify the result has the expected structure
     std::string formula_str = h2.value().get().to_string();
-    std::string expected = "forall x_0. R((iota x_1. forall x_0. R(x_1, x_0)), x_0)";
+    std::string expected = "forall x_0. R((iota x_1. forall x_2. R(x_1, x_2)), x_0)";
     if (formula_str != expected) {
         std::cout << "[unexpected: " << formula_str << " != " << expected << "] ";
         return false;
