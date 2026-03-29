@@ -141,6 +141,18 @@ int main(int argc, char* argv[]) {
     int max_warnings = 10;
     const char* max_env = std::getenv("PROOF_CHECKER_MAX_WARNINGS");
     if (max_env) max_warnings = std::atoi(max_env);
+    // A failed proof doesn't disprove the claim. Register it as unproved
+    // so dependents remain conditional rather than becoming missing.
+    auto mark_failed_as_unproved = [&](const ParsedProof& proof) {
+        if (!proof.unproved) {
+            auto claim = rt.context().find_claim(proof.claim_name);
+            if (!claim.has_value()) claim = rt.context().find_known(proof.claim_name);
+            if (claim.has_value()) {
+                rt.context().add_unproved_theorem(proof.claim_name, claim.value());
+            }
+        }
+    };
+
     {
         PROFILE_SCOPE("execute_proofs");
         for (const auto& proof : proof_result.proofs) {
@@ -154,15 +166,7 @@ int main(int argc, char* argv[]) {
                                   << status.error().to_string() << "\n";
                     else if (proof_errors == max_warnings + 1)
                         std::cerr << "WARNING: ... more errors suppressed\n";
-                    // A failed proof doesn't disprove the claim. Treat it as
-                    // unproved so dependents remain conditional, not missing.
-                    if (!proof.unproved) {
-                        auto claim = rt.context().find_claim(proof.claim_name);
-                        if (!claim.has_value()) claim = rt.context().find_known(proof.claim_name);
-                        if (claim.has_value()) {
-                            rt.context().add_unproved_theorem(proof.claim_name, claim.value());
-                        }
-                    }
+                    mark_failed_as_unproved(proof);
                 }
             } catch (const std::exception& e) {
                 proof_errors++;
@@ -171,14 +175,7 @@ int main(int argc, char* argv[]) {
                               << e.what() << "\n";
                 else if (proof_errors == max_warnings + 1)
                     std::cerr << "WARNING: ... more errors suppressed\n";
-                // Same: treat exception as unproved.
-                if (!proof.unproved) {
-                    auto claim = rt.context().find_claim(proof.claim_name);
-                    if (!claim.has_value()) claim = rt.context().find_known(proof.claim_name);
-                    if (claim.has_value()) {
-                        rt.context().add_unproved_theorem(proof.claim_name, claim.value());
-                    }
-                }
+                mark_failed_as_unproved(proof);
             }
         }
     }
