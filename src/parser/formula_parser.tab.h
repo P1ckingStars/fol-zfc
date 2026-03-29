@@ -111,17 +111,18 @@ typedef void* yyscan_t;
     DOUBLE_NEG_ELIM = 302,         /* DOUBLE_NEG_ELIM  */
     EXCLUDED_MIDDLE = 303,         /* EXCLUDED_MIDDLE  */
     EQ_SUBST = 304,                /* EQ_SUBST  */
-    IOTA_ELIM = 305,               /* IOTA_ELIM  */
-    IOTA = 306,                    /* IOTA  */
-    UNPROVED = 307,                /* UNPROVED  */
-    SCHEMA = 308,                  /* SCHEMA  */
-    SCHEMA_INST = 309,             /* SCHEMA_INST  */
-    LBRACKET = 310,                /* LBRACKET  */
-    RBRACKET = 311,                /* RBRACKET  */
-    LBRACE = 312,                  /* LBRACE  */
-    RBRACE = 313,                  /* RBRACE  */
-    BACKSLASH = 314,               /* BACKSLASH  */
-    NUMBER = 315                   /* NUMBER  */
+    EQ_SYM = 305,                  /* EQ_SYM  */
+    IOTA_ELIM = 306,               /* IOTA_ELIM  */
+    IOTA = 307,                    /* IOTA  */
+    UNPROVED = 308,                /* UNPROVED  */
+    SCHEMA = 309,                  /* SCHEMA  */
+    SCHEMA_INST = 310,             /* SCHEMA_INST  */
+    LBRACKET = 311,                /* LBRACKET  */
+    RBRACKET = 312,                /* RBRACKET  */
+    LBRACE = 313,                  /* LBRACE  */
+    RBRACE = 314,                  /* RBRACE  */
+    BACKSLASH = 315,               /* BACKSLASH  */
+    NUMBER = 316                   /* NUMBER  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -136,7 +137,7 @@ union YYSTYPE
     ASTNode* node;
     std::vector<ASTNode*>* node_list;
 
-#line 140 "formula_parser.tab.h"
+#line 141 "formula_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -180,6 +181,6 @@ void yypstate_delete (yypstate *ps);
 
 void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg);
 
-#line 184 "formula_parser.tab.h"
+#line 185 "formula_parser.tab.h"
 
 #endif /* !YY_YY_FORMULA_PARSER_TAB_H_INCLUDED  */

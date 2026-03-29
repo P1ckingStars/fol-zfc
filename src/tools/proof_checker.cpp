@@ -154,6 +154,15 @@ int main(int argc, char* argv[]) {
                                   << status.error().to_string() << "\n";
                     else if (proof_errors == max_warnings + 1)
                         std::cerr << "WARNING: ... more errors suppressed\n";
+                    // A failed proof doesn't disprove the claim. Treat it as
+                    // unproved so dependents remain conditional, not missing.
+                    if (!proof.unproved) {
+                        auto claim = rt.context().find_claim(proof.claim_name);
+                        if (!claim.has_value()) claim = rt.context().find_known(proof.claim_name);
+                        if (claim.has_value()) {
+                            rt.context().add_unproved_theorem(proof.claim_name, claim.value());
+                        }
+                    }
                 }
             } catch (const std::exception& e) {
                 proof_errors++;
@@ -162,6 +171,14 @@ int main(int argc, char* argv[]) {
                               << e.what() << "\n";
                 else if (proof_errors == max_warnings + 1)
                     std::cerr << "WARNING: ... more errors suppressed\n";
+                // Same: treat exception as unproved.
+                if (!proof.unproved) {
+                    auto claim = rt.context().find_claim(proof.claim_name);
+                    if (!claim.has_value()) claim = rt.context().find_known(proof.claim_name);
+                    if (claim.has_value()) {
+                        rt.context().add_unproved_theorem(proof.claim_name, claim.value());
+                    }
+                }
             }
         }
     }

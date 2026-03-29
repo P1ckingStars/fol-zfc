@@ -288,12 +288,17 @@ static FormulaResult execute_rule(
         return ctx.excluded_middle(f);
     }
 
-    // Equality substitution
+    // Equality
     if (rule == "eq_subst") {
         if (args.size() != 2) return MAKE_ERROR << "eq_subst requires 2 arguments";
         TRY_ASSIGN(eq, get_step(args[0]));
         TRY_ASSIGN(target, get_step(args[1]));
         return ctx.eq_subst(eq, target);
+    }
+    if (rule == "eq_sym") {
+        if (args.size() != 1) return MAKE_ERROR << "eq_sym requires 1 argument";
+        TRY_ASSIGN(eq, get_step(args[0]));
+        return ctx.eq_sym(eq);
     }
 
     // Definite descriptions
@@ -677,6 +682,9 @@ FormulaResult ProofContext::exists_elim(FormulaHandle const& f) {
 // Equality
 FormulaResult ProofContext::eq_subst(FormulaHandle const& eq, FormulaHandle const& target) {
     return stack_.eq_subst(eq, target);
+}
+FormulaResult ProofContext::eq_sym(FormulaHandle const& eq) {
+    return stack_.eq_sym(eq);
 }
 
 // Schema instantiation

@@ -44,7 +44,7 @@ void yyerror(YYLTYPE* loc, yyscan_t scanner, ParseContext* ctx, const char* msg)
 %token NOT_INTRO NOT_ELIM BOTTOM_ELIM
 %token IFF_INTRO IFF_ELIM_L IFF_ELIM_R
 %token FORALL_INTRO FORALL_ELIM EXISTS_INTRO EXISTS_ELIM
-%token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE EQ_SUBST
+%token DOUBLE_NEG_ELIM EXCLUDED_MIDDLE EQ_SUBST EQ_SYM
 %token IOTA_ELIM IOTA
 %token UNPROVED
 %token SCHEMA SCHEMA_INST LBRACKET RBRACKET LBRACE RBRACE
@@ -354,6 +354,9 @@ rule_call
     }
     | EQ_SUBST id_list {
         $$ = ASTNode::make_rule_step("eq_subst", $2);
+    }
+    | EQ_SYM id_list {
+        $$ = ASTNode::make_rule_step("eq_sym", $2);
     }
     | IOTA_ELIM id_list {
         $$ = ASTNode::make_rule_step("iota_elim", $2);

@@ -214,9 +214,11 @@ public:
     // Returns the witness variable from the last exists_elim call
     std::optional<Term> last_witness_var() const { return last_witness_var_; }
 
-    // ========== Equality Substitution ==========
+    // ========== Equality ==========
     // From eq(a, b) and φ(a), derive φ(b) by replacing a with b
     FormulaResult eq_subst(FormulaHandle const &eq_formula, FormulaHandle const &target);
+    // From eq(a, b), derive eq(b, a)
+    FormulaResult eq_sym(FormulaHandle const &eq_formula);
 
     // Schema instantiation: substitute schema vars with bindings
     FormulaResult schema_inst(const SchemaDefinition& schema,

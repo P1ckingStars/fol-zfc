@@ -75,6 +75,7 @@ static int col = 1;
 "double_neg_elim" { return DOUBLE_NEG_ELIM; }
 "excluded_middle" { return EXCLUDED_MIDDLE; }
 "eq_subst"      { return EQ_SUBST; }
+"eq_sym"        { return EQ_SYM; }
 "iota_elim"     { return IOTA_ELIM; }
 "iota"          { return IOTA; }
 "include"       { return INCLUDE; }

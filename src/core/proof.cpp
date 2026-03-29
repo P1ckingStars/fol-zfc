@@ -662,6 +662,25 @@ FormulaResult ProofStack::eq_subst(FormulaHandle const &eq_formula, FormulaHandl
     return result;
 }
 
+FormulaResult ProofStack::eq_sym(FormulaHandle const &eq_formula) {
+    if (!is_derived(eq_formula))
+        return MAKE_ERROR << "eq_sym: equality not derived: " << eq_formula.get();
+
+    const Formula& f = eq_formula.get();
+    if (!f.is_predicate())
+        return MAKE_ERROR << "eq_sym: expected predicate, got: " << f;
+    const PredicateInstance& pred = f.as_predicate();
+    if (pred.predicate().get().get_name() != "eq" || pred.args().size() != 2)
+        return MAKE_ERROR << "eq_sym: expected eq(a, b), got: " << f;
+
+    Term a = pred.args()[0];
+    Term b = pred.args()[1];
+
+    auto result = formula_builder_.predicate(pred.predicate(), {b, a});
+    derive_with_deps(result, deps_of(eq_formula));
+    return result;
+}
+
 // ========== Classical Logic Extensions ==========
 
 FormulaResult ClassicalProofStack::double_neg_elim(FormulaHandle const &double_neg) {

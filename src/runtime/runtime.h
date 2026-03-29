@@ -151,6 +151,7 @@ public:
 
     // ========== Equality ==========
     FormulaResult eq_subst(FormulaHandle const& eq_formula, FormulaHandle const& target);
+    FormulaResult eq_sym(FormulaHandle const& eq_formula);
 
     // ========== Schema Instantiation ==========
     FormulaResult schema_inst(const SchemaDefinition& schema,
