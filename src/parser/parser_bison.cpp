@@ -193,12 +193,13 @@ private:
     }
 
     PredicateHandle get_or_create_predicate(const std::string& name, size_t arity) {
-        auto it = predicates_.find(name);
+        std::string key = name + "/" + std::to_string(arity);
+        auto it = predicates_.find(key);
         if (it != predicates_.end()) {
             return it->second;
         }
         PredicateHandle h = ctx_.add_predicate(name, arity);
-        predicates_[name] = h;
+        predicates_[key] = h;
         return h;
     }
 
