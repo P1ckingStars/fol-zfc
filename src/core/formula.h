@@ -65,7 +65,9 @@ struct GeneralizedVarTag { var_index idx; bool operator==(const GeneralizedVarTa
 // De Bruijn: Gen(0) in body is the described variable. No explicit bound_var needed.
 struct DescriptionTag {
     FormulaHandle body;
-    bool operator==(const DescriptionTag&) const = default;
+    // Declared out-of-line: structural comparison using content_hash + to_string.
+    // Ensures the formula registry deduplicates structurally identical iota terms.
+    bool operator==(const DescriptionTag& other) const;
 };
 
 // A term is a generalized var, fixed var, or definite description
@@ -132,9 +134,7 @@ public:
     PredicateHandle predicate() const { return predicate_; }
     const std::vector<Term>& args() const { return args_; }
 
-    bool operator==(const PredicateInstance& other) const {
-        return predicate_ == other.predicate_ && args_ == other.args_;
-    }
+    bool operator==(const PredicateInstance& other) const;
 };
 
 // Propositional connective: op(left, right) or op(left) for unary
@@ -143,9 +143,7 @@ struct Compound {
     FormulaHandle left;
     FormulaHandle right;
 
-    bool operator==(const Compound& other) const {
-        return op == other.op && left == other.left && right == other.right;
-    }
+    bool operator==(const Compound& other) const;
 };
 
 // Quantified formula: ∀x.φ or ∃x.φ
@@ -154,9 +152,7 @@ struct Quantified {
     Op op;  // Forall or Exists
     FormulaHandle body;
 
-    bool operator==(const Quantified& other) const {
-        return op == other.op && body == other.body;
-    }
+    bool operator==(const Quantified& other) const;
 };
 
 // Schema variable: a metavariable for formula or predicate substitution.
