@@ -239,53 +239,6 @@ size_t Formula::content_hash() const {
     return content_hash_;
 }
 
-// ==================== Structural equality for formula types ====================
-// All sub-formula comparisons use content_hash + to_string fallback
-// to properly handle structurally identical formulas with different handle IDs.
-
-namespace {
-
-bool handles_content_equal(const FormulaHandle& a, const FormulaHandle& b) {
-    if (a == b) return true;
-    if (!a.valid() || !b.valid()) return a.valid() == b.valid();
-    if (a.get().content_hash() != b.get().content_hash()) return false;
-    return a.get().to_string() == b.get().to_string();
-}
-
-bool terms_content_equal(const Term& a, const Term& b) {
-    if (a == b) return true;
-    if (a.data.index() != b.data.index()) return false;
-    if (a.is_description() && b.is_description()) {
-        return handles_content_equal(a.as_description().body, b.as_description().body);
-    }
-    return false;  // GeneralizedVar/FixedVar already compared by a == b above
-}
-
-}  // anonymous namespace
-
-bool DescriptionTag::operator==(const DescriptionTag& other) const {
-    return handles_content_equal(body, other.body);
-}
-
-bool PredicateInstance::operator==(const PredicateInstance& other) const {
-    if (predicate_ != other.predicate_) return false;
-    if (args_.size() != other.args_.size()) return false;
-    for (size_t i = 0; i < args_.size(); i++) {
-        if (!terms_content_equal(args_[i], other.args_[i])) return false;
-    }
-    return true;
-}
-
-bool Compound::operator==(const Compound& other) const {
-    return op == other.op
-        && handles_content_equal(left, other.left)
-        && handles_content_equal(right, other.right);
-}
-
-bool Quantified::operator==(const Quantified& other) const {
-    return op == other.op && handles_content_equal(body, other.body);
-}
-
 // ==================== Sentence ====================
 
 std::string Sentence::to_string() const {
