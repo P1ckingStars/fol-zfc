@@ -1,0 +1,64 @@
+include "../basics/ordered_pair.fol.def"
+include "../basics/set_operations.fol.def"
+
+# ============================================================
+# Natural Numbers: Von Neumann Ordinals (Note 3.139)
+# ============================================================
+#
+# The natural numbers are defined as the smallest inductive set.
+# An inductive set contains the empty set and is closed under
+# the von Neumann successor operation s(n) = n ∪ {n}.
+#
+# ℕ = ⋂{A : A is inductive} (intersection of all inductive sets)
+
+# succ(s, n) means s = n ∪ {n} (von Neumann successor)
+@def(succ) axiom succ_def: forall s. forall n. (succ(s, n) <->
+    forall z. (elem(z, s) <-> (elem(z, n) | eq(z, n))))
+
+# inductive_set(a) means a contains ∅ and is closed under successor
+@def(inductive_set) axiom inductive_set_def: forall a. (inductive_set(a) <->
+    (exists e. (elem(e, a) & empty(e))) &
+    (forall x. (elem(x, a) -> forall s. (succ(s, x) -> elem(s, a)))))
+
+# nat_set(n) means n = ℕ (the smallest inductive set)
+# x ∈ n iff x is in every inductive set
+@def(nat_set) axiom nat_set_def: forall n. (nat_set(n) <->
+    forall x. (elem(x, n) <-> forall a. (inductive_set(a) -> elem(x, a))))
+
+# Separation schema instance for natural numbers
+# {x ∈ A : x is in every inductive set}
+axiom separation_nat: forall A. exists B. forall x.
+    (elem(x, B) <-> (elem(x, A) & forall a. (inductive_set(a) -> elem(x, a))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Successor is unique (by extensionality)
+claim succ_unique: forall s1. forall s2. forall n.
+    ((succ(s1, n) & succ(s2, n)) -> eq(s1, s2))
+
+# At least one inductive set exists (from axiom of infinity)
+claim inductive_set_exists: exists a. inductive_set(a)
+
+# The natural number set exists
+claim nat_set_exists: exists n. nat_set(n)
+
+# The natural number set is unique
+claim nat_set_unique: forall n1. forall n2.
+    ((nat_set(n1) & nat_set(n2)) -> eq(n1, n2))
+
+# The empty set is in ℕ
+claim zero_in_nat: forall n. forall e. ((nat_set(n) & empty(e)) -> elem(e, n))
+
+# ℕ is closed under successor
+claim succ_in_nat: forall n. forall x. forall s.
+    ((nat_set(n) & elem(x, n) & succ(s, x)) -> elem(s, n))
+
+# ℕ is the smallest inductive set
+claim nat_set_smallest: forall n. forall a.
+    ((nat_set(n) & inductive_set(a)) -> subset(n, a))
+
+# Principle of mathematical induction
+claim nat_induction: forall n. forall a.
+    ((nat_set(n) & subset(a, n) & inductive_set(a)) -> eq(a, n))

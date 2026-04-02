@@ -8,6 +8,7 @@ cc_library(
     deps = [
         "//src/core:formula",
         "//src/core:proof",
+        "//src/library",
         "//src/parser",
         "//src/util:error",
     ],

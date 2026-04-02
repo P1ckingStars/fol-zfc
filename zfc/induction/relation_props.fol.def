@@ -1,0 +1,115 @@
+include "well_founded.fol.def"
+
+# ============================================================
+# Binary Relation Properties (Note 3.44)
+# ============================================================
+#
+# Properties of a binary relation ≺ ⊆ X² on a set X.
+# We encode relations via rel_elem(r, a, b) meaning a ≺ b.
+#
+# Note 3.44 defines: reflexive, irreflexive, symmetric,
+# antisymmetric, transitive, trichotomous.
+# Note 3.107 defines: partial order, linear order, well-order.
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# rel_on(r, x): r ⊆ x × x (binary relation on x)
+@def(rel_on) axiom rel_on_def: forall r. forall x.
+    (rel_on(r, x) <->
+        forall a. forall b. (rel_elem(r, a, b) -> (elem(a, x) & elem(b, x))))
+
+# irreflexive_rel(r, x): ∀a ∈ x. ¬(a ≺ a)
+@def(irreflexive_rel) axiom irreflexive_rel_def: forall r. forall x.
+    (irreflexive_rel(r, x) <->
+        forall a. (elem(a, x) -> ~rel_elem(r, a, a)))
+
+# transitive_rel(r, x): a ≺ b & b ≺ c → a ≺ c
+@def(transitive_rel) axiom transitive_rel_def: forall r. forall x.
+    (transitive_rel(r, x) <->
+        forall a. forall b. forall c.
+            ((elem(a, x) & elem(b, x) & elem(c, x) &
+              rel_elem(r, a, b) & rel_elem(r, b, c)) -> rel_elem(r, a, c)))
+
+# trichotomous(r, x): ∀a,b ∈ x. a ≺ b ∨ a = b ∨ b ≺ a
+@def(trichotomous) axiom trichotomous_def: forall r. forall x.
+    (trichotomous(r, x) <->
+        forall a. forall b.
+            ((elem(a, x) & elem(b, x)) ->
+             (rel_elem(r, a, b) | eq(a, b) | rel_elem(r, b, a))))
+
+# ============================================================
+# Composite Relation Types (Note 3.107)
+# ============================================================
+
+# partial_well_order(r, x): well-founded strict partial order
+# (well-founded + irreflexive + transitive; irreflexive follows from
+# well-foundedness, and antisymmetry follows from irreflexive + transitive)
+@def(partial_well_order) axiom partial_well_order_def: forall r. forall x.
+    (partial_well_order(r, x) <->
+        (well_founded(r, x) & transitive_rel(r, x)))
+
+# well_order(r, x): well-founded strict linear order
+# (partial well-order + trichotomy)
+@def(well_order) axiom well_order_def: forall r. forall x.
+    (well_order(r, x) <->
+        (partial_well_order(r, x) & trichotomous(r, x)))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For wf_irreflexive: {a ∈ A : ~rel_elem(r, a, a)}
+axiom separation_no_self_rel: forall A. forall r. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) & ~rel_elem(r, a, a)))
+
+# For wf_trich_transitive induction: {a ∈ A : preds closed under r}
+axiom separation_trich_trans: forall A. forall r. forall b. forall c. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) &
+        ((elem(b, A) & elem(c, A) &
+          rel_elem(r, a, b) & rel_elem(r, b, c)) -> rel_elem(r, a, c))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Well-founded implies irreflexive (Note 3.45)
+# Proof: use wf_no_self_loop with singleton {a}
+claim wf_irreflexive: forall r. forall x.
+    (well_founded(r, x) -> irreflexive_rel(r, x))
+
+# Well-founded + trichotomous implies transitive (Note 3.108)
+# Proof: by well-founded induction. Assume a ≺ b ≺ c.
+# By trichotomy, either a ≺ c, a = c, or c ≺ a.
+# If a = c: a ≺ b ≺ a gives a 2-cycle, contradicting wf.
+# If c ≺ a: b ≺ c ≺ a, and {a,b,c} has no minimal element
+# since a ≺ b, b ≺ c, c ≺ a. Contradicts wf.
+# So a ≺ c.
+claim wf_trich_transitive: forall r. forall x.
+    ((well_founded(r, x) & trichotomous(r, x)) -> transitive_rel(r, x))
+
+# Well-founded + transitive gives partial well-order
+claim wf_trans_partial_order: forall r. forall x.
+    ((well_founded(r, x) & transitive_rel(r, x)) -> partial_well_order(r, x))
+
+# Well-founded + trichotomous gives well-order
+# Combines wf_trich_transitive with well_order_def
+claim wf_trich_well_order: forall r. forall x.
+    ((well_founded(r, x) & trichotomous(r, x)) -> well_order(r, x))
+
+# A partial well-order is irreflexive
+claim partial_wo_irreflexive: forall r. forall x.
+    (partial_well_order(r, x) -> irreflexive_rel(r, x))
+
+# Extraction: well_order implies well_founded
+claim well_order_wf: forall r. forall x.
+    (well_order(r, x) -> well_founded(r, x))
+
+# Extraction: well_order implies transitive
+claim well_order_transitive: forall r. forall x.
+    (well_order(r, x) -> transitive_rel(r, x))
+
+# Extraction: well_order implies trichotomous
+claim well_order_trichotomous: forall r. forall x.
+    (well_order(r, x) -> trichotomous(r, x))

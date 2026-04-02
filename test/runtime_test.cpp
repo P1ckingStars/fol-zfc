@@ -883,6 +883,811 @@ bool test_fol_test_file() {
     return true;
 }
 
+// ==================== Definite Description (Iota) Tests ====================
+
+bool test_iota_elim_basic() {
+    // From ∃x.P(x), derive P(ιx.P(x))
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_p: exists x. P(x)
+        claim p_of_iota: P((iota x_0. P(x_0)))
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto pctx = rt.prove("p_of_iota");
+    auto h_exists = pctx.use("exists_p");
+    if (!h_exists.ok()) { std::cout << "[use error] "; return false; }
+
+    auto h_result = pctx.iota_elim(h_exists.value());
+    if (!h_result.ok()) { std::cout << "[iota_elim error: " << h_result.error() << "] "; return false; }
+
+    auto qed = pctx.qed(h_result.value());
+    if (!qed.ok()) { std::cout << "[qed error: " << qed.error() << "] "; return false; }
+
+    return true;
+}
+
+bool test_iota_elim_syntax() {
+    // Test iota_elim via proof syntax
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_p: exists x. P(x)
+        claim p_of_iota: P((iota x_0. P(x_0)))
+
+        proof p_of_iota:
+            h1 = use exists_p
+            h2 = iota_elim h1
+            qed h2
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_with_forall() {
+    // Use iota term in forall_elim
+    // From ∃x.P(x) and ∀y.Q(y), derive Q(ιx.P(x))
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_p: exists x. P(x)
+        axiom all_q: forall y. Q(y)
+        claim q_of_iota: Q((iota x_0. P(x_0)))
+
+        proof q_of_iota:
+            h1 = use exists_p
+            h2 = iota_elim h1, t
+            h3 = use all_q
+            h4 = forall_elim h3, t
+            qed h4
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_binary_predicate() {
+    // From ∃x.R(x,x), derive R(ιx.R(x,x), ιx.R(x,x))
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_r: exists x. R(x, x)
+        claim r_of_iota: R((iota x_0. R(x_0, x_0)), (iota x_0. R(x_0, x_0)))
+
+        proof r_of_iota:
+            h1 = use exists_r
+            h2 = iota_elim h1
+            qed h2
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_nested_quantifier() {
+    // From ∃x.∀y.R(x,y), derive ∀y.R(ιx.∀y.R(x,y), y)
+    // Uses C++ API because de Bruijn indices differ between
+    // parsed and derived formulas for nested quantifiers
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom exists_forall_r: exists x. forall y. R(x, y)
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto pctx = rt.prove(SentenceHandle{});
+    auto h = pctx.use("exists_forall_r");
+    if (!h.ok()) { std::cout << "[use error] "; return false; }
+
+    auto h2 = pctx.iota_elim(h.value());
+    if (!h2.ok()) {
+        std::cout << "[iota_elim error: " << h2.error() << "] ";
+        return false;
+    }
+
+    // Verify the result has the expected structure
+    std::string formula_str = h2.value().get().to_string();
+    std::string expected = "forall x_0. R((iota x_1. forall x_2. R(x_1, x_2)), x_0)";
+    if (formula_str != expected) {
+        std::cout << "[unexpected: " << formula_str << " != " << expected << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_not_exists_error() {
+    // iota_elim should fail on non-existential
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom all_p: forall x. P(x)
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto pctx = rt.prove(SentenceHandle{});  // no specific goal
+    auto h = pctx.use("all_p");
+    if (!h.ok()) { std::cout << "[use error] "; return false; }
+
+    auto fail = pctx.iota_elim(h.value());
+    if (fail.ok()) {
+        std::cout << "[should have failed] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_term_to_string() {
+    // Verify the string representation of iota terms
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom exists_p: exists x. P(x)
+    )");
+    if (!result.ok()) return false;
+
+    auto pctx = rt.prove(SentenceHandle{});
+    auto h = pctx.use("exists_p");
+    auto iota_result = pctx.iota_elim(h.value());
+    if (!iota_result.ok()) return false;
+
+    std::string formula_str = iota_result.value().get().to_string();
+    // Should be P(ιx_0. P(x_0)) printed as P((iota x_0. P(x_0)))
+    if (formula_str != "P((iota x_0. P(x_0)))") {
+        std::cout << "[unexpected string: " << formula_str << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_in_eq_subst() {
+    // Use iota term with eq_subst
+    // From ∃x.P(x) and eq(a,b) and P(a), derive P(b) via eq_subst
+    // Then from ∃y.Q(y), use iota term in forall_elim on ∀z.(z=z)
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        axiom exists_eq: exists x. eq(x, x)
+        axiom all_refl: forall x. eq(x, x)
+        claim iota_eq: eq((iota x_0. eq(x_0, x_0)), (iota x_0. eq(x_0, x_0)))
+
+        proof iota_eq:
+            h1 = use exists_eq
+            h2 = iota_elim h1, t
+            h3 = use all_refl
+            h4 = forall_elim h3, t
+            qed h4
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+bool test_iota_elim_capture_avoidance() {
+    // Tests that forall_elim correctly handles capture avoidance when the
+    // formula contains an iota term whose body reuses the same generalized index.
+    //
+    // This is the exact pattern the translator needs for comprehension:
+    //   axiom: ∀A.∀B.∃C.∀u.(elem(u,C) <-> (elem(u,A) -> elem(u,B)))
+    //   After forall_elim(A,B) and iota_elim, the outer ∀u and inner ∀u
+    //   (inside the iota body) use the same generalized index.
+    //   forall_elim on the outer ∀u must NOT substitute inside the iota body.
+    Runtime rt;
+
+    auto result = rt.load(R"(
+        axiom comp: forall A. forall B. exists C. forall u. (R(u, C) <-> (R(u, A) -> R(u, B)))
+    )");
+    if (!result.ok()) { std::cout << "[load error: " << result.error() << "] "; return false; }
+
+    auto pctx = rt.prove(SentenceHandle{});
+
+    // fix A, B
+    auto A = pctx.fix_var();
+    auto B = pctx.fix_var();
+
+    // use comp; forall_elim with A, B
+    auto h_comp = pctx.use("comp");
+    if (!h_comp.ok()) { std::cout << "[use error] "; return false; }
+    auto h1 = pctx.forall_elim(h_comp.value(), A);
+    if (!h1.ok()) { std::cout << "[fe1 error: " << h1.error() << "] "; return false; }
+    auto h2 = pctx.forall_elim(h1.value(), B);
+    if (!h2.ok()) { std::cout << "[fe2 error: " << h2.error() << "] "; return false; }
+
+    // iota_elim: from ∃C.∀u.(...) get ∀u.(R(u, ιC.∀u.(...)) <-> ...)
+    auto h3 = pctx.iota_elim(h2.value());
+    if (!h3.ok()) { std::cout << "[iota error: " << h3.error() << "] "; return false; }
+
+    // fix u; forall_elim with u — this is the critical step.
+    // Without capture avoidance, this would incorrectly substitute inside
+    // the iota body's ∀u, corrupting the term.
+    auto u = pctx.fix_var();
+    auto h4 = pctx.forall_elim(h3.value(), u);
+    if (!h4.ok()) { std::cout << "[fe3 error: " << h4.error() << "] "; return false; }
+
+    // Verify the result: R(u, ιC.∀u.(...)) <-> (R(u, A) -> R(u, B))
+    // Extract both sides of the iff to verify structure
+    const auto& f = h4.value().get();
+    if (!f.is_compound() || f.as_compound().op != logic::Op::Iff) {
+        std::cout << "[expected iff, got: " << f << "] ";
+        return false;
+    }
+
+    // The left side should contain the iota term
+    std::string s = f.to_string();
+    if (s.find("(iota") == std::string::npos) {
+        std::cout << "[expected iota term in result: " << s << "] ";
+        return false;
+    }
+
+    return true;
+}
+
+// ==================== Schema Tests ====================
+
+bool test_schema_declare_prove_instantiate() {
+    // Declare schema S [ph, ps]: (ph -> (ps -> ph))
+    // Prove it, then schema_inst with concrete formulas
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+
+        proof S:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim test_inst: forall x. forall y. forall a. (eq(x, y) -> (P(a) -> eq(x, y)))
+
+        proof test_inst:
+            fix x
+            fix y
+            fix a
+            h = schema_inst S { ph: eq(x, y), ps: P(a) }
+            h1 = forall_intro h
+            h2 = forall_intro h1
+            h3 = forall_intro h2
+            qed h3
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    // Schema should be proven
+    if (!rt.context().is_schema_proven("S")) {
+        std::cout << "[S not marked as proven] ";
+        return false;
+    }
+
+    // Claim should be proven as theorem
+    if (!rt.context().find_theorem("test_inst").has_value()) {
+        std::cout << "[test_inst not proven] ";
+        return false;
+    }
+
+    std::cout << "[schema declared, proved, instantiated] ";
+    return true;
+}
+
+bool test_schema_inst_before_proof_fails() {
+    // schema_inst before the schema is proved should fail
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph]: (ph -> ph)
+        claim bad: (P -> P)
+
+        proof bad:
+            h = schema_inst S { ph: P }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (exec.ok()) {
+        std::cout << "[SOUNDNESS BUG: schema_inst succeeded before schema was proven] ";
+        return false;
+    }
+
+    std::string err = exec.error().message();
+    if (err.find("not yet proven") == std::string::npos) {
+        std::cout << "[unexpected error: " << err << "] ";
+        return false;
+    }
+
+    std::cout << "[correctly rejected] ";
+    return true;
+}
+
+bool test_schema_missing_binding_fails() {
+    // Missing a binding in schema_inst should fail
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+
+        proof S:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim bad: P
+
+        proof bad:
+            h = schema_inst S { ph: P }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (exec.ok()) {
+        std::cout << "[should have failed with missing binding] ";
+        return false;
+    }
+
+    std::string err = exec.error().message();
+    if (err.find("missing binding") == std::string::npos) {
+        std::cout << "[unexpected error: " << err << "] ";
+        return false;
+    }
+
+    std::cout << "[correctly rejected: missing binding] ";
+    return true;
+}
+
+bool test_schema_to_string() {
+    // Verify SchemaVar serialization
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto schema = rt.context().find_schema("S");
+    if (!schema.has_value()) {
+        std::cout << "[schema S not found] ";
+        return false;
+    }
+
+    std::string body_str = schema->body.get().to_string();
+    std::cout << "[" << body_str << "] ";
+    return body_str == "?0 -> ?1 -> ?0";
+}
+
+bool test_schema_with_quantifiers() {
+    // Schema with quantifiers in body
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema ax1 [ph, ps]: (ph -> (ps -> ph))
+
+        proof ax1:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim inst: forall x. forall y. (eq(x, y) -> (P(x) -> eq(x, y)))
+
+        proof inst:
+            fix x
+            fix y
+            h = schema_inst ax1 { ph: eq(x, y), ps: P(x) }
+            h1 = forall_intro h
+            h2 = forall_intro h1
+            qed h2
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[schema with quantifier instantiation works] ";
+    return true;
+}
+
+bool test_schema_connectives_in_proof() {
+    // Prove a schema using connective rules, then instantiate
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema id [ph]: (ph -> ph)
+
+        proof id:
+            h = assume ph
+            h1 = implies_intro h
+            qed h1
+
+        claim use_id: forall x. (P(x) -> P(x))
+
+        proof use_id:
+            fix x
+            h = schema_inst id { ph: P(x) }
+            h1 = forall_intro h
+            qed h1
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[schema identity proved and instantiated] ";
+    return true;
+}
+
+// ==================== Predicate Schema Tests ====================
+
+bool test_predicate_schema_arity1() {
+    // P(1) means P is a unary predicate, substituted with \x. formula
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim test: forall a. (forall x. elem(x, x)) -> elem(a, a)
+
+        proof test:
+            h = schema_inst allE { P: \x. elem(x, x) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    if (!rt.context().find_theorem("test").has_value()) {
+        std::cout << "[test not proven] ";
+        return false;
+    }
+    std::cout << "[arity-1 predicate schema works] ";
+    return true;
+}
+
+bool test_predicate_schema_arity2() {
+    // R(2) is a binary predicate — test with a provable schema
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema refl2 [R(2)]: forall x. forall y. (R(x, y) -> R(x, y))
+
+        proof refl2:
+            fix x
+            fix y
+            h = assume R(x, y)
+            h1 = implies_intro h
+            h2 = forall_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim test: forall x. forall y. (eq(x, y) -> eq(x, y))
+
+        proof test:
+            h = schema_inst refl2 { R: \x y. eq(x, y) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    std::cout << "[arity-2 predicate schema works] ";
+    return true;
+}
+
+bool test_predicate_schema_mixed_arity() {
+    // Mix arity-0 (formula) and arity-1 (predicate) in one schema
+    // Schema: (forall x. P(x)) -> ph -> (forall x. P(x))
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema mixed [ph, P(1)]: (forall x. P(x)) -> ph -> (forall x. P(x))
+
+        proof mixed:
+            h1 = assume forall x. P(x)
+            h2 = assume ph
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim test: (forall x. R(x)) -> Q -> (forall x. R(x))
+
+        proof test:
+            h = schema_inst mixed { ph: Q, P: \x. R(x) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    std::cout << "[mixed arity schema works] ";
+    return true;
+}
+
+bool test_predicate_schema_to_string() {
+    // Verify SchemaVar with args prints correctly
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema S [P(1)]: forall x. P(x)
+    )");
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto schema = rt.context().find_schema("S");
+    if (!schema.has_value()) {
+        std::cout << "[schema not found] ";
+        return false;
+    }
+    std::string s = schema->body.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should contain ?0 applied to a generalized var
+    return s.find("?0") != std::string::npos;
+}
+
+bool test_predicate_schema_backward_compat() {
+    // Existing arity-0 syntax must still work unchanged
+    Runtime rt;
+    auto result = rt.load_with_proofs(R"(
+        schema S [ph, ps]: (ph -> (ps -> ph))
+
+        proof S:
+            h1 = assume ph
+            h2 = assume ps
+            h3 = implies_intro h1
+            h4 = implies_intro h3
+            qed h4
+
+        claim test: (P -> (Q -> P))
+
+        proof test:
+            h = schema_inst S { ph: P, ps: Q }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+    std::cout << "[backward compatible] ";
+    return true;
+}
+
+// ==================== Schema Capture Avoidance Tests ====================
+
+bool test_predicate_schema_capture_avoidance() {
+    // When a lambda binding body contains quantifiers, the lambda param
+    // substitution must not let inner quantifiers capture the schema arg.
+    //
+    // Schema: forall a. (forall x. P(x)) -> P(a)
+    // Binding: P: \x. forall y. R(x, y)
+    // Expected: forall a. (forall x. forall y. R(x, y)) -> forall y. R(a, y)
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim correct: forall a. (forall x. forall y. R(x, y)) -> forall y. R(a, y)
+
+        proof correct:
+            h = schema_inst allE { P: \x. forall y. R(x, y) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[capture avoidance works] ";
+    return true;
+}
+
+bool test_predicate_schema_capture_nested() {
+    // Lambda body with nested quantifiers: \x. forall y. forall z. S(x, y, z)
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim nested: forall a. (forall x. forall y. forall z. S(x, y, z)) -> forall y. forall z. S(a, y, z)
+
+        proof nested:
+            h = schema_inst allE { P: \x. forall y. forall z. S(x, y, z) }
+            qed h
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[nested capture avoidance works] ";
+    return true;
+}
+
+bool test_predicate_schema_capture_with_forall_intro() {
+    // Schema inst result wrapped in forall_intro — tests that subsequent
+    // generalization doesn't collide with renamed internal indices.
+    Runtime rt;
+
+    auto result = rt.load_with_proofs(R"(
+        schema allE [P(1)]: forall a. (forall x. P(x)) -> P(a)
+
+        proof allE:
+            fix a
+            h = assume forall x. P(x)
+            h1 = forall_elim h, a
+            h2 = implies_intro h1
+            h3 = forall_intro h2
+            qed h3
+
+        claim wrapped: forall w. forall a. (forall x. forall y. R(x, y)) -> forall y. R(a, y)
+
+        proof wrapped:
+            fix w
+            h = schema_inst allE { P: \x. forall y. R(x, y) }
+            h1 = forall_intro h
+            qed h1
+    )");
+
+    if (!result.ok()) {
+        std::cout << "[parse error: " << result.error() << "] ";
+        return false;
+    }
+
+    auto exec = rt.execute_all_proofs(result.value());
+    if (!exec.ok()) {
+        std::cout << "[execution error: " << exec.error() << "] ";
+        return false;
+    }
+
+    std::cout << "[capture + forall_intro works] ";
+    return true;
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -923,6 +1728,41 @@ int main() {
     std::cout << "\n── Ordered Pair Proofs ──\n";
     run_test("Load ordered pair axioms and claims", test_ordered_pair_axioms_loaded);
     run_test("Execute ordered pair proofs", test_execute_ordered_pair_proofs);
+
+    // Definite description (iota) tests
+    std::cout << "\n── Definite Description (Iota) Tests ──\n";
+    run_test("iota_elim basic (C++ API)", test_iota_elim_basic);
+    run_test("iota_elim proof syntax", test_iota_elim_syntax);
+    run_test("iota_elim with forall_elim", test_iota_elim_with_forall);
+    run_test("iota_elim binary predicate", test_iota_elim_binary_predicate);
+    run_test("iota_elim nested quantifier", test_iota_elim_nested_quantifier);
+    run_test("iota_elim error on non-existential", test_iota_elim_not_exists_error);
+    run_test("iota term to_string", test_iota_term_to_string);
+    run_test("iota term in eq context", test_iota_in_eq_subst);
+    run_test("iota_elim capture avoidance", test_iota_elim_capture_avoidance);
+
+    // Schema tests
+    std::cout << "\n── Schema Tests ──\n";
+    run_test("Schema declare, prove, instantiate", test_schema_declare_prove_instantiate);
+    run_test("Schema inst before proof fails", test_schema_inst_before_proof_fails);
+    run_test("Schema missing binding fails", test_schema_missing_binding_fails);
+    run_test("Schema to_string", test_schema_to_string);
+    run_test("Schema with quantifiers", test_schema_with_quantifiers);
+    run_test("Schema connectives in proof", test_schema_connectives_in_proof);
+
+    // Predicate schema tests
+    std::cout << "\n── Predicate Schema Tests ──\n";
+    run_test("Predicate schema arity-1", test_predicate_schema_arity1);
+    run_test("Predicate schema arity-2", test_predicate_schema_arity2);
+    run_test("Predicate schema mixed arity", test_predicate_schema_mixed_arity);
+    run_test("Predicate schema to_string", test_predicate_schema_to_string);
+    run_test("Predicate schema backward compat", test_predicate_schema_backward_compat);
+
+    // Schema capture avoidance tests
+    std::cout << "\n── Schema Capture Avoidance Tests ──\n";
+    run_test("Capture avoidance arity-N", test_predicate_schema_capture_avoidance);
+    run_test("Capture avoidance nested", test_predicate_schema_capture_nested);
+    run_test("Capture avoidance + forall_intro", test_predicate_schema_capture_with_forall_intro);
 
     // Integration test
     std::cout << "\n── Integration Test ──\n";

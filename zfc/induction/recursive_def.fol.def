@@ -1,0 +1,110 @@
+include "well_founded.fol.def"
+
+# ============================================================
+# Principle of Well-Founded Recursive Definition (Note 3.50)
+# ============================================================
+#
+# Let ≺ be a well-founded relation on a set X, let (Y_x)_{x∈X}
+# be a family of sets, and let F_x : ∏_{z≺x} Y_z → Y_x be a
+# family of functions. Then there exists a unique function
+# f ∈ ∏_{x∈X} Y_x such that for each x ∈ X:
+#
+#   f(x) = F_x((f(z))_{z≺x})
+#
+# Simplified version (Remark 3.54): for a single codomain Y,
+# define f : X → Y inductively. It suffices to give for each
+# x ∈ X, a function F_x that computes f(x) given the
+# restriction of f to the predecessors of x.
+#
+# In our encoding:
+#   - r is the well-founded relation on x
+#   - step is the "step function" mapping pairs (a, g) to values,
+#     where a ∈ x and g = f|↓a (restriction of f to predecessors)
+#   - f is the recursive solution function
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# restriction_to_pred(g, f, r, a): g is f restricted to ≺-predecessors of a
+# g = {(z, v) ∈ f : z ≺ a}
+@def(restriction_to_pred) axiom restriction_to_pred_def: forall g. forall f. forall r. forall a.
+    (restriction_to_pred(g, f, r, a) <->
+        forall z. forall v. (rel_elem(g, z, v) <-> (rel_elem(f, z, v) & rel_elem(r, z, a))))
+
+# rec_solution(f, step, r, x): f satisfies the recursion equation
+# For each a ∈ x, letting g = f|↓a and p = (a, g):
+#   f(a) = step(p) = step((a, g))
+#
+# That is: f is a function, and for each a ∈ x, f(a) equals
+# the value that step assigns to the pair (a, f|↓a).
+@def(rec_solution) axiom rec_solution_def: forall f. forall step. forall r. forall x.
+    (rec_solution(f, step, r, x) <->
+        (is_function(f) &
+         forall a. (elem(a, x) ->
+            exists v. exists g. exists p.
+                (rel_elem(f, a, v) &
+                 restriction_to_pred(g, f, r, a) &
+                 pair(p, a, g) &
+                 rel_elem(step, p, v)))))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For rec_def_unique: {a ∈ A : f1 and f2 agree at a}
+axiom separation_rec_def_agree: forall A. forall f1. forall f2. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) &
+        forall v1. forall v2. ((rel_elem(f1, a, v1) & rel_elem(f2, a, v2)) -> eq(v1, v2))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Uniqueness of recursive solution (Note 3.50)
+# Proof by well-founded induction on x:
+# If f1, f2 both satisfy the recursion, then for each a ∈ x,
+# by IH f1 and f2 agree on all predecessors, so f1|↓a = f2|↓a,
+# so step(a, f1|↓a) = step(a, f2|↓a), so f1(a) = f2(a).
+claim rec_def_unique: forall f1. forall f2. forall step. forall r. forall x.
+    ((well_founded(r, x) & is_function(step) &
+      rec_solution(f1, step, r, x) & rec_solution(f2, step, r, x)) ->
+     forall a. (elem(a, x) ->
+        forall v1. forall v2. ((rel_elem(f1, a, v1) & rel_elem(f2, a, v2)) -> eq(v1, v2))))
+
+# Existence of recursive solution (Note 3.50)
+# Proof by Knaster-Tarski: the graph of f is the fixed point of
+# the monotone operator T(f) = {(x, step(x, f|↓x)) | x ∈ X, f|↓x total}.
+# The T-closure gives a partial function; well-foundedness ensures
+# it is total on all of X.
+#
+# Requires: step is a function, and for every a ∈ x and every
+# valid partial function g on predecessors of a, step is defined
+# on (a, g).
+claim rec_def_exists: forall step. forall r. forall x.
+    ((well_founded(r, x) & is_function(step) &
+      forall a. forall g. forall p.
+        ((elem(a, x) & is_function(g) &
+          (forall z. forall v. (rel_elem(g, z, v) -> rel_elem(r, z, a))) &
+          pair(p, a, g)) ->
+         in_domain(step, p))) ->
+     exists f. rec_solution(f, step, r, x))
+
+# The restriction to predecessors is a function
+claim restriction_is_function: forall g. forall f. forall r. forall a.
+    ((is_function(f) & restriction_to_pred(g, f, r, a)) -> is_function(g))
+
+# The restriction to predecessors is unique (among relations)
+# Requires is_relation so extensionality on ordered pairs applies:
+# two relations with the same rel_elem pairs are equal.
+claim restriction_unique: forall g1. forall g2. forall f. forall r. forall a.
+    ((is_relation(g1) & is_relation(g2) &
+      restriction_to_pred(g1, f, r, a) & restriction_to_pred(g2, f, r, a)) -> eq(g1, g2))
+
+# If f1 and f2 agree on predecessors of a, their restrictions are equal
+claim restriction_agree: forall g1. forall g2. forall f1. forall f2. forall r. forall a.
+    ((is_relation(g1) & is_relation(g2) &
+      restriction_to_pred(g1, f1, r, a) & restriction_to_pred(g2, f2, r, a) &
+      forall z. (rel_elem(r, z, a) ->
+        forall v1. forall v2. ((rel_elem(f1, z, v1) & rel_elem(f2, z, v2)) -> eq(v1, v2)))) ->
+     eq(g1, g2))

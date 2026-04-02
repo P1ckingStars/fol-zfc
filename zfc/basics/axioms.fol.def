@@ -23,9 +23,12 @@ axiom union: forall A. exists U. forall x. (elem(x, U) <-> exists y. (elem(y, A)
 axiom power_set: forall A. exists P. forall x. (elem(x, P) <-> forall y. (elem(y, x) -> elem(y, A)))
 
 # 6. Infinity
-# There exists an infinite set (contains empty set and is closed under successor)
-# Successor of x is {x, {x}} but we express closure differently
-axiom infinity: exists I. (exists e. (elem(e, I) & forall x. ~elem(x, e))) & (forall x. (elem(x, I) -> exists y. (elem(y, I) & elem(x, y))))
+# There exists an infinite set (contains empty set and is closed under von Neumann successor)
+# For every x in I, there exists y in I where y = x ∪ {x}
+axiom infinity: exists I.
+    (exists e. (elem(e, I) & forall x. ~elem(x, e))) &
+    (forall x. (elem(x, I) -> exists y. (elem(y, I) &
+        forall z. (elem(z, y) <-> (elem(z, x) | eq(z, x))))))
 
 # 7. Foundation (Regularity)
 # Every non-empty set has an element disjoint from it

@@ -3,8 +3,24 @@ load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 cc_binary(
     name = "proof_checker",
     srcs = ["proof_checker.cpp"],
+    local_defines = select({
+        "//build:profiling": ["PROFILING_ENABLED"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [
+        "//src/library",
+        "//src/runtime",
+        "//src/util:profiler",
+    ],
+)
+
+cc_binary(
+    name = "fol_compiler",
+    srcs = ["fol_compiler.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/library",
         "//src/runtime",
     ],
 )

@@ -1,0 +1,118 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "wff_ast",
+    srcs = ["wff_ast.cpp"],
+    hdrs = ["wff_ast.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "syntax_parser",
+    srcs = ["syntax_parser.cpp"],
+    hdrs = ["syntax_parser.h"],
+    deps = ["//metamath/parser:mm_database"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "proof_emit",
+    srcs = ["proof_emit.cpp"],
+    hdrs = ["proof_emit.h"],
+    deps = [":mm_translator_base"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "comprehension",
+    srcs = ["comprehension.cpp"],
+    hdrs = ["comprehension.h"],
+    deps = [
+        ":mm_translator_base",
+        ":proof_emit",
+        ":wff_ast",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "proof_tree",
+    srcs = ["proof_tree.cpp"],
+    hdrs = ["proof_tree.h"],
+    deps = [
+        "//metamath/parser:mm_database",
+        "//metamath/verifier:mm_verifier",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "mm_translator_base",
+    hdrs = ["mm_translator.h"],
+    deps = [
+        ":syntax_parser",
+        ":wff_ast",
+        "//metamath/parser:mm_database",
+        "//metamath/verifier:mm_verifier",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "mm_translator",
+    srcs = ["mm_translator.cpp", "proof_emit_tree.cpp"],
+    hdrs = ["mm_translator.h"],
+    deps = [
+        ":comprehension",
+        ":mm_translator_base",
+        ":proof_emit",
+        ":proof_tree",
+        ":syntax_parser",
+        ":syntax_to_wff",
+        ":wff_ast",
+        "//metamath/parser:mm_database",
+        "//metamath/verifier:mm_verifier",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "syntax_to_wff",
+    srcs = ["syntax_to_wff.cpp"],
+    hdrs = ["syntax_to_wff.h"],
+    deps = [
+        ":syntax_parser",
+        ":wff_ast",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "syntax_parser_test",
+    srcs = ["syntax_parser_test.cpp"],
+    deps = [
+        ":syntax_parser",
+        "//metamath/parser:mm_database",
+    ],
+)
+
+cc_binary(
+    name = "syntax_to_wff_test",
+    srcs = ["syntax_to_wff_test.cpp"],
+    deps = [
+        ":syntax_parser",
+        ":syntax_to_wff",
+        "//metamath/parser:mm_database",
+    ],
+)
+
+cc_binary(
+    name = "mm_to_fol",
+    srcs = ["mm_to_fol.cpp"],
+    deps = [
+        ":mm_translator",
+        ":proof_tree",
+        "//metamath/parser:mm_database",
+    ],
+)

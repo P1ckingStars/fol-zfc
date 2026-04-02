@@ -76,8 +76,8 @@ bool test_parse_nested_quantifiers() {
     auto s = parse_sentence("forall x. exists y. R(x, y)", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    // Convention: outer quantifiers get larger indices, inner get smaller
-    return str == "forall x_1. exists x_0. R(x_1, x_0)";
+    // De Bruijn: outer binders get lower subscripts
+    return str == "forall x_0. exists x_1. R(x_0, x_1)";
 }
 
 bool test_parse_same_var_name_different_scope() {
@@ -86,8 +86,10 @@ bool test_parse_same_var_name_different_scope() {
     auto s = parse_sentence("forall x. P(x) & forall x. Q(x)", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    // Left forall processed first, gets larger index; right forall gets smaller
-    return str == "forall x_1. P(x_1) & forall x_0. Q(x_0)";
+    // Parser: "forall x. P(x) & forall x. Q(x)" parses as "forall x. (P(x) & (forall x. Q(x)))"
+    // because forall extends to the right. Inner forall is nested inside outer.
+    // De Bruijn: outer forall = x_0, inner forall (nested one deeper) = x_1
+    return str == "forall x_0. P(x_0) & forall x_1. Q(x_1)";
 }
 
 bool test_parse_implication() {
@@ -104,7 +106,7 @@ bool test_parse_multiple_quantifiers() {
     auto s = parse_sentence("forall x. forall y. R(x, y)", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    return str == "forall x_1. forall x_0. R(x_1, x_0)";
+    return str == "forall x_0. forall x_1. R(x_0, x_1)";
 }
 
 bool test_reject_free_variable() {
@@ -149,9 +151,9 @@ bool test_parse_complex() {
     auto s = parse_sentence("forall x. forall y. (R(x, y) -> exists z. S(x, z) & S(z, y))", ctx);
     std::string str = s->to_string();
     std::cout << "[" << str << "] ";
-    // Convention: outer quantifiers get larger indices, inner get smaller
-    // x (outermost) = x_2, y (middle) = x_1, z (innermost) = x_0
-    return str == "forall x_2. forall x_1. R(x_2, x_1) -> exists x_0. S(x_2, x_0) & S(x_0, x_1)";
+    // De Bruijn: outer binders get lower subscripts
+    // x (outermost) = x_0, y (middle) = x_1, z (innermost) = x_2
+    return str == "forall x_0. forall x_1. R(x_0, x_1) -> exists x_2. S(x_0, x_2) & S(x_2, x_1)";
 }
 
 // ==================== Sentence Equality Tests ====================
@@ -285,6 +287,261 @@ bool test_parse_zfc_axioms() {
     }
 }
 
+// ==================== Predicate Schema Core Tests ====================
+// These bypass the parser and test FormulaBuilder directly.
+
+// Helper: create a predicate P with given arity
+static PredicateHandle make_pred(GlobalContext& ctx, const std::string& name, size_t arity) {
+    return ctx.add_predicate(name, arity);
+}
+
+bool test_schema_var_args_to_string() {
+    // SchemaVar{0, [gen(0)]} should print as ?0(v0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto h = b.make_schema_var(0, {Term::generalized(0)});
+    std::string s = h.get().to_string();
+    std::cout << "[" << s << "] ";
+    return s.find("?0") != std::string::npos;
+}
+
+bool test_instantiate_arity1_basic() {
+    // Schema body: P(gen_0)  — "P applied to variable 0"
+    // Binding: \x. elem(x, nat)
+    // Result: elem(gen_0, nat)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto elem = make_pred(ctx, "elem", 2);
+
+    // Build schema body: P(gen_0) where P is SchemaVar{0}
+    auto body = b.make_schema_var(0, {Term::generalized(0)});
+
+    // Build lambda binding: \x. elem(x, x)
+    var_index x = b.enter_scope();
+    auto lambda_body = b.predicate(elem, {Term::fixed(x), Term::fixed(x)});
+    b.exit_scope();
+
+    SchemaBind bind({x}, lambda_body);
+    auto result = b.instantiate_schema(body, {bind});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be elem(v0, v0) — gen(0) substituted for fixed(x) in both positions
+    return s.find("elem") != std::string::npos;
+}
+
+bool test_instantiate_arity1_two_occ() {
+    // Schema: P(a) -> P(b)  where a=gen(0), b=gen(1)
+    // Binding P: \x. R(x)
+    // Result: R(a) -> R(b)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 1);
+
+    auto pa = b.make_schema_var(0, {Term::generalized(0)});
+    auto pb = b.make_schema_var(0, {Term::generalized(1)});
+    auto body = b.make_implies(pa, pb);
+
+    var_index x = b.enter_scope();
+    auto lambda_body = b.predicate(R, {Term::fixed(x)});
+    b.exit_scope();
+
+    SchemaBind bind({x}, lambda_body);
+    auto result = b.instantiate_schema(body, {bind});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be R(gen_0) -> R(gen_1) — free Gen vars in a non-sentence
+    return s == "R(x_FREE_0) -> R(x_FREE_1)";
+}
+
+bool test_instantiate_arity2() {
+    // Schema: R(gen_0, gen_1)
+    // Binding R: \x y. eq(x, y)
+    // Result: eq(gen_0, gen_1)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto eq = make_pred(ctx, "eq", 2);
+
+    auto body = b.make_schema_var(0, {Term::generalized(0), Term::generalized(1)});
+
+    var_index x = b.enter_scope();
+    var_index y = b.enter_scope();
+    auto lambda_body = b.predicate(eq, {Term::fixed(x), Term::fixed(y)});
+    b.exit_scope();
+    b.exit_scope();
+
+    SchemaBind bind({x, y}, lambda_body);
+    auto result = b.instantiate_schema(body, {bind});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    return s == "eq(x_FREE_0, x_FREE_1)";
+}
+
+bool test_instantiate_mixed() {
+    // Schema with arity-0 var ph and arity-1 var P:
+    // ph -> P(gen_0)
+    // Bindings: ph = Q(a), P = \x. R(x)
+    // Result: Q(a) -> R(gen_0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto R = make_pred(ctx, "R", 1);
+
+    // ph is SchemaVar{0}, P is SchemaVar{1}
+    auto ph = b.make_schema_var(0);
+    auto p_applied = b.make_schema_var(1, {Term::generalized(0)});
+    auto body = b.make_implies(ph, p_applied);
+
+    // Binding 0 (ph): Q(gen_0) — arity 0
+    auto qa = b.predicate(Q, {Term::generalized(5)});  // use gen_5 as "a"
+    SchemaBind bind_ph(qa);
+
+    // Binding 1 (P): \x. R(x) — arity 1
+    var_index x = b.enter_scope();
+    auto lambda_body = b.predicate(R, {Term::fixed(x)});
+    b.exit_scope();
+    SchemaBind bind_P({x}, lambda_body);
+
+    auto result = b.instantiate_schema(body, {bind_ph, bind_P});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be Q(v5) -> R(v0)
+    return s.find("Q(") != std::string::npos && s.find("R(") != std::string::npos;
+}
+
+bool test_instantiate_arity0_compat() {
+    // Pure arity-0 schema (backward compat): ph -> ps
+    // Bindings: ph = A, ps = B
+    // Result: A -> B
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto A = make_pred(ctx, "A", 0);
+    auto B = make_pred(ctx, "B", 0);
+
+    auto ph = b.make_schema_var(0);
+    auto ps = b.make_schema_var(1);
+    auto body = b.make_implies(ph, ps);
+
+    auto fa = b.predicate(A, {});
+    auto fb = b.predicate(B, {});
+
+    auto result = b.instantiate_schema(body, {SchemaBind(fa), SchemaBind(fb)});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    return s == "A -> B";
+}
+
+bool test_translate_term_schema_var() {
+    // translate_term should propagate through SchemaVar args
+    // SchemaVar{0, [fixed(x)]} with translate fixed(x) -> gen(0)
+    // should become SchemaVar{0, [gen(0)]}
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+
+    var_index x = b.enter_scope();
+    auto sv = b.make_schema_var(0, {Term::fixed(x)});
+
+    // Translate fixed(x) -> generalized(0)
+    auto result = b.translate_term(sv, Term::fixed(x), Term::generalized(0));
+    b.exit_scope();
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be ?0(v0) — the fixed var replaced with generalized
+    return result != sv;  // should have changed
+}
+
+bool test_capture_avoidance() {
+    // Schema: forall x. P(x)
+    // Binding P: \y. elem(y, nat)
+    // Result: forall x. elem(x, nat)
+    //
+    // The tricky part: P(x) has x=gen(0) which is bound by the forall.
+    // The lambda has param y (a fixed var). When instantiating P(gen_0),
+    // we substitute fixed(y) -> gen(0) in the lambda body.
+    // This should produce elem(gen_0, nat) inside the forall scope.
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto elem = make_pred(ctx, "elem", 2);
+
+    // Build: forall x. P(x)
+    FormulaHandle forall_result;
+    {
+        QuantifierBuilder qb(b, Op::Forall, forall_result);
+        auto p_x = b.make_schema_var(0, {qb.var()});
+        qb.set_body(p_x);
+    }
+
+    // Build lambda: \y. elem(y, y)
+    var_index y = b.enter_scope();
+    auto lambda_body = b.predicate(elem, {Term::fixed(y), Term::fixed(y)});
+    b.exit_scope();
+
+    SchemaBind bind({y}, lambda_body);
+    auto result = b.instantiate_schema(forall_result, {bind});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be a forall with elem inside
+    return s.find("forall") != std::string::npos && s.find("elem") != std::string::npos;
+}
+
+bool test_instantiate_complex_body() {
+    // Schema: P(a) & P(b) -> P(a)
+    // Binding P: \x. (elem(x, nat) & R(x))
+    // Result: (elem(a,nat) & R(a)) & (elem(b,nat) & R(b)) -> (elem(a,nat) & R(a))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 1);
+
+    // Schema body: P(gen_0) & P(gen_1) -> P(gen_0)
+    auto pa = b.make_schema_var(0, {Term::generalized(0)});
+    auto pb = b.make_schema_var(0, {Term::generalized(1)});
+    auto pa2 = b.make_schema_var(0, {Term::generalized(0)});
+    auto lhs = b.make_and(pa, pb);
+    auto body = b.make_implies(lhs, pa2);
+
+    // Lambda: \x. R(x)  (simpler than original description)
+    var_index x = b.enter_scope();
+    auto lambda_body = b.predicate(R, {Term::fixed(x)});
+    b.exit_scope();
+
+    SchemaBind bind({x}, lambda_body);
+    auto result = b.instantiate_schema(body, {bind});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be (R(gen_0) & R(gen_1)) -> R(gen_0) — free Gen vars in a non-sentence
+    return s == "R(x_FREE_0) & R(x_FREE_1) -> R(x_FREE_0)";
+}
+
+bool test_lambda_param_unused() {
+    // Schema: P(gen_0)
+    // Binding P: \x. Q  (lambda param x is unused in body)
+    // Result: Q (the formula Q, regardless of gen_0)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto Q = make_pred(ctx, "Q", 0);
+
+    auto body = b.make_schema_var(0, {Term::generalized(0)});
+
+    var_index x = b.enter_scope();
+    auto lambda_body = b.predicate(Q, {});  // Q doesn't use x
+    b.exit_scope();
+
+    SchemaBind bind({x}, lambda_body);
+    auto result = b.instantiate_schema(body, {bind});
+
+    std::string s = result.get().to_string();
+    std::cout << "[" << s << "] ";
+    // Should be just "Q" — the unused param means P is a constant predicate
+    return s == "Q";
+}
+
 bool test_parse_ordered_pair_proof() {
     // Parse ordered pair header (axioms + claims only, no proofs)
     std::ifstream file("zfc/basics/ordered_pair.fol.def");
@@ -333,6 +590,155 @@ bool test_parse_ordered_pair_proof() {
     }
 }
 
+// ==================== Structural Equality Tests (De Bruijn) ====================
+// With De Bruijn indices, structural equality IS alpha-equivalence.
+// Gen(0) always refers to the innermost binder. No explicit var_index in make_quantified.
+
+bool test_alpha_identical() {
+    // forall. P(Gen(0))  ==  forall. P(Gen(0))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto f = b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)}));
+    return f == f;
+}
+
+bool test_alpha_renamed_bound_var() {
+    // With De Bruijn, "renamed bound var" just means building the same formula twice.
+    // Both use Gen(0) for the bound var → same FormulaHandle.
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto f1 = b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)}));
+    auto f2 = b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)}));
+    return f1 == f2;
+}
+
+bool test_alpha_forall_vs_exists() {
+    // forall. P(Gen(0))  !=  exists. P(Gen(0))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto f1 = b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)}));
+    auto f2 = b.make_quantified(Op::Exists, b.predicate(P, {Term::generalized(0)}));
+    return f1 != f2;
+}
+
+bool test_alpha_nested_renamed() {
+    // forall. exists. R(Gen(1), Gen(0))  built two ways → same handle
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    // De Bruijn: Gen(1) = outer forall, Gen(0) = inner exists
+    auto inner_body = b.predicate(R, {Term::generalized(1), Term::generalized(0)});
+    auto f1 = b.make_quantified(Op::Forall,
+        b.make_quantified(Op::Exists, inner_body));
+    auto f2 = b.make_quantified(Op::Forall,
+        b.make_quantified(Op::Exists, inner_body));
+    return f1 == f2;
+}
+
+bool test_alpha_swapped_args_not_equiv() {
+    // forall. exists. R(Gen(1), Gen(0))  !=  forall. exists. R(Gen(0), Gen(1))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto f1 = b.make_quantified(Op::Forall,
+        b.make_quantified(Op::Exists, b.predicate(R, {Term::generalized(1), Term::generalized(0)})));
+    auto f2 = b.make_quantified(Op::Forall,
+        b.make_quantified(Op::Exists, b.predicate(R, {Term::generalized(0), Term::generalized(1)})));
+    return f1 != f2;
+}
+
+bool test_alpha_swapped_quantifiers_not_equiv() {
+    // forall. exists. R(Gen(1), Gen(0))  !=  exists. forall. R(Gen(1), Gen(0))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto body = b.predicate(R, {Term::generalized(1), Term::generalized(0)});
+    auto f1 = b.make_quantified(Op::Forall, b.make_quantified(Op::Exists, body));
+    auto f2 = b.make_quantified(Op::Exists, b.make_quantified(Op::Forall, body));
+    return f1 != f2;
+}
+
+bool test_alpha_shadowing() {
+    // forall. (P(Gen(0)) & exists. Q(Gen(0)))
+    // The inner Gen(0) refers to the inner exists, outer Gen(0) in P refers to forall.
+    // Built two ways → same handle.
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto inner_exists = b.make_quantified(Op::Exists, b.predicate(Q, {Term::generalized(0)}));
+    auto f1 = b.make_quantified(Op::Forall,
+        b.make_and(
+            b.predicate(P, {Term::generalized(0)}),
+            inner_exists));
+    auto f2 = b.make_quantified(Op::Forall,
+        b.make_and(
+            b.predicate(P, {Term::generalized(0)}),
+            inner_exists));
+    return f1 == f2;
+}
+
+bool test_alpha_shadowing_not_equiv() {
+    // forall. (P(Gen(0)) & exists. Q(Gen(0)))   ← inner Q uses inner binder
+    //   !=
+    // forall. (P(Gen(0)) & exists. Q(Gen(1)))   ← inner Q uses outer binder
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = b.make_quantified(Op::Forall,
+        b.make_and(
+            b.predicate(P, {Term::generalized(0)}),
+            b.make_quantified(Op::Exists, b.predicate(Q, {Term::generalized(0)}))));
+    auto f2 = b.make_quantified(Op::Forall,
+        b.make_and(
+            b.predicate(P, {Term::generalized(0)}),
+            b.make_quantified(Op::Exists, b.predicate(Q, {Term::generalized(1)}))));
+    return f1 != f2;
+}
+
+bool test_alpha_fixed_vars_must_match() {
+    // forall. R(Gen(0), Fixed(3))  ==  forall. R(Gen(0), Fixed(3))  (same fixed var)
+    // forall. R(Gen(0), Fixed(3))  !=  forall. R(Gen(0), Fixed(4))  (different fixed var)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto R = make_pred(ctx, "R", 2);
+    auto f1 = b.make_quantified(Op::Forall, b.predicate(R, {Term::generalized(0), Term::fixed(3)}));
+    auto f2 = b.make_quantified(Op::Forall, b.predicate(R, {Term::generalized(0), Term::fixed(3)}));
+    auto f3 = b.make_quantified(Op::Forall, b.predicate(R, {Term::generalized(0), Term::fixed(4)}));
+    return (f1 == f2) && (f1 != f3);
+}
+
+bool test_alpha_different_predicate() {
+    // forall. P(Gen(0))  !=  forall. Q(Gen(0))
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)}));
+    auto f2 = b.make_quantified(Op::Forall, b.predicate(Q, {Term::generalized(0)}));
+    return f1 != f2;
+}
+
+bool test_alpha_compound() {
+    // (forall. P(Gen(0))) -> (exists. Q(Gen(0)))
+    // Built two ways → same handle (both quantifiers use Gen(0) independently)
+    GlobalContext ctx;
+    FormulaBuilder b(ctx);
+    auto P = make_pred(ctx, "P", 1);
+    auto Q = make_pred(ctx, "Q", 1);
+    auto f1 = b.make_implies(
+        b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)})),
+        b.make_quantified(Op::Exists, b.predicate(Q, {Term::generalized(0)})));
+    auto f2 = b.make_implies(
+        b.make_quantified(Op::Forall, b.predicate(P, {Term::generalized(0)})),
+        b.make_quantified(Op::Exists, b.predicate(Q, {Term::generalized(0)})));
+    return f1 == f2;
+}
+
 // ==================== Main ====================
 
 int main() {
@@ -366,6 +772,33 @@ int main() {
     run_test("Parse multiple statements", test_parse_multiple_statements);
     run_test("Axiom registered in context", test_axiom_registered_in_context);
     run_test("Claim not registered", test_claim_not_registered);
+
+    // Predicate schema core tests (bypass parser, test C++ API directly)
+    std::cout << "\n── Predicate Schema Core Tests ──\n";
+    run_test("SchemaVar with args to_string", test_schema_var_args_to_string);
+    run_test("Instantiate arity-1 basic", test_instantiate_arity1_basic);
+    run_test("Instantiate arity-1 two occurrences", test_instantiate_arity1_two_occ);
+    run_test("Instantiate arity-2", test_instantiate_arity2);
+    run_test("Instantiate mixed arity-0 and arity-1", test_instantiate_mixed);
+    run_test("Instantiate arity-0 backward compat", test_instantiate_arity0_compat);
+    run_test("translate_term propagates through SchemaVar args", test_translate_term_schema_var);
+    run_test("Capture avoidance: lambda param vs quantifier var", test_capture_avoidance);
+    run_test("Instantiate arity-1 with complex body", test_instantiate_complex_body);
+    run_test("Lambda param unused in body", test_lambda_param_unused);
+
+    // Structural equality tests (De Bruijn)
+    std::cout << "\n── Structural Equality Tests (De Bruijn) ──\n";
+    run_test("Identical formulas", test_alpha_identical);
+    run_test("Same structure = same handle", test_alpha_renamed_bound_var);
+    run_test("Forall != exists", test_alpha_forall_vs_exists);
+    run_test("Nested same structure", test_alpha_nested_renamed);
+    run_test("Swapped args != equiv", test_alpha_swapped_args_not_equiv);
+    run_test("Swapped quantifiers != equiv", test_alpha_swapped_quantifiers_not_equiv);
+    run_test("Shadowing equiv", test_alpha_shadowing);
+    run_test("Shadowing not equiv", test_alpha_shadowing_not_equiv);
+    run_test("Fixed vars must match", test_alpha_fixed_vars_must_match);
+    run_test("Different predicate != equiv", test_alpha_different_predicate);
+    run_test("Compound with same structure", test_alpha_compound);
 
     // ZFC axioms test
     std::cout << "\n── ZFC Axioms Test ──\n";

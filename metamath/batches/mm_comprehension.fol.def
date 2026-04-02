@@ -1,0 +1,15 @@
+# Comprehension axioms for wff-as-set encoding
+# These assert that the set universe is closed under propositional ops
+
+axiom wff_impl: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) -> elem(u, B)))
+axiom wff_neg: forall A. exists B. forall u. (elem(u, B) <-> ~elem(u, A))
+axiom wff_and: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) & elem(u, B)))
+axiom wff_or: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) | elem(u, B)))
+axiom wff_bic: forall A. forall B. exists C. forall u. (elem(u, C) <-> (elem(u, A) <-> elem(u, B)))
+axiom wff_true: exists B. forall u. (elem(u, B) <-> (elem(u, u) -> elem(u, u)))
+axiom wff_false: exists B. forall u. (elem(u, B) <-> ~(elem(u, u) -> elem(u, u)))
+axiom wff_eq: forall x. forall y. exists S. forall u. (elem(u, S) <-> eq(x, y))
+axiom wff_ne: forall x. forall y. exists S. forall u. (elem(u, S) <-> ne(x, y))
+axiom wff_elem: forall x. forall y. exists S. forall u. (elem(u, S) <-> elem(x, y))
+axiom wff_nel: forall x. forall y. exists S. forall u. (elem(u, S) <-> nel(x, y))
+

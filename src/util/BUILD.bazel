@@ -17,3 +17,11 @@ cc_library(
     hdrs = ["error.h"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "profiler",
+    hdrs = ["profiler.h"],
+    strip_include_prefix = "/src/util",
+    include_prefix = "src/util",
+    visibility = ["//visibility:public"],
+)

@@ -34,7 +34,12 @@ struct ASTNode {
         ProofStepRule,   // h = rule args
         ProofStepQed,    // qed h
         // Include
-        IncludeStmt      // include "path"
+        IncludeStmt,     // include "path"
+        // Definite description term
+        DescriptionTerm, // (iota x. φ) - term with bound variable and body formula
+        // Schema
+        SchemaStmt,          // schema name [vars]: formula
+        ProofStepSchemaInst  // h = schema_inst name { var: formula, ... }
     };
 
     Type type;
@@ -123,6 +128,28 @@ struct ASTNode {
     static ASTNode* make_include(const std::string& path) {
         auto* node = new ASTNode(IncludeStmt);
         node->name = path;  // Store path in name field
+        return node;
+    }
+
+    // Schema statement: schema name [var1, var2]: formula
+    // var_names stored in args (as Term nodes), body formula in body
+    static ASTNode* make_schema_stmt(const std::string& schema_name,
+                                      std::vector<ASTNode*>* var_names,
+                                      ASTNode* formula_body) {
+        auto* node = new ASTNode(SchemaStmt);
+        node->name = schema_name;
+        node->args = var_names;
+        node->body = formula_body;
+        return node;
+    }
+
+    // Schema instantiation proof step: h = schema_inst name { var: formula, ... }
+    // Schema name in rule_name, bindings stored in steps (pairs of name/formula)
+    static ASTNode* make_schema_inst_step(const std::string& schema_name,
+                                           std::vector<ASTNode*>* bindings) {
+        auto* node = new ASTNode(ProofStepSchemaInst);
+        node->rule_name = schema_name;
+        node->steps = bindings;  // Each binding: Term node with name + body formula
         return node;
     }
 

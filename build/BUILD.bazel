@@ -1,1 +1,7 @@
 # This directory contains Bazel rules for FOL proof verification.
+
+config_setting(
+    name = "profiling",
+    define_values = {"profiling": "1"},
+    visibility = ["//visibility:public"],
+)

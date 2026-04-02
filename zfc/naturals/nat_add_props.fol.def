@@ -1,0 +1,65 @@
+include "nat_add.fol.def"
+
+# ============================================================
+# Addition Algebraic Properties (Notes 3.153-3.157)
+# ============================================================
+#
+# Proved by induction on the second argument (or first, as needed):
+#   - Left identity: 0 + a = a (Note 3.155)
+#   - Left successor: S(a) + b = S(a + b)
+#   - Commutativity: a + b = b + a (Note 3.157)
+#   - Associativity: (a + b) + c = a + (b + c) (Note 3.154)
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# For add_zero_left: {a in A : nat_add(a, e, a)} with param e
+axiom separation_add_zero_left: forall A. forall e. exists B. forall a.
+    (elem(a, B) <-> (elem(a, A) & nat_add(a, e, a)))
+
+# For add_succ_left: {b in A : forall sa s ss. (hyp -> nat_add(ss, sa, b))} with param a
+axiom separation_add_succ_left: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall sa. forall s. forall ss.
+            ((succ(sa, a) & nat_add(s, a, b) & succ(ss, s)) -> nat_add(ss, sa, b))))
+
+# For add_comm: {b in A : forall s. (nat_add(s, a, b) -> nat_add(s, b, a))} with param a
+axiom separation_add_comm: forall A. forall a. exists B. forall b.
+    (elem(b, B) <-> (elem(b, A) &
+        forall s. (nat_add(s, a, b) -> nat_add(s, b, a))))
+
+# For add_assoc: {c in A : forall ab bc s1 s2. (hyp -> eq(s1, s2))} with params a, b
+axiom separation_add_assoc: forall A. forall a. forall b. exists B. forall c.
+    (elem(c, B) <-> (elem(c, A) &
+        forall ab. forall bc. forall s1. forall s2.
+            ((nat_add(ab, a, b) & nat_add(bc, b, c) &
+              nat_add(s1, ab, c) & nat_add(s2, a, bc)) -> eq(s1, s2))))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# Left identity: 0 + a = a (Note 3.155)
+# Proof by induction on a: base 0+0=0, step 0+S(a)=S(0+a)=S(a).
+claim add_zero_left: forall n. forall a. forall e.
+    ((nat_set(n) & elem(a, n) & empty(e)) -> nat_add(a, e, a))
+
+# Left successor: S(a) + b = S(a + b)
+# Proof by induction on b: uses add_zero, add_succ, add_unique.
+claim add_succ_left: forall n. forall a. forall b. forall sa. forall s. forall ss.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & succ(sa, a) & nat_add(s, a, b) & succ(ss, s))
+     -> nat_add(ss, sa, b))
+
+# Commutativity: a + b = b + a (Note 3.157)
+# Proof: first prove 1+n=n+1 by induction, then m+n=n+m by induction on n.
+claim add_comm: forall n. forall a. forall b. forall s.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & nat_add(s, a, b)) -> nat_add(s, b, a))
+
+# Associativity: (a + b) + c = a + (b + c) (Note 3.154)
+# Proof by induction on c.
+claim add_assoc: forall n. forall a. forall b. forall c.
+    forall ab. forall bc. forall s1. forall s2.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & elem(c, n) &
+      nat_add(ab, a, b) & nat_add(bc, b, c) &
+      nat_add(s1, ab, c) & nat_add(s2, a, bc)) -> eq(s1, s2))

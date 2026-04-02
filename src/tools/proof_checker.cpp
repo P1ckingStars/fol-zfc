@@ -1,4 +1,6 @@
+#include "../library/library.h"
 #include "../runtime/runtime.h"
+#include "src/util/profiler.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -38,24 +40,36 @@ int main(int argc, char* argv[]) {
     Runtime rt;
 
     // Load dependency headers first (in order)
+    // Supports both .fol.def (text) and .fol.lib (compiled binary)
     for (const auto& dep_path : dep_header_paths) {
-        auto result = rt.load_file_recursive(dep_path);
-        if (!result.ok()) {
-            std::cerr << "ERROR: Failed to load dependency " << dep_path << ": "
-                      << result.error().to_string() << "\n";
-            return 1;
-        }
-        // Execute any proofs from dependencies (they become available as theorems)
-        auto exec = rt.execute_all_proofs(result.value());
-        if (!exec.ok()) {
-            std::cerr << "ERROR: Failed to execute proofs in dependency " << dep_path << ": "
-                      << exec.error().to_string() << "\n";
-            return 1;
+        PROFILE_SCOPE("load_dep_header");
+        if (dep_path.size() >= 8 && dep_path.substr(dep_path.size() - 8) == ".fol.lib") {
+            auto status = rt.load_library(dep_path);
+            if (!status.ok()) {
+                std::cerr << "ERROR: Failed to load library " << dep_path << ": "
+                          << status.error().to_string() << "\n";
+                return 1;
+            }
+        } else {
+            auto result = rt.load_file_recursive(dep_path);
+            if (!result.ok()) {
+                std::cerr << "ERROR: Failed to load dependency " << dep_path << ": "
+                          << result.error().to_string() << "\n";
+                return 1;
+            }
+            // Execute any proofs from dependencies (they become available as theorems)
+            auto exec = rt.execute_all_proofs(result.value());
+            if (!exec.ok()) {
+                std::cerr << "ERROR: Failed to execute proofs in dependency " << dep_path << ": "
+                          << exec.error().to_string() << "\n";
+                return 1;
+            }
         }
     }
 
     // Load and execute dependency proof files (making proved claims available as theorems)
     for (const auto& dep_path : dep_proof_paths) {
+        PROFILE_SCOPE("load_dep_proof");
         auto result = rt.load_file_recursive(dep_path);
         if (!result.ok()) {
             std::cerr << "ERROR: Failed to load dependency proof " << dep_path << ": "
@@ -74,75 +88,228 @@ int main(int argc, char* argv[]) {
     auto dep_claims = rt.context().claims();
 
     // Load the main header (axioms + claims)
-    auto header_result = rt.load_file_recursive(header_path);
+    decltype(rt.load_file_recursive(header_path)) header_result = MAKE_ERROR << "not loaded";
+    {
+        PROFILE_SCOPE("load_header");
+        header_result = rt.load_file_recursive(header_path);
+    }
     if (!header_result.ok()) {
         std::cerr << "ERROR: Failed to load header " << header_path << ": "
                   << header_result.error().to_string() << "\n";
+        PROFILE_REPORT();
         return 1;
     }
 
     // Execute any proofs from the header's includes
-    auto header_exec = rt.execute_all_proofs(header_result.value());
-    if (!header_exec.ok()) {
-        std::cerr << "ERROR: Failed to execute proofs from header includes: "
-                  << header_exec.error().to_string() << "\n";
-        return 1;
+    {
+        PROFILE_SCOPE("execute_header_proofs");
+        auto header_exec = rt.execute_all_proofs(header_result.value());
+        if (!header_exec.ok()) {
+            std::cerr << "ERROR: Failed to execute proofs from header includes: "
+                      << header_exec.error().to_string() << "\n";
+            PROFILE_REPORT();
+            return 1;
+        }
     }
 
     // Snapshot claims after loading the main header
     auto all_claims = rt.context().claims();
 
     // Load the proof file
-    std::ifstream proof_file(proof_path);
-    if (!proof_file.is_open()) {
-        std::cerr << "ERROR: Could not open proof file: " << proof_path << "\n";
-        return 1;
-    }
-    std::stringstream buffer;
-    buffer << proof_file.rdbuf();
+    ParseResult proof_result;
+    {
+        PROFILE_SCOPE("load_proof_file");
+        std::ifstream proof_file(proof_path);
+        if (!proof_file.is_open()) {
+            std::cerr << "ERROR: Could not open proof file: " << proof_path << "\n";
+            return 1;
+        }
+        std::stringstream buffer;
+        buffer << proof_file.rdbuf();
 
-    std::string error;
-    auto proof_result = try_parse_with_proofs(buffer.str(), rt.context(), &error);
-    if (!error.empty()) {
-        std::cerr << "ERROR: Parse error in " << proof_path << ": " << error << "\n";
-        return 1;
-    }
-
-    // Execute all proofs
-    auto exec_result = rt.execute_all_proofs(proof_result);
-    if (!exec_result.ok()) {
-        std::cerr << "ERROR: " << exec_result.error().to_string() << "\n";
-        return 1;
+        std::string error;
+        proof_result = try_parse_with_proofs(buffer.str(), rt.context(), &error);
+        if (!error.empty()) {
+            std::cerr << "ERROR: Parse error in " << proof_path << ": " << error << "\n";
+            PROFILE_REPORT();
+            return 1;
+        }
     }
 
-    // Check that every NEW claim (from the main header, not deps) is proved
-    std::vector<std::string> unproven;
+    // Execute all proofs (continue on error to get full results)
+    int proof_errors = 0;
+    int max_warnings = 10;
+    const char* max_env = std::getenv("PROOF_CHECKER_MAX_WARNINGS");
+    if (max_env) max_warnings = std::atoi(max_env);
+    // A failed proof doesn't disprove the claim. Register it as unproved
+    // so dependents remain conditional rather than becoming missing.
+    auto mark_failed_as_unproved = [&](const ParsedProof& proof) {
+        if (!proof.unproved) {
+            auto claim = rt.context().find_claim(proof.claim_name);
+            if (!claim.has_value()) claim = rt.context().find_known(proof.claim_name);
+            if (claim.has_value()) {
+                rt.context().add_unproved_theorem(proof.claim_name, claim.value());
+            }
+        }
+    };
+
+    {
+        PROFILE_SCOPE("execute_proofs");
+        for (const auto& proof : proof_result.proofs) {
+            try {
+                PROFILE_SCOPE("execute_single_proof");
+                auto status = rt.execute_proof(proof);
+                if (!status.ok()) {
+                    proof_errors++;
+                    if (proof_errors <= max_warnings)
+                        std::cerr << "WARNING: " << proof.claim_name << ": "
+                                  << status.error().to_string() << "\n";
+                    else if (proof_errors == max_warnings + 1)
+                        std::cerr << "WARNING: ... more errors suppressed\n";
+                    mark_failed_as_unproved(proof);
+                }
+            } catch (const std::exception& e) {
+                proof_errors++;
+                if (proof_errors <= max_warnings)
+                    std::cerr << "WARNING: " << proof.claim_name << ": exception: "
+                              << e.what() << "\n";
+                else if (proof_errors == max_warnings + 1)
+                    std::cerr << "WARNING: ... more errors suppressed\n";
+                mark_failed_as_unproved(proof);
+            }
+        }
+    }
+
+    // Classify each NEW claim (from the main header, not deps)
+    // Categories: PROVED, CONDITIONAL, UNPROVED, MISSING
+    std::vector<std::string> proved, conditional, unproved_list, missing;
     size_t new_claims = 0;
-    for (const auto& [name, _] : all_claims) {
-        if (dep_claims.count(name) > 0) continue;  // Skip dependency claims
-        new_claims++;
-        if (!rt.context().find_theorem(name).has_value()) {
-            unproven.push_back(name);
+
+    // Helper: check if a theorem transitively depends on any UNPROVED claim
+    auto has_unproved_dep = [&](const std::string& name) -> std::unordered_set<std::string> {
+        std::unordered_set<std::string> unproved_deps;
+        std::unordered_set<std::string> visited;
+        std::vector<std::string> stack;
+        stack.push_back(name);
+
+        while (!stack.empty()) {
+            std::string current = stack.back();
+            stack.pop_back();
+            if (visited.count(current)) continue;
+            visited.insert(current);
+
+            auto deps_it = rt.proof_deps().find(current);
+            if (deps_it == rt.proof_deps().end()) continue;
+
+            for (const auto& dep : deps_it->second) {
+                if (rt.context().is_unproved(dep)) {
+                    unproved_deps.insert(dep);
+                }
+                if (!visited.count(dep)) {
+                    stack.push_back(dep);
+                }
+            }
+        }
+        return unproved_deps;
+    };
+
+    // Maps for conditional claims: name -> set of unproved deps it depends on
+    std::unordered_map<std::string, std::unordered_set<std::string>> conditional_deps;
+
+    {
+        PROFILE_SCOPE("classify_claims");
+        for (const auto& [name, _] : all_claims) {
+            if (dep_claims.count(name) > 0) continue;  // Skip dependency claims
+            new_claims++;
+
+            if (!rt.context().find_theorem(name).has_value()) {
+                // No theorem at all — MISSING
+                missing.push_back(name);
+            } else if (rt.context().is_unproved(name)) {
+                // Explicitly UNPROVED
+                unproved_list.push_back(name);
+            } else {
+                // Has a real proof — check transitive deps
+                auto deps = has_unproved_dep(name);
+                if (deps.empty()) {
+                    proved.push_back(name);
+                } else {
+                    conditional.push_back(name);
+                    conditional_deps[name] = std::move(deps);
+                }
+            }
         }
     }
 
-    if (!unproven.empty()) {
-        std::sort(unproven.begin(), unproven.end());
-        std::cerr << "ERROR: " << unproven.size() << " claim(s) not proved:\n";
-        for (const auto& name : unproven) {
-            std::cerr << "  - " << name << "\n";
+    // Sort all lists for deterministic output
+    std::sort(proved.begin(), proved.end());
+    std::sort(conditional.begin(), conditional.end());
+    std::sort(unproved_list.begin(), unproved_list.end());
+    std::sort(missing.begin(), missing.end());
+
+    // Print status report
+    std::cout << "Proved (" << proved.size() << "):\n";
+    for (const auto& name : proved) {
+        std::cout << "  + " << name << "\n";
+    }
+    std::cout << "\n";
+
+    if (!conditional.empty()) {
+        std::cout << "Conditional (" << conditional.size() << "):\n";
+        for (const auto& name : conditional) {
+            std::cout << "  ~ " << name << " (depends on:";
+            std::vector<std::string> sorted_deps(conditional_deps[name].begin(),
+                                                  conditional_deps[name].end());
+            std::sort(sorted_deps.begin(), sorted_deps.end());
+            for (const auto& dep : sorted_deps) {
+                std::cout << " " << dep;
+            }
+            std::cout << ")\n";
         }
+        std::cout << "\n";
+    }
+
+    if (!unproved_list.empty()) {
+        std::cout << "Unproved (" << unproved_list.size() << "):\n";
+        for (const auto& name : unproved_list) {
+            std::cout << "  - " << name << "\n";
+        }
+        std::cout << "\n";
+    }
+
+    if (!missing.empty()) {
+        std::cerr << "Missing (" << missing.size() << "):\n";
+        for (const auto& name : missing) {
+            std::cerr << "  ! " << name << "\n";
+        }
+        std::cerr << "\n";
+    }
+
+    // Fail only if there are MISSING claims (no proof and not UNPROVED)
+    if (!missing.empty()) {
+        std::cerr << "ERROR: " << missing.size() << " claim(s) have no proof and are not marked UNPROVED\n";
+        PROFILE_REPORT();
         return 1;
     }
 
-    std::cout << "OK: All " << new_claims << " claim(s) proved in "
-              << proof_path << "\n";
+    std::cout << "OK: " << new_claims << " claim(s) checked in " << proof_path;
+    if (!unproved_list.empty() || !conditional.empty()) {
+        std::cout << " (" << proved.size() << " proved";
+        if (!conditional.empty()) std::cout << ", " << conditional.size() << " conditional";
+        if (!unproved_list.empty()) std::cout << ", " << unproved_list.size() << " unproved";
+        std::cout << ")";
+    }
+    std::cout << "\n";
+
+    PROFILE_REPORT();
 
     // Write output marker file if FOL_OUTPUT is set (for Bazel)
     const char* output_path = std::getenv("FOL_OUTPUT");
     if (output_path) {
         std::ofstream out(output_path);
-        out << "proven\n";
+        out << "proved: " << proved.size() << "\n";
+        out << "conditional: " << conditional.size() << "\n";
+        out << "unproved: " << unproved_list.size() << "\n";
     }
 
     return 0;

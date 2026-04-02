@@ -1,0 +1,86 @@
+include "naturals.fol.def"
+include "../basics/functions.fol.def"
+
+# ============================================================
+# Recursive Definition and Strong Induction on N
+# (Notes 3.50, 3.67)
+# ============================================================
+#
+# Section 3.D: Principle of recursive definition on N.
+# Given a base value y0 and a step function g: N -> N,
+# there exists a unique function f: N -> N satisfying:
+#   f(0) = y0
+#   f(S(x)) = g(f(x))
+#
+# Section 3.C/3.67: Strong induction on N.
+# To prove P(x) for all x in N, it suffices to prove P(x)
+# assuming P(y) for all y < x (i.e., y in x).
+
+# ============================================================
+# Definitions
+# ============================================================
+
+# rec_fun(f, y0, g, n): f is a recursive function on nat_set n
+# with base value y0 and step function g.
+# f(0) = y0, f(S(x)) = g(f(x)) for all x in n.
+@def(rec_fun) axiom rec_fun_def: forall f. forall y0. forall g. forall n.
+    (rec_fun(f, y0, g, n) <->
+        (nat_set(n) & is_function(f) & is_function(g) &
+         (forall e. (empty(e) -> rel_elem(f, e, y0))) &
+         (forall x. forall y. forall sx. forall gy.
+            ((elem(x, n) & rel_elem(f, x, y) & succ(sx, x) & rel_elem(g, y, gy)) ->
+             rel_elem(f, sx, gy)))))
+
+# ============================================================
+# Separation Instances
+# ============================================================
+
+# {x in A : in_domain(f, x)} -- for rec_fun_total induction
+axiom separation_in_domain: forall A. forall f. exists B. forall x.
+    (elem(x, B) <-> (elem(x, A) & in_domain(f, x)))
+
+# {x in A : forall v1 v2. (rel_elem(f1,x,v1) & rel_elem(f2,x,v2) -> eq(v1,v2))}
+# for rec_fun_unique induction
+axiom separation_rec_agree: forall A. forall f1. forall f2. exists B. forall x.
+    (elem(x, B) <-> (elem(x, A) &
+        forall v1. forall v2. ((rel_elem(f1, x, v1) & rel_elem(f2, x, v2)) -> eq(v1, v2))))
+
+# {x in A : subset(x, a)} -- for strong_induction proof
+axiom separation_subset_param: forall A. forall a. exists B. forall x.
+    (elem(x, B) <-> (elem(x, A) & subset(x, a)))
+
+# ============================================================
+# Claims: Recursive Definition (Note 3.50)
+# ============================================================
+
+# Existence: given base value y0 in N and step function g: N -> N,
+# the recursive function exists.
+claim rec_fun_exists: forall n. forall y0. forall g.
+    ((nat_set(n) & elem(y0, n) & is_function(g) &
+      (forall x. (elem(x, n) -> exists y. (rel_elem(g, x, y) & elem(y, n))))) ->
+     exists f. rec_fun(f, y0, g, n))
+
+# Uniqueness: any two recursive functions with the same base
+# and step agree on all of N.
+claim rec_fun_unique: forall n. forall f1. forall f2. forall y0. forall g.
+    ((rec_fun(f1, y0, g, n) & rec_fun(f2, y0, g, n)) ->
+     forall x. (elem(x, n) ->
+        forall v1. forall v2. ((rel_elem(f1, x, v1) & rel_elem(f2, x, v2)) -> eq(v1, v2))))
+
+# Totality: every element of N is in the domain of f.
+claim rec_fun_total: forall n. forall f. forall y0. forall g.
+    (rec_fun(f, y0, g, n) ->
+     forall x. (elem(x, n) -> in_domain(f, x)))
+
+# ============================================================
+# Claims: Strong Induction (Notes 3.42, 3.67)
+# ============================================================
+
+# Strong (complete) induction on N:
+# If a subset a of N satisfies "for all x in N, if all
+# elements of x are in a then x is in a", then a = N.
+# (In the von Neumann encoding, y < x iff y in x.)
+claim strong_induction: forall n. forall a.
+    ((nat_set(n) & subset(a, n) &
+      forall x. ((elem(x, n) & forall y. (elem(y, x) -> elem(y, a))) -> elem(x, a)))
+     -> eq(a, n))

@@ -1,0 +1,472 @@
+# ============================================================
+# Proof 1: singleton_exists
+# From pairing(x,x) get p with elem(z,p) <-> eq(z,x)|eq(z,x).
+# Show singleton(p,x) by collapsing the disjunction.
+# ============================================================
+proof singleton_exists:
+    fix x
+    # Pairing with a=b=x gives {x, x}
+    pair_ax = use pairing
+    pa1 = forall_elim pair_ax, x
+    pa2 = forall_elim pa1, x
+    h_p = exists_elim pa2, wp
+    # h_p: forall z. (elem(z, wp) <-> (eq(z, x) | eq(z, x)))
+
+    # Show singleton(wp, x): forall z. (elem(z, wp) <-> eq(z, x))
+    sdef = use singleton_def
+    sd1 = forall_elim sdef, wp
+    sd2 = forall_elim sd1, x
+
+    fix z
+    h_z = forall_elim h_p, z
+
+    # Forward: elem(z, wp) -> eq(z, x)
+    hf1 = assume elem(z, wp)
+    hf2 = iff_elim_l h_z, hf1
+    hf3 = assume eq(z, x)
+    hf4 = implies_intro hf3
+    hf5 = or_elim hf2, hf4, hf4
+    hfwd = implies_intro hf5
+
+    # Backward: eq(z, x) -> elem(z, wp)
+    hb1 = assume eq(z, x)
+    hb2 = let eq(z, x)
+    hb3 = or_intro_l hb1, hb2
+    hb4 = iff_elim_r h_z, hb3
+    hbwd = implies_intro hb4
+
+    h_iff = iff_intro hfwd, hbwd
+    h_all = forall_intro h_iff
+
+    h_sing = iff_elim_r sd2, h_all
+    h_ex = exists_intro h_sing, wp
+    # Close exists scope from pairing
+    h_result = exists_intro h_ex
+    h_forall = forall_intro h_result
+    qed h_forall
+
+# ============================================================
+# Proof 2: doubleton_exists
+# From pairing(x,y) get p with elem(z,p) <-> eq(z,x)|eq(z,y).
+# This matches doubleton_def directly.
+# ============================================================
+proof doubleton_exists:
+    fix x
+    fix y
+    pair_ax = use pairing
+    pa1 = forall_elim pair_ax, x
+    pa2 = forall_elim pa1, y
+    h_p = exists_elim pa2, wp
+    # h_p: forall z. (elem(z, wp) <-> (eq(z, x) | eq(z, y)))
+
+    ddef = use doubleton_def
+    dd1 = forall_elim ddef, wp
+    dd2 = forall_elim dd1, x
+    dd3 = forall_elim dd2, y
+    h_doub = iff_elim_r dd3, h_p
+    h_ex = exists_intro h_doub, wp
+    # Close exists scope from pairing
+    h_result = exists_intro h_ex
+    h2 = forall_intro h_result
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 3: pair_exists
+# Build {a} (singleton_exists), {a,b} (doubleton_exists),
+# then {{a},{a,b}} (pairing on the two sets).
+# Show pair_def holds by extensionality argument.
+# ============================================================
+proof pair_exists:
+    fix a
+    fix b
+
+    # Get {a}
+    se = use singleton_exists
+    se1 = forall_elim se, a
+    h_sa = exists_elim se1, sa
+    # h_sa: singleton(sa, a)
+
+    # Get {a, b}
+    de = use doubleton_exists
+    de1 = forall_elim de, a
+    de2 = forall_elim de1, b
+    h_dab = exists_elim de2, dab
+    # h_dab: doubleton(dab, a, b)
+
+    # Pairing on sa and dab gives {{a}, {a,b}}
+    pair_ax = use pairing
+    pa1 = forall_elim pair_ax, sa
+    pa2 = forall_elim pa1, dab
+    h_pp = exists_elim pa2, wp
+    # h_pp: forall z. (elem(z, wp) <-> (eq(z, sa) | eq(z, dab)))
+
+    # Now show pair(wp, a, b)
+    # pair_def: pair(p,a,b) <-> forall z. (elem(z,p) <->
+    #   (forall w. (elem(w,z) <-> eq(w,a))) |
+    #   (forall w. (elem(w,z) <-> (eq(w,a) | eq(w,b)))))
+
+    pdef = use pair_def
+    pd1 = forall_elim pdef, wp
+    pd2 = forall_elim pd1, a
+    pd3 = forall_elim pd2, b
+
+    # Expand singleton_def and doubleton_def
+    sdef = use singleton_def
+    sd1 = forall_elim sdef, sa
+    sd2 = forall_elim sd1, a
+    # sd2: singleton(sa, a) <-> forall z. (elem(z, sa) <-> eq(z, a))
+    h_sa_body = iff_elim_l sd2, h_sa
+    # h_sa_body: forall z. (elem(z, sa) <-> eq(z, a))
+
+    ddef = use doubleton_def
+    dd1 = forall_elim ddef, dab
+    dd2 = forall_elim dd1, a
+    dd3 = forall_elim dd2, b
+    h_dab_body = iff_elim_l dd3, h_dab
+    # h_dab_body: forall z. (elem(z, dab) <-> (eq(z, a) | eq(z, b)))
+
+    # Precompute tools
+    ext = use extensionality
+    esym = use eq_sym
+    eer = use eq_elem_r
+
+    # Show: forall z. (elem(z, wp) <-> D1(z) | D2(z))
+    # where D1(z) = forall w. (elem(w,z) <-> eq(w,a))
+    #       D2(z) = forall w. (elem(w,z) <-> (eq(w,a) | eq(w,b)))
+    fix z
+
+    h_z_pp = forall_elim h_pp, z
+
+    # Forward: elem(z, wp) -> D1(z) | D2(z)
+    h_z_in = assume elem(z, wp)
+    h_z_disj = iff_elim_l h_z_pp, h_z_in
+    # h_z_disj: eq(z, sa) | eq(z, dab)
+
+    # Case eq(z, sa): show D1(z)
+    h_eq_z_sa = assume eq(z, sa)
+    # From eq(z, sa) and h_sa_body, derive forall w. (elem(w,z) <-> eq(w,a))
+    # For any w: elem(w, z) <-> elem(w, sa) (via extensionality on eq(z,sa))
+    #            elem(w, sa) <-> eq(w, a) (from h_sa_body)
+    ext1 = forall_elim ext, z
+    ext2 = forall_elim ext1, sa
+    h_z_sa_ext = iff_elim_l ext2, h_eq_z_sa
+    fix w1
+    h_w1_ext = forall_elim h_z_sa_ext, w1
+    h_w1_sa = forall_elim h_sa_body, w1
+    # Chain: elem(w1,z) <-> elem(w1,sa) <-> eq(w1,a)
+    h_w1z = assume elem(w1, z)
+    h_w1sa = iff_elim_l h_w1_ext, h_w1z
+    h_w1a = iff_elim_l h_w1_sa, h_w1sa
+    h_fwd1 = implies_intro h_w1a
+    h_w1a2 = assume eq(w1, a)
+    h_w1sa2 = iff_elim_r h_w1_sa, h_w1a2
+    h_w1z2 = iff_elim_r h_w1_ext, h_w1sa2
+    h_bwd1 = implies_intro h_w1z2
+    h_iff1 = iff_intro h_fwd1, h_bwd1
+    h_all_w1 = forall_intro h_iff1
+    # h_all_w1: forall w. (elem(w,z) <-> eq(w,a)) = D1(z)
+    d2_z = let forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b)))
+    h_d1_or = or_intro_l h_all_w1, d2_z
+    h_case_sa = implies_intro h_d1_or
+
+    # Case eq(z, dab): show D2(z)
+    h_eq_z_dab = assume eq(z, dab)
+    ext3 = forall_elim ext, z
+    ext4 = forall_elim ext3, dab
+    h_z_dab_ext = iff_elim_l ext4, h_eq_z_dab
+    fix w2
+    h_w2_ext = forall_elim h_z_dab_ext, w2
+    h_w2_dab = forall_elim h_dab_body, w2
+    # Chain: elem(w2,z) <-> elem(w2,dab) <-> (eq(w2,a) | eq(w2,b))
+    h_w2z = assume elem(w2, z)
+    h_w2d = iff_elim_l h_w2_ext, h_w2z
+    h_w2ab = iff_elim_l h_w2_dab, h_w2d
+    h_fwd2 = implies_intro h_w2ab
+    h_w2ab2 = assume eq(w2, a) | eq(w2, b)
+    h_w2d2 = iff_elim_r h_w2_dab, h_w2ab2
+    h_w2z2 = iff_elim_r h_w2_ext, h_w2d2
+    h_bwd2 = implies_intro h_w2z2
+    h_iff2 = iff_intro h_fwd2, h_bwd2
+    h_all_w2 = forall_intro h_iff2
+    # h_all_w2: forall w. (elem(w,z) <-> (eq(w,a) | eq(w,b))) = D2(z)
+    d1_z = let forall w. (elem(w, z) <-> eq(w, a))
+    h_d2_or = or_intro_r d1_z, h_all_w2
+    h_case_dab = implies_intro h_d2_or
+
+    h_disj_result = or_elim h_z_disj, h_case_sa, h_case_dab
+    h_fwd_main = implies_intro h_disj_result
+
+    # Backward: D1(z) | D2(z) -> elem(z, wp)
+    h_d1_or_d2 = assume (forall w. (elem(w, z) <-> eq(w, a))) | (forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b))))
+
+    # Case D1(z): show eq(z, sa)
+    h_d1 = assume forall w. (elem(w, z) <-> eq(w, a))
+    # Show z and sa have same members -> eq(z, sa)
+    fix w3
+    h_w3_z = forall_elim h_d1, w3
+    h_w3_sa3 = forall_elim h_sa_body, w3
+    h_w3z3 = assume elem(w3, z)
+    h_w3a3 = iff_elim_l h_w3_z, h_w3z3
+    h_w3sa3 = iff_elim_r h_w3_sa3, h_w3a3
+    h_fwd3 = implies_intro h_w3sa3
+    h_w3sa3b = assume elem(w3, sa)
+    h_w3a3b = iff_elim_l h_w3_sa3, h_w3sa3b
+    h_w3z3b = iff_elim_r h_w3_z, h_w3a3b
+    h_bwd3 = implies_intro h_w3z3b
+    h_iff3 = iff_intro h_fwd3, h_bwd3
+    h_all_w3 = forall_intro h_iff3
+    ext5 = forall_elim ext, z
+    ext6 = forall_elim ext5, sa
+    h_eq_z_sa2 = iff_elim_r ext6, h_all_w3
+    d_eq_z_dab = let eq(z, dab)
+    h_z_sa_disj = or_intro_l h_eq_z_sa2, d_eq_z_dab
+    h_z_in_wp = iff_elim_r h_z_pp, h_z_sa_disj
+    h_d1_impl = implies_intro h_z_in_wp
+
+    # Case D2(z): show eq(z, dab)
+    h_d2 = assume forall w. (elem(w, z) <-> (eq(w, a) | eq(w, b)))
+    fix w4
+    h_w4_z = forall_elim h_d2, w4
+    h_w4_dab4 = forall_elim h_dab_body, w4
+    h_w4z4 = assume elem(w4, z)
+    h_w4ab4 = iff_elim_l h_w4_z, h_w4z4
+    h_w4d4 = iff_elim_r h_w4_dab4, h_w4ab4
+    h_fwd4 = implies_intro h_w4d4
+    h_w4d4b = assume elem(w4, dab)
+    h_w4ab4b = iff_elim_l h_w4_dab4, h_w4d4b
+    h_w4z4b = iff_elim_r h_w4_z, h_w4ab4b
+    h_bwd4 = implies_intro h_w4z4b
+    h_iff4 = iff_intro h_fwd4, h_bwd4
+    h_all_w4 = forall_intro h_iff4
+    ext7 = forall_elim ext, z
+    ext8 = forall_elim ext7, dab
+    h_eq_z_dab2 = iff_elim_r ext8, h_all_w4
+    d_eq_z_sa2 = let eq(z, sa)
+    h_z_dab_disj = or_intro_r d_eq_z_sa2, h_eq_z_dab2
+    h_z_in_wp2 = iff_elim_r h_z_pp, h_z_dab_disj
+    h_d2_impl = implies_intro h_z_in_wp2
+
+    h_bwd_result = or_elim h_d1_or_d2, h_d1_impl, h_d2_impl
+    h_bwd_main = implies_intro h_bwd_result
+
+    h_iff_main = iff_intro h_fwd_main, h_bwd_main
+    h_all_z = forall_intro h_iff_main
+
+    h_pair = iff_elim_r pd3, h_all_z
+
+    h_ex = exists_intro h_pair, wp
+    # Close exists scopes: wp (pairing), dab (doubleton_exists), sa (singleton_exists)
+    h_c1 = exists_intro h_ex
+    h_c2 = exists_intro h_c1
+    h_c3 = exists_intro h_c2
+    h2 = forall_intro h_c3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 4: binary_union_exists
+# From pairing(a,b) get p = {a,b}.
+# From union(p) get U with elem(x,U) <-> exists y.(elem(y,p) & elem(x,y)).
+# The witness y is either a or b (from pairing), giving
+# elem(x,U) <-> elem(x,a) | elem(x,b).
+# ============================================================
+proof binary_union_exists:
+    fix a
+    fix b
+
+    # Get p = {a, b}
+    pair_ax = use pairing
+    pa1 = forall_elim pair_ax, a
+    pa2 = forall_elim pa1, b
+    h_p = exists_elim pa2, wp
+    # h_p: forall x. (elem(x, wp) <-> (eq(x, a) | eq(x, b)))
+
+    # Get U = union(wp)
+    un = use union
+    un1 = forall_elim un, wp
+    h_U = exists_elim un1, wU
+    # h_U: forall x. (elem(x, wU) <-> exists y. (elem(y, wp) & elem(x, y)))
+
+    # Show binary_union(wU, a, b)
+    budef = use binary_union_def
+    bu1 = forall_elim budef, wU
+    bu2 = forall_elim bu1, a
+    bu3 = forall_elim bu2, b
+
+    er = use eq_refl
+
+    fix x
+    h_x_U = forall_elim h_U, x
+
+    # Forward: elem(x, wU) -> elem(x, a) | elem(x, b)
+    h_x_in_U = assume elem(x, wU)
+    h_ex_y = iff_elim_l h_x_U, h_x_in_U
+    h_wy = exists_elim h_ex_y, wy
+    h_wy_in_p = and_elim_l h_wy
+    h_x_in_wy = and_elim_r h_wy
+
+    # wy is in wp, so eq(wy, a) | eq(wy, b)
+    h_wy_iff = forall_elim h_p, wy
+    h_wy_disj = iff_elim_l h_wy_iff, h_wy_in_p
+
+    # Case eq(wy, a): elem(x, wy) -> elem(x, a) via eq_subst
+    h_eq_wy_a = assume eq(wy, a)
+    h_x_in_a = eq_subst h_eq_wy_a, h_x_in_wy
+    d_xb = let elem(x, b)
+    h_xa_or = or_intro_l h_x_in_a, d_xb
+    h_case_a = implies_intro h_xa_or
+
+    # Case eq(wy, b): elem(x, wy) -> elem(x, b) via eq_subst
+    h_eq_wy_b = assume eq(wy, b)
+    h_x_in_b = eq_subst h_eq_wy_b, h_x_in_wy
+    d_xa = let elem(x, a)
+    h_xb_or = or_intro_r d_xa, h_x_in_b
+    h_case_b = implies_intro h_xb_or
+
+    h_fwd_disj = or_elim h_wy_disj, h_case_a, h_case_b
+    # Close wy exists scope
+    h_fwd_closed = exists_intro h_fwd_disj
+    h_fwd = implies_intro h_fwd_closed
+
+    # Backward: elem(x, a) | elem(x, b) -> elem(x, wU)
+    h_ab_disj = assume elem(x, a) | elem(x, b)
+
+    # Case elem(x, a): witness y = a
+    h_x_in_a2 = assume elem(x, a)
+    # Show elem(a, wp)
+    er_a = forall_elim er, a
+    d_eqab = let eq(a, b)
+    h_a_disj = or_intro_l er_a, d_eqab
+    h_a_iff = forall_elim h_p, a
+    h_a_in_p = iff_elim_r h_a_iff, h_a_disj
+    h_conj_a = and_intro h_a_in_p, h_x_in_a2
+    h_ex_a = exists_intro h_conj_a, a
+    h_x_in_U_a = iff_elim_r h_x_U, h_ex_a
+    h_case_a2 = implies_intro h_x_in_U_a
+
+    # Case elem(x, b): witness y = b
+    h_x_in_b2 = assume elem(x, b)
+    er_b = forall_elim er, b
+    d_eqba = let eq(b, a)
+    h_b_disj = or_intro_r d_eqba, er_b
+    h_b_iff = forall_elim h_p, b
+    h_b_in_p = iff_elim_r h_b_iff, h_b_disj
+    h_conj_b = and_intro h_b_in_p, h_x_in_b2
+    h_ex_b = exists_intro h_conj_b, b
+    h_x_in_U_b = iff_elim_r h_x_U, h_ex_b
+    h_case_b2 = implies_intro h_x_in_U_b
+
+    h_bwd_result = or_elim h_ab_disj, h_case_a2, h_case_b2
+    h_bwd = implies_intro h_bwd_result
+
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+
+    h_bunion = iff_elim_r bu3, h_all
+    h_ex = exists_intro h_bunion, wU
+    # Close exists scopes: wU (union), wp (pairing)
+    h_c1 = exists_intro h_ex
+    h_c2 = exists_intro h_c1
+    h2 = forall_intro h_c2
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 5: succ_exists
+# From singleton_exists(x) get {x}.
+# From binary_union_exists(x, {x}) get x cup {x}.
+# Show succ_def: elem(z, x cup {x}) <-> elem(z,x) | eq(z,x).
+# ============================================================
+proof succ_exists:
+    fix x
+
+    # Get {x}
+    se = use singleton_exists
+    se1 = forall_elim se, x
+    h_sx = exists_elim se1, sx
+    # h_sx: singleton(sx, x)
+
+    # Get x cup {x}
+    bue = use binary_union_exists
+    bue1 = forall_elim bue, x
+    bue2 = forall_elim bue1, sx
+    h_u = exists_elim bue2, wu
+    # h_u: binary_union(wu, x, sx)
+
+    # Expand binary_union_def
+    budef = use binary_union_def
+    bu1 = forall_elim budef, wu
+    bu2 = forall_elim bu1, x
+    bu3 = forall_elim bu2, sx
+    h_bu_body = iff_elim_l bu3, h_u
+    # h_bu_body: forall z. (elem(z, wu) <-> (elem(z, x) | elem(z, sx)))
+
+    # Expand singleton_def
+    sdef = use singleton_def
+    sd1 = forall_elim sdef, sx
+    sd2 = forall_elim sd1, x
+    h_sx_body = iff_elim_l sd2, h_sx
+    # h_sx_body: forall z. (elem(z, sx) <-> eq(z, x))
+
+    # Show succ(wu, x): forall z. (elem(z, wu) <-> (elem(z, x) | eq(z, x)))
+    scdef = use succ_def
+    sc1 = forall_elim scdef, wu
+    sc2 = forall_elim sc1, x
+
+    fix z
+    h_z_bu = forall_elim h_bu_body, z
+    h_z_sx = forall_elim h_sx_body, z
+
+    # Forward: elem(z, wu) -> elem(z, x) | eq(z, x)
+    h_z_in = assume elem(z, wu)
+    h_z_disj = iff_elim_l h_z_bu, h_z_in
+    # h_z_disj: elem(z, x) | elem(z, sx)
+
+    # Case elem(z, x)
+    h_z_in_x = assume elem(z, x)
+    d_eqzx = let eq(z, x)
+    h_left = or_intro_l h_z_in_x, d_eqzx
+    h_case1 = implies_intro h_left
+
+    # Case elem(z, sx) -> eq(z, x)
+    h_z_in_sx = assume elem(z, sx)
+    h_eqzx = iff_elim_l h_z_sx, h_z_in_sx
+    d_elemzx = let elem(z, x)
+    h_right = or_intro_r d_elemzx, h_eqzx
+    h_case2 = implies_intro h_right
+
+    h_fwd_result = or_elim h_z_disj, h_case1, h_case2
+    h_fwd = implies_intro h_fwd_result
+
+    # Backward: elem(z, x) | eq(z, x) -> elem(z, wu)
+    h_or_in = assume elem(z, x) | eq(z, x)
+
+    # Case elem(z, x) -> elem(z, wu)
+    h_z_x2 = assume elem(z, x)
+    d_z_sx = let elem(z, sx)
+    h_left2 = or_intro_l h_z_x2, d_z_sx
+    h_z_wu2 = iff_elim_r h_z_bu, h_left2
+    h_case1b = implies_intro h_z_wu2
+
+    # Case eq(z, x) -> elem(z, sx) -> elem(z, wu)
+    h_eqzx2 = assume eq(z, x)
+    h_z_sx2 = iff_elim_r h_z_sx, h_eqzx2
+    d_z_x2 = let elem(z, x)
+    h_right2 = or_intro_r d_z_x2, h_z_sx2
+    h_z_wu3 = iff_elim_r h_z_bu, h_right2
+    h_case2b = implies_intro h_z_wu3
+
+    h_bwd_result = or_elim h_or_in, h_case1b, h_case2b
+    h_bwd = implies_intro h_bwd_result
+
+    h_iff = iff_intro h_fwd, h_bwd
+    h_all = forall_intro h_iff
+
+    h_succ = iff_elim_r sc2, h_all
+    h_ex = exists_intro h_succ, wu
+    # Close exists scopes: wu (binary_union_exists), sx (singleton_exists)
+    h_c1 = exists_intro h_ex
+    h_c2 = exists_intro h_c1
+    h_forall = forall_intro h_c2
+    qed h_forall

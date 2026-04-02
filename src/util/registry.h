@@ -130,6 +130,17 @@ public:
         }
     }
 
+    // Const iteration over all (id, item) pairs
+    template<typename Fn>
+    void for_each(Fn&& fn) const {
+        for (const auto& [id, item] : id2item_) {
+            fn(id, item);
+        }
+    }
+
+    // Current next ID (for delta computation)
+    size_t next_id() const { return next_id_; }
+
 protected:
     const T& get_by_id(size_t id) const override {
         return id2item_.at(id);
@@ -198,6 +209,17 @@ public:
     bool contains(const handle_type& h) const {
         return h.valid() && &h.get() == &get_by_id(this->get_id(h));
     }
+
+    // Const iteration over all (id, item) pairs
+    template<typename Fn>
+    void for_each(Fn&& fn) const {
+        for (const auto& [id, item] : id2item_) {
+            fn(id, item);
+        }
+    }
+
+    // Current next ID (for delta computation)
+    size_t next_id() const { return next_id_; }
 
 protected:
     const T& get_by_id(size_t id) const override {

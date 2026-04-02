@@ -30,6 +30,17 @@ cc_test(
     ],
 )
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
+cc_binary(
+    name = "verify_file",
+    srcs = ["verify_file.cpp"],
+    deps = [
+        "//src/runtime",
+        "//src/parser",
+    ],
+)
+
 test_suite(
     name = "all_tests",
     tests = [

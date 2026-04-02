@@ -1,0 +1,48 @@
+include "naturals.fol.def"
+
+# ============================================================
+# Natural Number Properties: Peano Axioms + Transitivity
+# ============================================================
+#
+# Key results:
+#   - No set is a member of itself (from foundation)
+#   - Zero is not a successor
+#   - Successor is injective on ℕ
+#   - Every natural number is a transitive set
+
+# transitive_set(x) means every member of x is a subset of x
+@def(transitive_set) axiom transitive_set_def: forall x. (transitive_set(x) <->
+    forall u. (elem(u, x) -> subset(u, x)))
+
+# Separation instance: {x in A : transitive_set(x)}
+axiom separation_transitive: forall A. exists B. forall x.
+    (elem(x, B) <-> (elem(x, A) & transitive_set(x)))
+
+# ============================================================
+# Claims
+# ============================================================
+
+# No set is a member of itself (from foundation on {x})
+claim not_self_elem: forall x. ~elem(x, x)
+
+# The empty set is a transitive set (vacuously)
+claim empty_is_transitive: forall e. (empty(e) -> transitive_set(e))
+
+# x is always an element of its successor
+claim elem_in_succ: forall s. forall x. (succ(s, x) -> elem(x, s))
+
+# The empty set is not a successor of anything
+claim zero_not_succ: forall e. forall s. forall x.
+    ((empty(e) & succ(s, x)) -> ~eq(e, s))
+
+# The successor of a transitive set is transitive
+claim succ_of_transitive: forall x. forall s.
+    ((transitive_set(x) & succ(s, x)) -> transitive_set(s))
+
+# Every natural number is a transitive set
+claim nat_transitive: forall n. forall x.
+    ((nat_set(n) & elem(x, n)) -> transitive_set(x))
+
+# Successor is injective on natural numbers
+claim succ_injective: forall n. forall a. forall b. forall sa. forall sb.
+    ((nat_set(n) & elem(a, n) & elem(b, n) & succ(sa, a) & succ(sb, b) & eq(sa, sb)) -> eq(a, b))

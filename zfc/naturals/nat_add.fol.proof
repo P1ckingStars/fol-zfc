@@ -1,0 +1,272 @@
+# ============================================================
+# Proof 1: add_zero
+# Base case: a + 0 = a.
+# Construct f = {(0, a)} as a singleton containing the ordered
+# pair (0, a). Show add_witness(f, a, 0, n) and rel_elem(f, 0, a).
+# The step condition is vacuous since nothing is in the empty set.
+# ============================================================
+proof add_zero:
+    fix n
+    fix a
+    fix e
+    h = assume nat_set(n) & elem(a, n) & empty(e)
+    h_left = and_elim_l h
+    h_empty = and_elim_r h
+    h_nat = and_elim_l h_left
+    h_an = and_elim_r h_left
+
+    # elem(e, n) from zero_in_nat
+    zin = use zero_in_nat
+    zin1 = forall_elim zin, n
+    zin2 = forall_elim zin1, e
+    h_zin_conj = and_intro h_nat, h_empty
+    h_en = implies_elim zin2, h_zin_conj
+
+    # Construct ordered pair p = (e, a)
+    pe = use pair_exists
+    pe1 = forall_elim pe, e
+    pe2 = forall_elim pe1, a
+    h_pair = exists_elim pe2, wp
+    # h_pair: pair(wp, e, a)
+
+    # Construct f = {p} as singleton
+    se = use singleton_exists
+    se1 = forall_elim se, wp
+    h_f = exists_elim se1, wf
+    # h_f: singleton(wf, wp)
+
+    # Expand singleton_def for wf
+    sgdef = use singleton_def
+    sg1 = forall_elim sgdef, wf
+    sg2 = forall_elim sg1, wp
+    h_f_body = iff_elim_l sg2, h_f
+    # h_f_body: forall z. (elem(z, wf) <-> eq(z, wp))
+
+    # Show rel_elem(f, e, a): exists p. (pair(p, e, a) & elem(p, f))
+    # We have pair(wp, e, a) and need elem(wp, wf)
+    er = use eq_refl
+    er_wp = forall_elim er, wp
+    h_wp_iff = forall_elim h_f_body, wp
+    h_wp_in_f = iff_elim_r h_wp_iff, er_wp
+
+    h_pair_conj = and_intro h_pair, h_wp_in_f
+    rdef = use rel_elem_def
+    rd1 = forall_elim rdef, wf
+    rd2 = forall_elim rd1, e
+    rd3 = forall_elim rd2, a
+    h_pair_ex = exists_intro h_pair_conj, wp
+    h_rel_ea = iff_elim_r rd3, h_pair_ex
+    # h_rel_ea: rel_elem(wf, e, a)
+
+    # Show is_function(f): forall a0 b0 c0. ((rel_elem(f,a0,b0) & rel_elem(f,a0,c0)) -> eq(b0,c0))
+    # Since f = {wp} and wp = (e,a), any rel_elem(f,x,y) means pair(p,x,y) & elem(p,f)
+    # which means eq(p, wp), so pair(p,x,y) & pair(wp,e,a) & eq(p,wp) -> eq(x,e) & eq(y,a)
+    # Hence any two outputs for the same input both equal a.
+    fdef = use function_def
+    fd1 = forall_elim fdef, wf
+
+    esym = use eq_sym
+    pi = use pair_injective
+
+    fix a0
+    fix b0
+    fix c0
+    h_func_hyp = assume rel_elem(wf, a0, b0) & rel_elem(wf, a0, c0)
+    h_rel_b = and_elim_l h_func_hyp
+    h_rel_c = and_elim_r h_func_hyp
+
+    # Extract pair from rel_elem(wf, a0, b0)
+    rd_b1 = forall_elim rdef, wf
+    rd_b2 = forall_elim rd_b1, a0
+    rd_b3 = forall_elim rd_b2, b0
+    h_ex_pb = iff_elim_l rd_b3, h_rel_b
+    h_pb = exists_elim h_ex_pb, pb
+    h_pair_pb = and_elim_l h_pb
+    h_pb_in_f = and_elim_r h_pb
+
+    # pb is in f = {wp}, so eq(pb, wp)
+    h_pb_iff = forall_elim h_f_body, pb
+    h_eq_pb_wp = iff_elim_l h_pb_iff, h_pb_in_f
+
+    # pair(pb, a0, b0) & pair(wp, e, a) & eq(pb, wp) -> eq(a0,e) & eq(b0,a)
+    pi1 = forall_elim pi, a0
+    pi2 = forall_elim pi1, b0
+    pi3 = forall_elim pi2, e
+    pi4 = forall_elim pi3, a
+    pi5 = forall_elim pi4, pb
+    pi6 = forall_elim pi5, wp
+    h_pi_conj1 = and_intro h_pair_pb, h_pair
+    h_pi_conj2 = and_intro h_pi_conj1, h_eq_pb_wp
+    h_pi_result = implies_elim pi6, h_pi_conj2
+    h_eq_b0_a = and_elim_r h_pi_result
+
+    # Close pb exists scope
+    h_eq_b0_a_closed = exists_intro h_eq_b0_a
+
+    # Similarly for rel_elem(wf, a0, c0) -> eq(c0, a)
+    rd_c1 = forall_elim rdef, wf
+    rd_c2 = forall_elim rd_c1, a0
+    rd_c3 = forall_elim rd_c2, c0
+    h_ex_pc = iff_elim_l rd_c3, h_rel_c
+    h_pc = exists_elim h_ex_pc, pc
+    h_pair_pc = and_elim_l h_pc
+    h_pc_in_f = and_elim_r h_pc
+
+    h_pc_iff = forall_elim h_f_body, pc
+    h_eq_pc_wp = iff_elim_l h_pc_iff, h_pc_in_f
+
+    pi_c1 = forall_elim pi, a0
+    pi_c2 = forall_elim pi_c1, c0
+    pi_c3 = forall_elim pi_c2, e
+    pi_c4 = forall_elim pi_c3, a
+    pi_c5 = forall_elim pi_c4, pc
+    pi_c6 = forall_elim pi_c5, wp
+    h_pi_conj_c1 = and_intro h_pair_pc, h_pair
+    h_pi_conj_c2 = and_intro h_pi_conj_c1, h_eq_pc_wp
+    h_pi_result_c = implies_elim pi_c6, h_pi_conj_c2
+    h_eq_c0_a = and_elim_r h_pi_result_c
+
+    # Close pc exists scope
+    h_eq_c0_a_closed = exists_intro h_eq_c0_a
+
+    # eq(b0, a) & eq(c0, a) -> eq(b0, c0)
+    # eq(a, c0) via eq_sym, then eq_trans
+    esym_c = forall_elim esym, c0
+    esym_ca = forall_elim esym_c, a
+    h_eq_a_c0 = implies_elim esym_ca, h_eq_c0_a_closed
+    etr = use eq_trans
+    etr1 = forall_elim etr, b0
+    etr2 = forall_elim etr1, a
+    etr3 = forall_elim etr2, c0
+    h_tr_conj = and_intro h_eq_b0_a_closed, h_eq_a_c0
+    h_eq_b0_c0 = implies_elim etr3, h_tr_conj
+
+    h_func_impl = implies_intro h_eq_b0_c0
+    h_func_c = forall_intro h_func_impl
+    h_func_b = forall_intro h_func_c
+    h_func_a = forall_intro h_func_b
+    h_is_func = iff_elim_r fd1, h_func_a
+
+    # Show domain bound: forall x. forall y. (rel_elem(wf, x, y) -> (elem(x, e) | eq(x, e)))
+    fix xd
+    fix yd
+    h_dom_hyp = assume rel_elem(wf, xd, yd)
+    rd_d1 = forall_elim rdef, wf
+    rd_d2 = forall_elim rd_d1, xd
+    rd_d3 = forall_elim rd_d2, yd
+    h_ex_pd = iff_elim_l rd_d3, h_dom_hyp
+    h_pd = exists_elim h_ex_pd, pd
+    h_pair_pd = and_elim_l h_pd
+    h_pd_in_f = and_elim_r h_pd
+    h_pd_iff = forall_elim h_f_body, pd
+    h_eq_pd_wp = iff_elim_l h_pd_iff, h_pd_in_f
+    pi_d1 = forall_elim pi, xd
+    pi_d2 = forall_elim pi_d1, yd
+    pi_d3 = forall_elim pi_d2, e
+    pi_d4 = forall_elim pi_d3, a
+    pi_d5 = forall_elim pi_d4, pd
+    pi_d6 = forall_elim pi_d5, wp
+    h_pi_d_conj1 = and_intro h_pair_pd, h_pair
+    h_pi_d_conj2 = and_intro h_pi_d_conj1, h_eq_pd_wp
+    h_pi_d_result = implies_elim pi_d6, h_pi_d_conj2
+    h_eq_xd_e = and_elim_l h_pi_d_result
+    d_xd_in_e = let elem(xd, e)
+    h_dom_disj = or_intro_r d_xd_in_e, h_eq_xd_e
+    h_dom_disj_closed = exists_intro h_dom_disj
+    h_dom_impl = implies_intro h_dom_disj_closed
+    h_dom_yd = forall_intro h_dom_impl
+    h_dom_bound = forall_intro h_dom_yd
+
+    # Show base condition: forall e0. (empty(e0) -> rel_elem(wf, e0, a))
+    fix e0
+    h_e0_empty = assume empty(e0)
+    # eq(e, e0) from empty_unique
+    eu = use empty_unique
+    eu1 = forall_elim eu, e
+    eu2 = forall_elim eu1, e0
+    h_both_empty = and_intro h_empty, h_e0_empty
+    h_eq_e_e0 = implies_elim eu2, h_both_empty
+    # rel_elem(wf, e, a) -> rel_elem(wf, e0, a) via rel_elem_eq
+    req = use rel_elem_eq
+    req1 = forall_elim req, wf
+    req2 = forall_elim req1, e
+    req3 = forall_elim req2, a
+    req4 = forall_elim req3, e0
+    req5 = forall_elim req4, a
+    er_a = forall_elim er, a
+    h_req_conj1 = and_intro h_rel_ea, h_eq_e_e0
+    h_req_conj2 = and_intro h_req_conj1, er_a
+    h_rel_e0a = implies_elim req5, h_req_conj2
+    h_base_impl = implies_intro h_rel_e0a
+    h_base = forall_intro h_base_impl
+
+    # Show step condition: vacuously true since nothing is in empty set e
+    edef = use empty_def
+    edef1 = forall_elim edef, e
+    h_e_body = iff_elim_l edef1, h_empty
+
+    fix x0
+    fix y0
+    fix sx0
+    fix sy0
+    h_step_hyp = assume elem(x0, e) & rel_elem(wf, x0, y0) & succ(sx0, x0) & succ(sy0, y0)
+    h_step_l2 = and_elim_l h_step_hyp
+    h_step_l1 = and_elim_l h_step_l2
+    h_x0_in_e = and_elim_l h_step_l1
+    h_not_x0_e = forall_elim h_e_body, x0
+    h_bot = not_elim h_not_x0_e, h_x0_in_e
+    d_step_goal = let rel_elem(wf, sx0, sy0)
+    h_step_result = bottom_elim h_bot, d_step_goal
+    h_step_impl = implies_intro h_step_result
+    h_step_sy = forall_intro h_step_impl
+    h_step_sx = forall_intro h_step_sy
+    h_step_y = forall_intro h_step_sx
+    h_step_x = forall_intro h_step_y
+
+    # Assemble add_witness(wf, a, e, n)
+    awdef = use add_witness_def
+    aw1 = forall_elim awdef, wf
+    aw2 = forall_elim aw1, a
+    aw3 = forall_elim aw2, e
+    aw4 = forall_elim aw3, n
+
+    h_aw_c1 = and_intro h_nat, h_an
+    h_aw_c2 = and_intro h_aw_c1, h_en
+    h_aw_c3 = and_intro h_aw_c2, h_is_func
+    h_aw_c4 = and_intro h_aw_c3, h_dom_bound
+    h_aw_c5 = and_intro h_aw_c4, h_base
+    h_aw_c6 = and_intro h_aw_c5, h_step_x
+    h_aw = iff_elim_r aw4, h_aw_c6
+
+    # Assemble nat_add(a, a, e) via nat_add_def
+    nadef = use nat_add_def
+    na1 = forall_elim nadef, a
+    na2 = forall_elim na1, a
+    na3 = forall_elim na2, e
+
+    h_witness_conj = and_intro h_aw, h_rel_ea
+    h_ex_n = exists_intro h_witness_conj, n
+    h_ex_f = exists_intro h_ex_n, wf
+    h_nat_add = iff_elim_r na3, h_ex_f
+
+    # Close exists scopes: wf (singleton_exists), wp (pair_exists)
+    h_c1 = exists_intro h_nat_add
+    h_c2 = exists_intro h_c1
+
+    h_impl = implies_intro h_c2
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# Proofs 2-5: Not yet completed — require domain bound analysis
+proof add_succ: UNPROVED
+
+proof add_exists: UNPROVED
+    use add_zero
+    use add_succ
+
+proof add_unique: UNPROVED
+
+proof add_in_nat: UNPROVED
+    use add_exists

@@ -33,3 +33,65 @@ fol_proof(
     proof = "well_founded.fol.proof",
     deps = [":induction"],
 )
+
+# Binary relation properties (Note 3.44)
+fol_library(
+    name = "relation_props_lib",
+    header = "relation_props.fol.def",
+    deps = [":well_founded_lib"],
+)
+
+fol_proof(
+    name = "relation_props",
+    header = "relation_props.fol.def",
+    proof = "relation_props.fol.proof",
+    deps = [":well_founded"],
+)
+
+# Recursive definition principle (Note 3.50)
+fol_library(
+    name = "recursive_def_lib",
+    header = "recursive_def.fol.def",
+    deps = [":well_founded_lib"],
+)
+
+fol_proof(
+    name = "recursive_def",
+    header = "recursive_def.fol.def",
+    proof = "recursive_def.fol.proof",
+    deps = [":well_founded"],
+)
+
+# Foundation as well-foundedness (Note 3.98)
+fol_library(
+    name = "foundation_lib",
+    header = "foundation.fol.def",
+    deps = [":well_founded_lib"],
+)
+
+fol_proof(
+    name = "foundation",
+    header = "foundation.fol.def",
+    proof = "foundation.fol.proof",
+    deps = [":well_founded"],
+)
+
+# Ordinal numbers (Notes 3.128-3.132)
+fol_library(
+    name = "ordinals_lib",
+    header = "ordinals.fol.def",
+    deps = [
+        ":relation_props_lib",
+        ":foundation_lib",
+    ],
+)
+
+fol_proof(
+    name = "ordinals",
+    header = "ordinals.fol.def",
+    proof = "ordinals.fol.proof",
+    deps = [
+        ":relation_props",
+        ":foundation",
+    ],
+)

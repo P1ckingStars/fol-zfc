@@ -1,0 +1,134 @@
+load("//build:fol.bzl", "fol_library", "fol_proof")
+
+package(default_visibility = ["//visibility:public"])
+
+fol_library(
+    name = "naturals_lib",
+    header = "naturals.fol.def",
+    deps = [
+        "//zfc/basics:ordered_pair_lib",
+        "//zfc/basics:set_operations_lib",
+    ],
+)
+
+fol_proof(
+    name = "naturals",
+    header = "naturals.fol.def",
+    proof = "naturals.fol.proof",
+    deps = [
+        "//zfc/basics:ordered_pair",
+        "//zfc/basics:set_operations",
+    ],
+)
+
+fol_library(
+    name = "nat_properties_lib",
+    header = "nat_properties.fol.def",
+    deps = [":naturals_lib"],
+)
+
+fol_proof(
+    name = "nat_properties",
+    header = "nat_properties.fol.def",
+    proof = "nat_properties.fol.proof",
+    deps = [":naturals"],
+)
+
+fol_library(
+    name = "nat_order_lib",
+    header = "nat_order.fol.def",
+    deps = [":nat_properties_lib"],
+)
+
+fol_proof(
+    name = "nat_order",
+    header = "nat_order.fol.def",
+    proof = "nat_order.fol.proof",
+    deps = [":nat_properties"],
+)
+
+fol_library(
+    name = "nat_basics_lib",
+    header = "nat_basics.fol.def",
+    deps = [":naturals_lib"],
+)
+
+fol_proof(
+    name = "nat_basics",
+    header = "nat_basics.fol.def",
+    proof = "nat_basics.fol.proof",
+    deps = [":naturals"],
+)
+
+fol_library(
+    name = "nat_add_lib",
+    header = "nat_add.fol.def",
+    deps = [
+        ":nat_basics_lib",
+        ":nat_order_lib",
+        "//zfc/basics:functions_lib",
+    ],
+)
+
+fol_proof(
+    name = "nat_add",
+    header = "nat_add.fol.def",
+    proof = "nat_add.fol.proof",
+    deps = [
+        ":nat_basics",
+        ":nat_order",
+        "//zfc/basics:functions",
+    ],
+)
+
+# Recursive definition principle + strong induction (Notes 3.50, 3.67)
+fol_library(
+    name = "nat_recursion_lib",
+    header = "nat_recursion.fol.def",
+    deps = [
+        ":naturals_lib",
+        "//zfc/basics:functions_lib",
+    ],
+)
+
+fol_proof(
+    name = "nat_recursion",
+    header = "nat_recursion.fol.def",
+    proof = "nat_recursion.fol.proof",
+    deps = [
+        ":naturals",
+        ":nat_properties",
+        "//zfc/basics:functions",
+    ],
+)
+
+# Addition algebraic properties (Notes 3.153-3.157)
+fol_library(
+    name = "nat_add_props_lib",
+    header = "nat_add_props.fol.def",
+    deps = [":nat_add_lib"],
+)
+
+fol_proof(
+    name = "nat_add_props",
+    header = "nat_add_props.fol.def",
+    proof = "nat_add_props.fol.proof",
+    deps = [":nat_add"],
+)
+
+# Multiplication (Notes 3.160-3.161)
+fol_library(
+    name = "nat_mul_lib",
+    header = "nat_mul.fol.def",
+    deps = [":nat_add_lib"],
+)
+
+fol_proof(
+    name = "nat_mul",
+    header = "nat_mul.fol.def",
+    proof = "nat_mul.fol.proof",
+    deps = [
+        ":nat_add",
+        ":nat_add_props",
+    ],
+)

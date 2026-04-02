@@ -1,0 +1,52 @@
+# ============================================================
+# Proofs for Recursive Definition Principle
+# ============================================================
+
+# Uniqueness by well-founded induction (Note 3.50)
+# At each a ∈ x, IH gives agreement on predecessors,
+# so restrictions are equal, so step produces the same value.
+proof rec_def_unique: UNPROVED
+    use well_founded_def
+    use rec_solution_def
+    use restriction_to_pred_def
+    use restriction_agree
+    use wf_induction
+    use func_unique
+    use pair_unique
+
+# Existence by Knaster-Tarski on graph (Note 3.50)
+# T(f) = {(a, step(a, f|↓a)) : a ∈ x, f|↓a total on predecessors}
+# is a monotone operator on partial functions. Its Knaster-Tarski
+# fixed point is the desired function.
+proof rec_def_exists: UNPROVED
+    use well_founded_def
+    use rec_solution_def
+    use restriction_to_pred_def
+    use wf_induction
+    use lfp_closed
+    use lfp_fixed_point
+
+# Restriction inherits the function property
+proof restriction_is_function: UNPROVED
+    use restriction_to_pred_def
+    use function_def
+    use func_unique
+
+# Restriction uniqueness via extensionality on relations
+# is_relation ensures all elements are ordered pairs, so matching
+# rel_elem pairs implies matching elements.
+proof restriction_unique: UNPROVED
+    use restriction_to_pred_def
+    use is_relation_def
+    use extensionality
+    use rel_elem_def
+    use pair_unique
+
+# Restrictions agree when functions agree on predecessors
+proof restriction_agree: UNPROVED
+    use restriction_to_pred_def
+    use is_relation_def
+    use extensionality
+    use rel_elem_def
+    use pair_injective
+    use pair_unique

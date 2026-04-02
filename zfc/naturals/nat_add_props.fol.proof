@@ -1,0 +1,50 @@
+# ============================================================
+# Proofs for Addition Algebraic Properties
+# ============================================================
+
+# 0 + a = a by induction on a (Note 3.155)
+# Base: 0 + 0 = 0 (from add_zero with a=0)
+# Step: 0 + S(a) = S(0 + a) = S(a) (from add_succ + IH)
+proof add_zero_left: UNPROVED
+    use add_zero
+    use add_succ
+    use nat_induction
+    use add_exists
+    use add_unique
+    use zero_in_nat
+
+# S(a) + b = S(a + b) by induction on b
+# Base: S(a) + 0 = S(a) = S(a + 0)
+# Step: S(a) + S(b) = S(S(a) + b) = S(S(a + b)) = S(a + S(b))
+proof add_succ_left: UNPROVED
+    use add_zero
+    use add_succ
+    use nat_induction
+    use add_exists
+    use add_unique
+    use succ_in_nat
+
+# Commutativity by induction on b (Note 3.157)
+# Base: a + 0 = a = 0 + a (add_zero + add_zero_left)
+# Step: a + S(b) = S(a + b) = S(b + a) = b + S(a) hmm...
+# Actually: first prove S(a) + b = S(a+b), then
+# a + S(b) = S(a + b) [add_succ] = S(b + a) [IH] = S(b) + a [add_succ_left inverse]
+proof add_comm: UNPROVED
+    use add_zero
+    use add_zero_left
+    use add_succ
+    use add_succ_left
+    use nat_induction
+    use add_exists
+    use add_unique
+
+# Associativity by induction on c (Note 3.154)
+# Base: (a+b)+0 = a+b = a+(b+0) since b+0=b
+# Step: (a+b)+S(c) = S((a+b)+c) = S(a+(b+c)) [IH] = a+S(b+c) = a+(b+S(c))
+proof add_assoc: UNPROVED
+    use add_zero
+    use add_succ
+    use nat_induction
+    use add_exists
+    use add_unique
+    use add_in_nat

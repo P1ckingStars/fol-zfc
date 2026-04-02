@@ -122,3 +122,110 @@ claim rel_ext: forall r. forall s.
         ((elem(a, x) & elem(b, x) & elem(c, x) &
           rel_elem(r, a, b) & rel_elem(r, b, c)) ->
          rel_elem(r, a, c)))
+
+# trichotomous(r, x): at least one of a≺b, a=b, b≺a holds
+@def(trichotomous) axiom trichotomous_def: forall r. forall x.
+    (trichotomous(r, x) <-> forall a. forall b.
+        ((elem(a, x) & elem(b, x)) ->
+         (rel_elem(r, a, b) | eq(a, b) | rel_elem(r, b, a))))
+
+# ============================================================
+# Compound Relation Types (Note 3.44)
+# ============================================================
+
+# preorder(r, x): reflexive and transitive
+@def(preorder) axiom preorder_def: forall r. forall x.
+    (preorder(r, x) <-> (reflexive(r, x) & transitive_rel(r, x)))
+
+# partial_order(r, x): antisymmetric preorder
+@def(partial_order) axiom partial_order_def: forall r. forall x.
+    (partial_order(r, x) <-> (antisymmetric(r, x) & preorder(r, x)))
+
+# linear_order(r, x): trichotomous partial order
+@def(linear_order) axiom linear_order_def: forall r. forall x.
+    (linear_order(r, x) <-> (trichotomous(r, x) & partial_order(r, x)))
+
+# equivalence_relation(r, x): symmetric preorder
+@def(equivalence_relation) axiom equivalence_relation_def: forall r. forall x.
+    (equivalence_relation(r, x) <-> (symmetric_rel(r, x) & preorder(r, x)))
+
+# graph(r, x): symmetric and irreflexive (simple undirected graph)
+@def(graph) axiom graph_def: forall r. forall x.
+    (graph(r, x) <-> (symmetric_rel(r, x) & irreflexive(r, x)))
+
+# ============================================================
+# Preorder Claims
+# ============================================================
+
+claim preorder_reflexive: forall r. forall x.
+    (preorder(r, x) -> reflexive(r, x))
+
+claim preorder_transitive: forall r. forall x.
+    (preorder(r, x) -> transitive_rel(r, x))
+
+claim preorder_intro: forall r. forall x.
+    ((reflexive(r, x) & transitive_rel(r, x)) -> preorder(r, x))
+
+# ============================================================
+# Partial Order Claims
+# ============================================================
+
+claim partial_order_antisymmetric: forall r. forall x.
+    (partial_order(r, x) -> antisymmetric(r, x))
+
+claim partial_order_preorder: forall r. forall x.
+    (partial_order(r, x) -> preorder(r, x))
+
+claim partial_order_reflexive: forall r. forall x.
+    (partial_order(r, x) -> reflexive(r, x))
+
+claim partial_order_transitive: forall r. forall x.
+    (partial_order(r, x) -> transitive_rel(r, x))
+
+claim partial_order_intro: forall r. forall x.
+    ((antisymmetric(r, x) & preorder(r, x)) -> partial_order(r, x))
+
+# ============================================================
+# Linear Order Claims
+# ============================================================
+
+claim linear_order_trichotomous: forall r. forall x.
+    (linear_order(r, x) -> trichotomous(r, x))
+
+claim linear_order_partial_order: forall r. forall x.
+    (linear_order(r, x) -> partial_order(r, x))
+
+claim linear_order_intro: forall r. forall x.
+    ((trichotomous(r, x) & partial_order(r, x)) -> linear_order(r, x))
+
+# ============================================================
+# Equivalence Relation Claims
+# ============================================================
+
+claim equivalence_symmetric: forall r. forall x.
+    (equivalence_relation(r, x) -> symmetric_rel(r, x))
+
+claim equivalence_preorder: forall r. forall x.
+    (equivalence_relation(r, x) -> preorder(r, x))
+
+claim equivalence_reflexive: forall r. forall x.
+    (equivalence_relation(r, x) -> reflexive(r, x))
+
+claim equivalence_transitive: forall r. forall x.
+    (equivalence_relation(r, x) -> transitive_rel(r, x))
+
+claim equivalence_intro: forall r. forall x.
+    ((symmetric_rel(r, x) & preorder(r, x)) -> equivalence_relation(r, x))
+
+# ============================================================
+# Graph Claims
+# ============================================================
+
+claim graph_symmetric: forall r. forall x.
+    (graph(r, x) -> symmetric_rel(r, x))
+
+claim graph_irreflexive: forall r. forall x.
+    (graph(r, x) -> irreflexive(r, x))
+
+claim graph_intro: forall r. forall x.
+    ((symmetric_rel(r, x) & irreflexive(r, x)) -> graph(r, x))

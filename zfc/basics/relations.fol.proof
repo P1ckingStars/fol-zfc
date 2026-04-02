@@ -443,3 +443,312 @@ proof rel_ext:
     h2 = forall_intro h_impl
     h1 = forall_intro h2
     qed h1
+
+# ============================================================
+# Preorder Proofs
+# ============================================================
+
+proof preorder_reflexive:
+    fix r
+    fix x
+    h = assume preorder(r, x)
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_body = iff_elim_l pd2, h
+    h_refl = and_elim_l h_body
+    h_impl = implies_intro h_refl
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof preorder_transitive:
+    fix r
+    fix x
+    h = assume preorder(r, x)
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_body = iff_elim_l pd2, h
+    h_trans = and_elim_r h_body
+    h_impl = implies_intro h_trans
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof preorder_intro:
+    fix r
+    fix x
+    h = assume reflexive(r, x) & transitive_rel(r, x)
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_pre = iff_elim_r pd2, h
+    h_impl = implies_intro h_pre
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Partial Order Proofs
+# ============================================================
+
+proof partial_order_antisymmetric:
+    fix r
+    fix x
+    h = assume partial_order(r, x)
+    pod = use partial_order_def
+    pod1 = forall_elim pod, r
+    pod2 = forall_elim pod1, x
+    h_body = iff_elim_l pod2, h
+    h_anti = and_elim_l h_body
+    h_impl = implies_intro h_anti
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof partial_order_preorder:
+    fix r
+    fix x
+    h = assume partial_order(r, x)
+    pod = use partial_order_def
+    pod1 = forall_elim pod, r
+    pod2 = forall_elim pod1, x
+    h_body = iff_elim_l pod2, h
+    h_pre = and_elim_r h_body
+    h_impl = implies_intro h_pre
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof partial_order_reflexive:
+    fix r
+    fix x
+    h = assume partial_order(r, x)
+    # Unpack partial_order -> preorder
+    pod = use partial_order_def
+    pod1 = forall_elim pod, r
+    pod2 = forall_elim pod1, x
+    h_po_body = iff_elim_l pod2, h
+    h_pre = and_elim_r h_po_body
+    # Unpack preorder -> reflexive
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_pre_body = iff_elim_l pd2, h_pre
+    h_refl = and_elim_l h_pre_body
+    h_impl = implies_intro h_refl
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof partial_order_transitive:
+    fix r
+    fix x
+    h = assume partial_order(r, x)
+    # Unpack partial_order -> preorder
+    pod = use partial_order_def
+    pod1 = forall_elim pod, r
+    pod2 = forall_elim pod1, x
+    h_po_body = iff_elim_l pod2, h
+    h_pre = and_elim_r h_po_body
+    # Unpack preorder -> transitive_rel
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_pre_body = iff_elim_l pd2, h_pre
+    h_trans = and_elim_r h_pre_body
+    h_impl = implies_intro h_trans
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof partial_order_intro:
+    fix r
+    fix x
+    h = assume antisymmetric(r, x) & preorder(r, x)
+    pod = use partial_order_def
+    pod1 = forall_elim pod, r
+    pod2 = forall_elim pod1, x
+    h_po = iff_elim_r pod2, h
+    h_impl = implies_intro h_po
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Linear Order Proofs
+# ============================================================
+
+proof linear_order_trichotomous:
+    fix r
+    fix x
+    h = assume linear_order(r, x)
+    lod = use linear_order_def
+    lod1 = forall_elim lod, r
+    lod2 = forall_elim lod1, x
+    h_body = iff_elim_l lod2, h
+    h_trich = and_elim_l h_body
+    h_impl = implies_intro h_trich
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof linear_order_partial_order:
+    fix r
+    fix x
+    h = assume linear_order(r, x)
+    lod = use linear_order_def
+    lod1 = forall_elim lod, r
+    lod2 = forall_elim lod1, x
+    h_body = iff_elim_l lod2, h
+    h_po = and_elim_r h_body
+    h_impl = implies_intro h_po
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof linear_order_intro:
+    fix r
+    fix x
+    h = assume trichotomous(r, x) & partial_order(r, x)
+    lod = use linear_order_def
+    lod1 = forall_elim lod, r
+    lod2 = forall_elim lod1, x
+    h_lo = iff_elim_r lod2, h
+    h_impl = implies_intro h_lo
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Equivalence Relation Proofs
+# ============================================================
+
+proof equivalence_symmetric:
+    fix r
+    fix x
+    h = assume equivalence_relation(r, x)
+    erd = use equivalence_relation_def
+    erd1 = forall_elim erd, r
+    erd2 = forall_elim erd1, x
+    h_body = iff_elim_l erd2, h
+    h_sym = and_elim_l h_body
+    h_impl = implies_intro h_sym
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof equivalence_preorder:
+    fix r
+    fix x
+    h = assume equivalence_relation(r, x)
+    erd = use equivalence_relation_def
+    erd1 = forall_elim erd, r
+    erd2 = forall_elim erd1, x
+    h_body = iff_elim_l erd2, h
+    h_pre = and_elim_r h_body
+    h_impl = implies_intro h_pre
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof equivalence_reflexive:
+    fix r
+    fix x
+    h = assume equivalence_relation(r, x)
+    # Unpack equivalence_relation -> preorder
+    erd = use equivalence_relation_def
+    erd1 = forall_elim erd, r
+    erd2 = forall_elim erd1, x
+    h_er_body = iff_elim_l erd2, h
+    h_pre = and_elim_r h_er_body
+    # Unpack preorder -> reflexive
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_pre_body = iff_elim_l pd2, h_pre
+    h_refl = and_elim_l h_pre_body
+    h_impl = implies_intro h_refl
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof equivalence_transitive:
+    fix r
+    fix x
+    h = assume equivalence_relation(r, x)
+    # Unpack equivalence_relation -> preorder
+    erd = use equivalence_relation_def
+    erd1 = forall_elim erd, r
+    erd2 = forall_elim erd1, x
+    h_er_body = iff_elim_l erd2, h
+    h_pre = and_elim_r h_er_body
+    # Unpack preorder -> transitive_rel
+    pd = use preorder_def
+    pd1 = forall_elim pd, r
+    pd2 = forall_elim pd1, x
+    h_pre_body = iff_elim_l pd2, h_pre
+    h_trans = and_elim_r h_pre_body
+    h_impl = implies_intro h_trans
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof equivalence_intro:
+    fix r
+    fix x
+    h = assume symmetric_rel(r, x) & preorder(r, x)
+    erd = use equivalence_relation_def
+    erd1 = forall_elim erd, r
+    erd2 = forall_elim erd1, x
+    h_er = iff_elim_r erd2, h
+    h_impl = implies_intro h_er
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Graph Proofs
+# ============================================================
+
+proof graph_symmetric:
+    fix r
+    fix x
+    h = assume graph(r, x)
+    gd = use graph_def
+    gd1 = forall_elim gd, r
+    gd2 = forall_elim gd1, x
+    h_body = iff_elim_l gd2, h
+    h_sym = and_elim_l h_body
+    h_impl = implies_intro h_sym
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof graph_irreflexive:
+    fix r
+    fix x
+    h = assume graph(r, x)
+    gd = use graph_def
+    gd1 = forall_elim gd, r
+    gd2 = forall_elim gd1, x
+    h_body = iff_elim_l gd2, h
+    h_irr = and_elim_r h_body
+    h_impl = implies_intro h_irr
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1
+
+proof graph_intro:
+    fix r
+    fix x
+    h = assume symmetric_rel(r, x) & irreflexive(r, x)
+    gd = use graph_def
+    gd1 = forall_elim gd, r
+    gd2 = forall_elim gd1, x
+    h_gr = iff_elim_r gd2, h
+    h_impl = implies_intro h_gr
+    h2 = forall_intro h_impl
+    h1 = forall_intro h2
+    qed h1

@@ -7,6 +7,7 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -17,6 +18,9 @@ class ProofContext;
 // Runtime manages axioms/theorems and creates proof contexts
 class Runtime {
     GlobalContext ctx_;
+    std::unordered_map<std::string, std::unordered_set<std::string>> proof_deps_;
+    // Source files loaded from libraries (for #pragma once across lib/source boundaries)
+    std::unordered_set<std::string> loaded_paths_;
 
 public:
     Runtime() = default;
@@ -35,6 +39,17 @@ public:
 
     // Execute a parsed proof and verify it
     util::ResultStatus execute_proof(const ParsedProof& proof);
+
+private:
+    // Execute a schema_inst step (extracted from execute_proof)
+    FormulaResult execute_schema_inst(
+        ProofContext& pctx,
+        const ParsedProofStep& step,
+        const std::unordered_map<std::string, Term>& fixed_vars,
+        const std::unordered_map<std::string, size_t>& schema_var_map,
+        const std::unordered_map<std::string, size_t>& schema_arity_map);
+
+public:
 
     // Execute all proofs from a ParseResult
     util::ResultStatus execute_all_proofs(const ParseResult& result);
@@ -56,6 +71,14 @@ private:
 public:
     const GlobalContext& context() const { return ctx_; }
 
+    // Proof dependency graph: proof name -> set of axiom/theorem names used
+    const std::unordered_map<std::string, std::unordered_set<std::string>>& proof_deps() const {
+        return proof_deps_;
+    }
+
+    // Load a compiled library (fast binary deserialization + link)
+    util::ResultStatus load_library(const std::string& path);
+
     // Create a proof context for proving a claim
     ProofContext prove(const std::string& claim_name);
     ProofContext prove(SentenceHandle goal);
@@ -65,12 +88,19 @@ public:
 class ProofContext {
     Runtime& runtime_;
     ClassicalProofStack stack_;
-    SentenceHandle goal_;
+    FormulaHandle goal_formula_;     // for qed comparison (always set for schemas)
+    SentenceHandle goal_sentence_;   // for add_theorem (regular proofs only)
     std::string name_;
     bool completed_ = false;
+    bool is_schema_ = false;
+    std::unordered_set<std::string> used_names_;
 
 public:
     ProofContext(Runtime& rt, const std::string& name, SentenceHandle goal);
+
+    // Factory for schema proofs
+    static ProofContext for_schema(Runtime& rt, const std::string& name,
+                                   const SchemaDefinition& schema);
 
     // Access formula builder for creating formulas
     FormulaBuilder& builder() { return stack_.builder(); }
@@ -121,6 +151,11 @@ public:
 
     // ========== Equality ==========
     FormulaResult eq_subst(FormulaHandle const& eq_formula, FormulaHandle const& target);
+    FormulaResult eq_sym(FormulaHandle const& eq_formula);
+
+    // ========== Schema Instantiation ==========
+    FormulaResult schema_inst(const SchemaDefinition& schema,
+                              const std::vector<SchemaBind>& bindings);
 
     // ========== Classical Extensions ==========
     FormulaResult double_neg_elim(FormulaHandle const& double_neg);
@@ -128,14 +163,19 @@ public:
     FormulaResult classical_absurd(FormulaHandle const& bottom);
     FormulaResult peirce(FormulaHandle const& a, FormulaHandle const& b);
 
+    // ========== Definite Descriptions ==========
+    FormulaResult iota_elim(FormulaHandle const& exists_formula);
+    std::optional<Term> last_iota_term() const { return stack_.last_iota_term(); }
+
     // ========== Proof Completion ==========
     // Complete the proof - verifies goal is derived and registers theorem
     util::ResultStatus qed(FormulaHandle const& derived);
 
     // Get proof goal
-    SentenceHandle goal() const { return goal_; }
+    SentenceHandle goal() const { return goal_sentence_; }
     const std::string& name() const { return name_; }
     bool is_completed() const { return completed_; }
+    const std::unordered_set<std::string>& used() const { return used_names_; }
 };
 
 }  // namespace logic

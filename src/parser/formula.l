@@ -75,13 +75,29 @@ static int col = 1;
 "double_neg_elim" { return DOUBLE_NEG_ELIM; }
 "excluded_middle" { return EXCLUDED_MIDDLE; }
 "eq_subst"      { return EQ_SUBST; }
+"eq_sym"        { return EQ_SYM; }
+"iota_elim"     { return IOTA_ELIM; }
+"iota"          { return IOTA; }
 "include"       { return INCLUDE; }
 "@def"          { return DEF; }
+"UNPROVED"      { return UNPROVED; }
+"schema"        { return SCHEMA; }
+"schema_inst"   { return SCHEMA_INST; }
+"\\"            { return BACKSLASH; }
+"["             { return LBRACKET; }
+"]"             { return RBRACKET; }
+"{"             { return LBRACE; }
+"}"             { return RBRACE; }
 
 \"[^"]*\"       {
     // String literal - strip quotes
     yylval->str = new std::string(yytext + 1, yyleng - 2);
     return STRING_LITERAL;
+}
+
+[0-9]+  {
+    yylval->str = new std::string(yytext);
+    return NUMBER;
 }
 
 [a-zA-Z_][a-zA-Z0-9_]*  {

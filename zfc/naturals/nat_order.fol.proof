@@ -1,0 +1,935 @@
+# ============================================================
+# Proof 1: nat_is_transitive
+# N is a transitive set: every element of N is a subset of N.
+# By induction: S = {x in n : subset(x, n)}.
+# Base: empty set is a subset of anything.
+# Step: if subset(x, n), then for z in succ(x), z in x or z=x,
+#       either way z in n. So subset(succ(x), n).
+# ============================================================
+proof nat_is_transitive:
+    fix n
+    h_nat = assume nat_set(n)
+
+    # Create S = {x in n : subset(x, n)}
+    sep = use separation_subset_self
+    sep1 = forall_elim sep, n
+    h_S = exists_elim sep1, wS
+
+    # ---- Part A: subset(wS, n) ----
+    sdef = use subset_def
+    fix y0
+    h_y0_in_S = assume elem(y0, wS)
+    h_y0_sep = forall_elim h_S, y0
+    h_y0_conj = iff_elim_l h_y0_sep, h_y0_in_S
+    h_y0_in_n = and_elim_l h_y0_conj
+    h_y0_impl = implies_intro h_y0_in_n
+    h_all_sub = forall_intro h_y0_impl
+    sdef_Sn1 = forall_elim sdef, wS
+    sdef_Sn2 = forall_elim sdef_Sn1, n
+    h_sub_Sn = iff_elim_r sdef_Sn2, h_all_sub
+
+    # ---- Part B1: exists e. (elem(e, wS) & empty(e)) ----
+    h_empty_set = use empty_set
+    h_e0 = exists_elim h_empty_set, e0
+    edef = use empty_def
+    edef1 = forall_elim edef, e0
+    h_empty_e0 = iff_elim_r edef1, h_e0
+
+    # elem(e0, n) from zero_in_nat
+    zin = use zero_in_nat
+    zin1 = forall_elim zin, n
+    zin2 = forall_elim zin1, e0
+    h_nat_empty = and_intro h_nat, h_empty_e0
+    h_e0_in_n = implies_elim zin2, h_nat_empty
+
+    # subset(e0, n) from empty_subset
+    es = use empty_subset
+    es1 = forall_elim es, e0
+    es2 = forall_elim es1, n
+    h_sub_e0 = implies_elim es2, h_empty_e0
+
+    # elem(e0, wS)
+    h_e0_conj = and_intro h_e0_in_n, h_sub_e0
+    h_e0_sep = forall_elim h_S, e0
+    h_e0_in_S = iff_elim_r h_e0_sep, h_e0_conj
+
+    h_b1_conj = and_intro h_e0_in_S, h_empty_e0
+    h_b1_ex = exists_intro h_b1_conj, e0
+    h_b1 = exists_intro h_b1_ex
+
+    # ---- Part B2: forall x. (elem(x, wS) -> forall s. (succ(s, x) -> elem(s, wS))) ----
+    fix x1
+    h_x1_in_S = assume elem(x1, wS)
+    h_x1_sep = forall_elim h_S, x1
+    h_x1_conj = iff_elim_l h_x1_sep, h_x1_in_S
+    h_x1_in_n = and_elim_l h_x1_conj
+    h_sub_x1 = and_elim_r h_x1_conj
+
+    fix s1
+    h_succ_x1 = assume succ(s1, x1)
+
+    # Show subset(s1, n): for any z in s1, z in x1 or z=x1; either way z in n
+    scdef = use succ_def
+    scdef1 = forall_elim scdef, s1
+    scdef2 = forall_elim scdef1, x1
+    h_s1_mem = iff_elim_l scdef2, h_succ_x1
+
+    # Get subset body of x1
+    sdef_x1n1 = forall_elim sdef, x1
+    sdef_x1n2 = forall_elim sdef_x1n1, n
+    h_sub_x1_body = iff_elim_l sdef_x1n2, h_sub_x1
+
+    fix z1
+    h_z1_in_s1 = assume elem(z1, s1)
+    h_z1_iff = forall_elim h_s1_mem, z1
+    h_z1_disj = iff_elim_l h_z1_iff, h_z1_in_s1
+
+    # Case 1: elem(z1, x1) -> elem(z1, n) from subset(x1, n)
+    h_c1 = assume elem(z1, x1)
+    h_c1_impl_body = forall_elim h_sub_x1_body, z1
+    h_z1_in_n_c1 = implies_elim h_c1_impl_body, h_c1
+    h_c1_impl = implies_intro h_z1_in_n_c1
+
+    # Case 2: eq(z1, x1) -> elem(z1, n) because x1 in n
+    h_c2 = assume eq(z1, x1)
+    h_z1_in_n_c2 = eq_subst h_c2, h_x1_in_n
+    esym = use eq_sym
+    esym1 = forall_elim esym, z1
+    esym2 = forall_elim esym1, x1
+    h_eq_x1z1 = implies_elim esym2, h_c2
+    eer = use eq_elem_r
+    eer1 = forall_elim eer, x1
+    eer2 = forall_elim eer1, n
+    eer3 = forall_elim eer2, n
+    er = use eq_refl
+    er_n = forall_elim er, n
+    h_eer_conj = and_intro er_n, h_x1_in_n
+    h_x1_in_n_2 = implies_elim eer3, h_eer_conj
+    eel = use eq_elem_l
+    eel1 = forall_elim eel, x1
+    eel2 = forall_elim eel1, z1
+    eel3 = forall_elim eel2, n
+    h_eel_conj = and_intro h_eq_x1z1, h_x1_in_n
+    h_z1_in_n_c2b = implies_elim eel3, h_eel_conj
+    h_c2_impl = implies_intro h_z1_in_n_c2b
+
+    h_z1_in_n = or_elim h_z1_disj, h_c1_impl, h_c2_impl
+
+    h_z1_impl = implies_intro h_z1_in_n
+    h_all_z1 = forall_intro h_z1_impl
+
+    sdef_s1n1 = forall_elim sdef, s1
+    sdef_s1n2 = forall_elim sdef_s1n1, n
+    h_sub_s1 = iff_elim_r sdef_s1n2, h_all_z1
+
+    # elem(s1, wS): need elem(s1, n) & subset(s1, n)
+    # elem(s1, n) from succ_in_nat
+    sin = use succ_in_nat
+    sin1 = forall_elim sin, n
+    sin2 = forall_elim sin1, x1
+    sin3 = forall_elim sin2, s1
+    h_sin_conj1 = and_intro h_nat, h_x1_in_n
+    h_sin_conj2 = and_intro h_sin_conj1, h_succ_x1
+    h_s1_in_n = implies_elim sin3, h_sin_conj2
+
+    h_s1_conj = and_intro h_s1_in_n, h_sub_s1
+    h_s1_sep = forall_elim h_S, s1
+    h_s1_in_S = iff_elim_r h_s1_sep, h_s1_conj
+
+    h_succ_impl = implies_intro h_s1_in_S
+    h_forall_s1 = forall_intro h_succ_impl
+    h_x1_impl = implies_intro h_forall_s1
+    h_forall_x1 = forall_intro h_x1_impl
+
+    # ---- Combine: inductive_set(wS) ----
+    h_both = and_intro h_b1, h_forall_x1
+    isdef = use inductive_set_def
+    isdef1 = forall_elim isdef, wS
+    h_ind_S = iff_elim_r isdef1, h_both
+
+    # ---- Apply nat_induction ----
+    ni = use nat_induction
+    ni1 = forall_elim ni, n
+    ni2 = forall_elim ni1, wS
+    h_ni_conj1 = and_intro h_nat, h_sub_Sn
+    h_ni_conj2 = and_intro h_ni_conj1, h_ind_S
+    h_eq_Sn = implies_elim ni2, h_ni_conj2
+
+    # From eq(wS, n): for any x in n, x in wS, so subset(x, n)
+    fix x
+    h_x_in_n = assume elem(x, n)
+    esym3 = forall_elim esym, wS
+    esym4 = forall_elim esym3, n
+    h_eq_nS = implies_elim esym4, h_eq_Sn
+
+    eer4 = forall_elim eer, x
+    eer5 = forall_elim eer4, n
+    eer6 = forall_elim eer5, wS
+    h_eer_conj2 = and_intro h_eq_nS, h_x_in_n
+    h_x_in_S = implies_elim eer6, h_eer_conj2
+
+    h_x_sep = forall_elim h_S, x
+    h_x_conj = iff_elim_l h_x_sep, h_x_in_S
+    h_sub_x = and_elim_r h_x_conj
+
+    h_x_impl = implies_intro h_sub_x
+    h_forall_x = forall_intro h_x_impl
+
+    # Close exists scope (wS) — forall x.(elem(x,n)->subset(x,n)) has no wS
+    h_closed = exists_intro h_forall_x
+
+    h_nat_impl = implies_intro h_closed
+    h_result = forall_intro h_nat_impl
+    qed h_result
+
+# ============================================================
+# Proof 2: nat_elem_is_nat
+# Corollary of nat_is_transitive: if x in n and y in x, then
+# subset(x, n) so y in n.
+# ============================================================
+proof nat_elem_is_nat:
+    fix n
+    fix x
+    fix y
+    h = assume nat_set(n) & elem(x, n) & elem(y, x)
+    h_left = and_elim_l h
+    h_y_in_x = and_elim_r h
+    h_nat = and_elim_l h_left
+    h_x_in_n = and_elim_r h_left
+
+    # nat_is_transitive: nat_set(n) -> forall x. (elem(x, n) -> subset(x, n))
+    nit = use nat_is_transitive
+    nit1 = forall_elim nit, n
+    h_nit = implies_elim nit1, h_nat
+    h_nit_x = forall_elim h_nit, x
+    h_sub_xn = implies_elim h_nit_x, h_x_in_n
+
+    # subset(x, n) means forall z. (elem(z, x) -> elem(z, n))
+    sdef = use subset_def
+    sdef1 = forall_elim sdef, x
+    sdef2 = forall_elim sdef1, n
+    h_sub_body = iff_elim_l sdef2, h_sub_xn
+    h_y_impl = forall_elim h_sub_body, y
+    h_y_in_n = implies_elim h_y_impl, h_y_in_x
+
+    h_impl = implies_intro h_y_in_n
+    h3 = forall_intro h_impl
+    h2 = forall_intro h3
+    h1 = forall_intro h2
+    qed h1
+
+# ============================================================
+# Proof 3: nat_subset_elem
+# For naturals, subset implies membership or equality.
+# By induction on b: S = {b in n : forall a in n. (subset(a,b) -> elem(a,b)|eq(a,b))}
+# Base: subset(a, empty) implies a is empty, so eq(a, empty).
+# Step: excluded_middle on elem(b, a).
+#   ~elem(b,a): subset transfers to x1, IH gives elem|eq, transfer to s1.
+#   elem(b,a): transitive_set(a) gives subset(b,a), build subset(s1,a),
+#              subset_antisym gives eq(a,s1).
+# ============================================================
+proof nat_subset_elem:
+    fix n
+    fix a
+    fix b
+    h = assume nat_set(n) & elem(a, n) & elem(b, n) & subset(a, b)
+    h_left3 = and_elim_l h
+    h_sub_ab = and_elim_r h
+    h_left2 = and_elim_l h_left3
+    h_b_in_n = and_elim_r h_left3
+    h_nat = and_elim_l h_left2
+    h_a_in_n = and_elim_r h_left2
+
+    # Create S = {b in n : forall a in n. (subset(a,b) -> (elem(a,b)|eq(a,b)))}
+    sep = use separation_subset_implies_elem
+    sep1 = forall_elim sep, n
+    h_S = exists_elim sep1, wS
+
+    # Precompute shared tools
+    sdef = use subset_def
+    esym = use eq_sym
+
+    # ---- Part A: subset(wS, n) ----
+    fix y0
+    h_y0_in_S = assume elem(y0, wS)
+    h_y0_sep = forall_elim h_S, y0
+    h_y0_conj = iff_elim_l h_y0_sep, h_y0_in_S
+    h_y0_in_n = and_elim_l h_y0_conj
+    h_y0_impl = implies_intro h_y0_in_n
+    h_all_sub = forall_intro h_y0_impl
+    sdef_Sn1 = forall_elim sdef, wS
+    sdef_Sn2 = forall_elim sdef_Sn1, n
+    h_sub_Sn = iff_elim_r sdef_Sn2, h_all_sub
+
+    # ---- Part B1: Base case ----
+    h_empty_set = use empty_set
+    h_e0 = exists_elim h_empty_set, e0
+    # h_e0: forall x. ~elem(x, e0)
+    edef = use empty_def
+    edef_e0 = forall_elim edef, e0
+    h_empty_e0 = iff_elim_r edef_e0, h_e0
+
+    # elem(e0, n) from zero_in_nat
+    zin = use zero_in_nat
+    zin1 = forall_elim zin, n
+    zin2 = forall_elim zin1, e0
+    h_nat_empty = and_intro h_nat, h_empty_e0
+    h_e0_in_n = implies_elim zin2, h_nat_empty
+
+    # Show: forall a1. (elem(a1, n) -> (subset(a1, e0) -> (elem(a1, e0) | eq(a1, e0))))
+    fix a1
+    h_a1_in_n = assume elem(a1, n)
+    h_sub_a1_e0 = assume subset(a1, e0)
+
+    # subset body: forall x. (elem(x, a1) -> elem(x, e0))
+    sdef_a1e1 = forall_elim sdef, a1
+    sdef_a1e2 = forall_elim sdef_a1e1, e0
+    h_sub_a1_body = iff_elim_l sdef_a1e2, h_sub_a1_e0
+
+    # Show empty(a1): forall z. ~elem(z, a1)
+    fix z0
+    h_z0_in_a1 = assume elem(z0, a1)
+    h_z0_impl_e = forall_elim h_sub_a1_body, z0
+    h_z0_in_e0 = implies_elim h_z0_impl_e, h_z0_in_a1
+    h_not_z0_e0 = forall_elim h_e0, z0
+    h_bot_base = not_elim h_not_z0_e0, h_z0_in_e0
+    h_not_z0_a1 = not_intro h_bot_base
+    h_all_not_a1 = forall_intro h_not_z0_a1
+
+    edef_a1 = forall_elim edef, a1
+    h_empty_a1 = iff_elim_r edef_a1, h_all_not_a1
+
+    # empty_unique: empty(a1) & empty(e0) -> eq(a1, e0)
+    eu = use empty_unique
+    eu1 = forall_elim eu, a1
+    eu2 = forall_elim eu1, e0
+    h_both_empty = and_intro h_empty_a1, h_empty_e0
+    h_eq_a1_e0 = implies_elim eu2, h_both_empty
+
+    d_elem_a1_e0 = let elem(a1, e0)
+    h_disj_base = or_intro_r d_elem_a1_e0, h_eq_a1_e0
+
+    h_sub_a1_impl = implies_intro h_disj_base
+    h_a1_impl = implies_intro h_sub_a1_impl
+    h_all_a1 = forall_intro h_a1_impl
+
+    # Combine: elem(e0, wS)
+    h_e0_conj_S = and_intro h_e0_in_n, h_all_a1
+    h_e0_sep = forall_elim h_S, e0
+    h_e0_in_S = iff_elim_r h_e0_sep, h_e0_conj_S
+
+    h_b1_conj = and_intro h_e0_in_S, h_empty_e0
+    h_b1_ex = exists_intro h_b1_conj, e0
+    h_b1 = exists_intro h_b1_ex
+
+    # ---- Part B2: Inductive step ----
+    fix x1
+    h_x1_in_S = assume elem(x1, wS)
+    h_x1_sep = forall_elim h_S, x1
+    h_x1_conj = iff_elim_l h_x1_sep, h_x1_in_S
+    h_x1_in_n = and_elim_l h_x1_conj
+    h_IH = and_elim_r h_x1_conj
+
+    fix s1
+    h_succ_x1 = assume succ(s1, x1)
+
+    # elem(s1, n) from succ_in_nat
+    sin = use succ_in_nat
+    sin1 = forall_elim sin, n
+    sin2 = forall_elim sin1, x1
+    sin3 = forall_elim sin2, s1
+    h_sin_conj1 = and_intro h_nat, h_x1_in_n
+    h_sin_conj2 = and_intro h_sin_conj1, h_succ_x1
+    h_s1_in_n = implies_elim sin3, h_sin_conj2
+
+    # succ_def membership condition
+    scdef = use succ_def
+    scdef1 = forall_elim scdef, s1
+    scdef2 = forall_elim scdef1, x1
+    h_s1_mem = iff_elim_l scdef2, h_succ_x1
+
+    # elem(x1, s1) from elem_in_succ
+    eis = use elem_in_succ
+    eis1 = forall_elim eis, s1
+    eis2 = forall_elim eis1, x1
+    h_x1_in_s1 = implies_elim eis2, h_succ_x1
+
+    # Now show: forall a2. (elem(a2, n) -> (subset(a2, s1) -> (elem(a2, s1) | eq(a2, s1))))
+    fix a2
+    h_a2_in_n = assume elem(a2, n)
+    h_sub_a2_s1 = assume subset(a2, s1)
+
+    # subset body of a2, s1
+    sdef_a2s1 = forall_elim sdef, a2
+    sdef_a2s2 = forall_elim sdef_a2s1, s1
+    h_sub_a2_body = iff_elim_l sdef_a2s2, h_sub_a2_s1
+
+    # excluded_middle on elem(x1, a2)
+    d_em = let elem(x1, a2)
+    h_em = excluded_middle d_em
+
+    # ---- Case 1: elem(x1, a2) → show eq(a2, s1) ----
+    h_x1_in_a2 = assume elem(x1, a2)
+
+    # transitive_set(a2) from nat_transitive
+    nt = use nat_transitive
+    nt1 = forall_elim nt, n
+    nt2 = forall_elim nt1, a2
+    h_nt_conj = and_intro h_nat, h_a2_in_n
+    h_trans_a2 = implies_elim nt2, h_nt_conj
+
+    # elem(x1, a2) -> subset(x1, a2)
+    tsdef = use transitive_set_def
+    tsdef_a2 = forall_elim tsdef, a2
+    h_ts_body = iff_elim_l tsdef_a2, h_trans_a2
+    h_x1_sub_impl = forall_elim h_ts_body, x1
+    h_sub_x1_a2 = implies_elim h_x1_sub_impl, h_x1_in_a2
+
+    # subset body of x1, a2
+    sdef_x1a1 = forall_elim sdef, x1
+    sdef_x1a2 = forall_elim sdef_x1a1, a2
+    h_sub_x1_body = iff_elim_l sdef_x1a2, h_sub_x1_a2
+
+    # Show subset(s1, a2): for z in s1, z in x1 or z=x1; either way z in a2
+    fix z3
+    h_z3_in_s1 = assume elem(z3, s1)
+    h_z3_iff = forall_elim h_s1_mem, z3
+    h_z3_disj = iff_elim_l h_z3_iff, h_z3_in_s1
+
+    # Sub-case: elem(z3, x1) -> elem(z3, a2)
+    h_z3_in_x1 = assume elem(z3, x1)
+    h_z3_x1_impl = forall_elim h_sub_x1_body, z3
+    h_z3_in_a2_c1 = implies_elim h_z3_x1_impl, h_z3_in_x1
+    h_z3_c1_impl = implies_intro h_z3_in_a2_c1
+
+    # Sub-case: eq(z3, x1) -> elem(z3, a2) via eq_subst
+    h_z3_eq_x1 = assume eq(z3, x1)
+    esym_z3 = forall_elim esym, z3
+    esym_z3x1 = forall_elim esym_z3, x1
+    h_eq_x1_z3 = implies_elim esym_z3x1, h_z3_eq_x1
+    h_z3_in_a2_c2 = eq_subst h_eq_x1_z3, h_x1_in_a2
+    h_z3_c2_impl = implies_intro h_z3_in_a2_c2
+
+    h_z3_in_a2 = or_elim h_z3_disj, h_z3_c1_impl, h_z3_c2_impl
+
+    h_z3_impl = implies_intro h_z3_in_a2
+    h_all_z3 = forall_intro h_z3_impl
+    sdef_s1a1 = forall_elim sdef, s1
+    sdef_s1a2 = forall_elim sdef_s1a1, a2
+    h_sub_s1_a2 = iff_elim_r sdef_s1a2, h_all_z3
+
+    # subset_antisym: subset(a2, s1) & subset(s1, a2) -> eq(a2, s1)
+    sa = use subset_antisym
+    sa1 = forall_elim sa, a2
+    sa2 = forall_elim sa1, s1
+    h_both_sub = and_intro h_sub_a2_s1, h_sub_s1_a2
+    h_eq_a2_s1 = implies_elim sa2, h_both_sub
+
+    d_elem_a2_s1 = let elem(a2, s1)
+    h_c1_result = or_intro_r d_elem_a2_s1, h_eq_a2_s1
+    h_c1_impl = implies_intro h_c1_result
+
+    # ---- Case 2: ~elem(x1, a2) → show elem(a2, s1) via IH ----
+    h_not_x1_a2 = assume ~elem(x1, a2)
+
+    # Show subset(a2, x1): for z in a2, z in s1 -> z in x1 | eq(z, x1)
+    # If eq(z, x1), then elem(x1, a2) via eq_subst, contradicting ~elem(x1, a2)
+    fix z2
+    h_z2_in_a2 = assume elem(z2, a2)
+    h_z2_impl_s = forall_elim h_sub_a2_body, z2
+    h_z2_in_s1b = implies_elim h_z2_impl_s, h_z2_in_a2
+    h_z2_iff = forall_elim h_s1_mem, z2
+    h_z2_disj = iff_elim_l h_z2_iff, h_z2_in_s1b
+
+    # Sub-case: elem(z2, x1) — done
+    h_z2_in_x1 = assume elem(z2, x1)
+    h_z2_sc1_impl = implies_intro h_z2_in_x1
+
+    # Sub-case: eq(z2, x1) — contradiction
+    h_z2_eq_x1 = assume eq(z2, x1)
+    h_x1_in_a2_contra = eq_subst h_z2_eq_x1, h_z2_in_a2
+    h_bot_c2 = not_elim h_not_x1_a2, h_x1_in_a2_contra
+    d_z2_in_x1 = let elem(z2, x1)
+    h_z2_x1_bot = bottom_elim h_bot_c2, d_z2_in_x1
+    h_z2_sc2_impl = implies_intro h_z2_x1_bot
+
+    h_z2_in_x1_final = or_elim h_z2_disj, h_z2_sc1_impl, h_z2_sc2_impl
+
+    h_z2_impl = implies_intro h_z2_in_x1_final
+    h_all_z2 = forall_intro h_z2_impl
+    sdef_a2x1 = forall_elim sdef, a2
+    sdef_a2x2 = forall_elim sdef_a2x1, x1
+    h_sub_a2_x1 = iff_elim_r sdef_a2x2, h_all_z2
+
+    # Apply IH: elem(a2, x1) | eq(a2, x1)
+    h_IH_a2 = forall_elim h_IH, a2
+    h_IH_a2_impl = implies_elim h_IH_a2, h_a2_in_n
+    h_IH_result = implies_elim h_IH_a2_impl, h_sub_a2_x1
+
+    # Sub-case: elem(a2, x1) → elem(a2, s1) via succ membership
+    h_a2_in_x1 = assume elem(a2, x1)
+    h_a2_s_iff = forall_elim h_s1_mem, a2
+    d_eq_a2_x1 = let eq(a2, x1)
+    h_a2_disj = or_intro_l h_a2_in_x1, d_eq_a2_x1
+    h_a2_in_s1_ih1 = iff_elim_r h_a2_s_iff, h_a2_disj
+    d_eq_a2_s1b = let eq(a2, s1)
+    h_ih1_result = or_intro_l h_a2_in_s1_ih1, d_eq_a2_s1b
+    h_ih1_impl = implies_intro h_ih1_result
+
+    # Sub-case: eq(a2, x1) → elem(a2, s1) via elem_in_succ
+    h_a2_eq_x1 = assume eq(a2, x1)
+    esym_a2 = forall_elim esym, a2
+    esym_a2x1 = forall_elim esym_a2, x1
+    h_eq_x1_a2 = implies_elim esym_a2x1, h_a2_eq_x1
+    h_a2_in_s1_ih2 = eq_subst h_eq_x1_a2, h_x1_in_s1
+    d_eq_a2_s1c = let eq(a2, s1)
+    h_ih2_result = or_intro_l h_a2_in_s1_ih2, d_eq_a2_s1c
+    h_ih2_impl = implies_intro h_ih2_result
+
+    h_c2_inner = or_elim h_IH_result, h_ih1_impl, h_ih2_impl
+    h_c2_impl = implies_intro h_c2_inner
+
+    # ---- or_elim on excluded_middle ----
+    h_step_result = or_elim h_em, h_c1_impl, h_c2_impl
+
+    h_sub_a2_impl = implies_intro h_step_result
+    h_a2_n_impl = implies_intro h_sub_a2_impl
+    h_all_a2 = forall_intro h_a2_n_impl
+
+    # Combine: elem(s1, n) & forall a2. (...)
+    h_s1_conj = and_intro h_s1_in_n, h_all_a2
+    h_s1_sep = forall_elim h_S, s1
+    h_s1_in_S = iff_elim_r h_s1_sep, h_s1_conj
+
+    h_succ_impl = implies_intro h_s1_in_S
+    h_forall_s1 = forall_intro h_succ_impl
+    h_x1_impl = implies_intro h_forall_s1
+    h_forall_x1 = forall_intro h_x1_impl
+
+    # ---- Combine: inductive_set(wS) ----
+    h_both = and_intro h_b1, h_forall_x1
+    isdef = use inductive_set_def
+    isdef1 = forall_elim isdef, wS
+    h_ind_S = iff_elim_r isdef1, h_both
+
+    # ---- nat_induction: eq(wS, n) ----
+    ni = use nat_induction
+    ni1 = forall_elim ni, n
+    ni2 = forall_elim ni1, wS
+    h_ni_conj1 = and_intro h_nat, h_sub_Sn
+    h_ni_conj2 = and_intro h_ni_conj1, h_ind_S
+    h_eq_Sn = implies_elim ni2, h_ni_conj2
+
+    # Transfer: elem(b, n) -> elem(b, wS) via eq(n, wS)
+    esym_wS = forall_elim esym, wS
+    esym_wSn = forall_elim esym_wS, n
+    h_eq_nS = implies_elim esym_wSn, h_eq_Sn
+    h_b_in_S = eq_subst h_eq_nS, h_b_in_n
+
+    # Extract property for our specific b
+    h_b_sep = forall_elim h_S, b
+    h_b_conj = iff_elim_l h_b_sep, h_b_in_S
+    h_b_prop = and_elim_r h_b_conj
+    h_b_prop_a = forall_elim h_b_prop, a
+    h_b_impl_a = implies_elim h_b_prop_a, h_a_in_n
+    h_final = implies_elim h_b_impl_a, h_sub_ab
+
+    # Close exists scope (wS)
+    h_closed = exists_intro h_final
+
+    h_main_impl = implies_intro h_closed
+    h_r3 = forall_intro h_main_impl
+    h_r2 = forall_intro h_r3
+    h_r1 = forall_intro h_r2
+    qed h_r1
+
+# ============================================================
+# Proof 4: nat_trichotomy
+# Any two naturals are comparable by membership.
+# By induction on b: S = {b in n : forall a in n. (elem(a,b)|eq(a,b)|elem(b,a))}
+# Base: empty_subset + nat_subset_elem gives elem(e0,a)|eq(e0,a), expand to 3-way.
+# Step: IH gives (elem(a,x1)|eq(a,x1))|elem(x1,a).
+#   Left: transfer to elem(a,s1) via succ.
+#   Right: transitive_set(a) -> subset(s1,a), nat_subset_elem -> elem(s1,a)|eq(s1,a).
+# ============================================================
+proof nat_trichotomy:
+    fix n
+    fix a
+    fix b
+    h = assume nat_set(n) & elem(a, n) & elem(b, n)
+    h_left = and_elim_l h
+    h_b_in_n = and_elim_r h
+    h_nat = and_elim_l h_left
+    h_a_in_n = and_elim_r h_left
+
+    # Create S = {b in n : forall a in n. (elem(a,b)|eq(a,b)|elem(b,a))}
+    sep = use separation_trichotomy
+    sep1 = forall_elim sep, n
+    h_S = exists_elim sep1, wS
+
+    sdef = use subset_def
+    esym = use eq_sym
+
+    # ---- Part A: subset(wS, n) ----
+    fix y0
+    h_y0_in_S = assume elem(y0, wS)
+    h_y0_sep = forall_elim h_S, y0
+    h_y0_conj = iff_elim_l h_y0_sep, h_y0_in_S
+    h_y0_in_n = and_elim_l h_y0_conj
+    h_y0_impl = implies_intro h_y0_in_n
+    h_all_sub = forall_intro h_y0_impl
+    sdef_Sn1 = forall_elim sdef, wS
+    sdef_Sn2 = forall_elim sdef_Sn1, n
+    h_sub_Sn = iff_elim_r sdef_Sn2, h_all_sub
+
+    # ---- Part B1: Base case — empty set is in S ----
+    h_empty_set = use empty_set
+    h_e0 = exists_elim h_empty_set, e0
+    edef = use empty_def
+    edef_e0 = forall_elim edef, e0
+    h_empty_e0 = iff_elim_r edef_e0, h_e0
+
+    zin = use zero_in_nat
+    zin1 = forall_elim zin, n
+    zin2 = forall_elim zin1, e0
+    h_nat_empty = and_intro h_nat, h_empty_e0
+    h_e0_in_n = implies_elim zin2, h_nat_empty
+
+    # For any a1 in n: empty_subset gives subset(e0, a1), nat_subset_elem gives elem(e0,a1)|eq(e0,a1)
+    es = use empty_subset
+    es1 = forall_elim es, e0
+
+    fix a1
+    h_a1_in_n = assume elem(a1, n)
+    es2 = forall_elim es1, a1
+    h_sub_e0_a1 = implies_elim es2, h_empty_e0
+
+    nse = use nat_subset_elem
+    nse1 = forall_elim nse, n
+    nse2 = forall_elim nse1, e0
+    nse3 = forall_elim nse2, a1
+    h_nse_conj1 = and_intro h_nat, h_e0_in_n
+    h_nse_conj2 = and_intro h_nse_conj1, h_a1_in_n
+    h_nse_conj3 = and_intro h_nse_conj2, h_sub_e0_a1
+    h_nse_result = implies_elim nse3, h_nse_conj3
+    # h_nse_result: elem(e0, a1) | eq(e0, a1)
+
+    # Map to 3-way: (elem(a1, e0) | eq(a1, e0)) | elem(e0, a1)
+    # Case elem(e0, a1): third disjunct
+    h_e0_in_a1 = assume elem(e0, a1)
+    d_left_base = let elem(a1, e0) | eq(a1, e0)
+    h_tri_base_c1 = or_intro_r d_left_base, h_e0_in_a1
+    h_base_c1_impl = implies_intro h_tri_base_c1
+
+    # Case eq(e0, a1): eq_sym → eq(a1, e0) → second disjunct
+    h_eq_e0_a1 = assume eq(e0, a1)
+    esym_e01 = forall_elim esym, e0
+    esym_e0a1 = forall_elim esym_e01, a1
+    h_eq_a1_e0 = implies_elim esym_e0a1, h_eq_e0_a1
+    d_a1_in_e0 = let elem(a1, e0)
+    h_left_base2 = or_intro_r d_a1_in_e0, h_eq_a1_e0
+    d_e0_in_a1 = let elem(e0, a1)
+    h_tri_base_c2 = or_intro_l h_left_base2, d_e0_in_a1
+    h_base_c2_impl = implies_intro h_tri_base_c2
+
+    h_tri_base = or_elim h_nse_result, h_base_c1_impl, h_base_c2_impl
+    h_a1_impl = implies_intro h_tri_base
+    h_all_a1_base = forall_intro h_a1_impl
+
+    # elem(e0, wS)
+    h_e0_conj_S = and_intro h_e0_in_n, h_all_a1_base
+    h_e0_sep = forall_elim h_S, e0
+    h_e0_in_S = iff_elim_r h_e0_sep, h_e0_conj_S
+
+    h_b1_conj = and_intro h_e0_in_S, h_empty_e0
+    h_b1_ex = exists_intro h_b1_conj, e0
+    h_b1 = exists_intro h_b1_ex
+
+    # ---- Part B2: Inductive step ----
+    fix x1
+    h_x1_in_S = assume elem(x1, wS)
+    h_x1_sep = forall_elim h_S, x1
+    h_x1_conj = iff_elim_l h_x1_sep, h_x1_in_S
+    h_x1_in_n = and_elim_l h_x1_conj
+    h_IH = and_elim_r h_x1_conj
+
+    fix s1
+    h_succ_x1 = assume succ(s1, x1)
+
+    # elem(s1, n)
+    sin = use succ_in_nat
+    sin1 = forall_elim sin, n
+    sin2 = forall_elim sin1, x1
+    sin3 = forall_elim sin2, s1
+    h_sin_conj1 = and_intro h_nat, h_x1_in_n
+    h_sin_conj2 = and_intro h_sin_conj1, h_succ_x1
+    h_s1_in_n = implies_elim sin3, h_sin_conj2
+
+    # succ membership
+    scdef = use succ_def
+    scdef1 = forall_elim scdef, s1
+    scdef2 = forall_elim scdef1, x1
+    h_s1_mem = iff_elim_l scdef2, h_succ_x1
+
+    # elem(x1, s1)
+    eis = use elem_in_succ
+    eis1 = forall_elim eis, s1
+    eis2 = forall_elim eis1, x1
+    h_x1_in_s1 = implies_elim eis2, h_succ_x1
+
+    # Show: forall a2. (elem(a2,n) -> (elem(a2,s1)|eq(a2,s1)|elem(s1,a2)))
+    fix a2
+    h_a2_in_n = assume elem(a2, n)
+
+    # IH applied: (elem(a2,x1)|eq(a2,x1)) | elem(x1,a2)
+    h_IH_a2 = forall_elim h_IH, a2
+    h_IH_result = implies_elim h_IH_a2, h_a2_in_n
+
+    # ---- Case D: elem(a2, x1) | eq(a2, x1) ----
+    h_case_D = assume elem(a2, x1) | eq(a2, x1)
+
+    # Sub-case: elem(a2, x1) → elem(a2, s1) via succ
+    h_a2_in_x1_D = assume elem(a2, x1)
+    h_a2_s_iff = forall_elim h_s1_mem, a2
+    d_eq_a2x1 = let eq(a2, x1)
+    h_a2_disj_D = or_intro_l h_a2_in_x1_D, d_eq_a2x1
+    h_a2_in_s1_D = iff_elim_r h_a2_s_iff, h_a2_disj_D
+    d_eq_a2s1_D = let eq(a2, s1)
+    h_left_D1 = or_intro_l h_a2_in_s1_D, d_eq_a2s1_D
+    d_s1a2_D1 = let elem(s1, a2)
+    h_tri_D1 = or_intro_l h_left_D1, d_s1a2_D1
+    h_D1_impl = implies_intro h_tri_D1
+
+    # Sub-case: eq(a2, x1) → elem(a2, s1) via elem_in_succ + eq_subst
+    h_a2_eq_x1_D = assume eq(a2, x1)
+    esym_a2x = forall_elim esym, a2
+    esym_a2x1 = forall_elim esym_a2x, x1
+    h_eq_x1_a2_D = implies_elim esym_a2x1, h_a2_eq_x1_D
+    h_a2_in_s1_D2 = eq_subst h_eq_x1_a2_D, h_x1_in_s1
+    d_eq_a2s1_D2 = let eq(a2, s1)
+    h_left_D2 = or_intro_l h_a2_in_s1_D2, d_eq_a2s1_D2
+    d_s1a2_D2 = let elem(s1, a2)
+    h_tri_D2 = or_intro_l h_left_D2, d_s1a2_D2
+    h_D2_impl = implies_intro h_tri_D2
+
+    h_D_result = or_elim h_case_D, h_D1_impl, h_D2_impl
+    h_case_D_impl = implies_intro h_D_result
+
+    # ---- Case C: elem(x1, a2) ----
+    h_x1_in_a2 = assume elem(x1, a2)
+
+    # transitive_set(a2) → subset(x1, a2)
+    nt = use nat_transitive
+    nt1 = forall_elim nt, n
+    nt2 = forall_elim nt1, a2
+    h_nt_conj = and_intro h_nat, h_a2_in_n
+    h_trans_a2 = implies_elim nt2, h_nt_conj
+    tsdef = use transitive_set_def
+    tsdef_a2 = forall_elim tsdef, a2
+    h_ts_body = iff_elim_l tsdef_a2, h_trans_a2
+    h_x1_sub_impl = forall_elim h_ts_body, x1
+    h_sub_x1_a2 = implies_elim h_x1_sub_impl, h_x1_in_a2
+
+    sdef_x1a1 = forall_elim sdef, x1
+    sdef_x1a2 = forall_elim sdef_x1a1, a2
+    h_sub_x1_body = iff_elim_l sdef_x1a2, h_sub_x1_a2
+
+    # Build subset(s1, a2)
+    fix z3
+    h_z3_in_s1 = assume elem(z3, s1)
+    h_z3_iff = forall_elim h_s1_mem, z3
+    h_z3_disj = iff_elim_l h_z3_iff, h_z3_in_s1
+
+    h_z3_in_x1 = assume elem(z3, x1)
+    h_z3_impl_a = forall_elim h_sub_x1_body, z3
+    h_z3_in_a2_c1 = implies_elim h_z3_impl_a, h_z3_in_x1
+    h_z3_c1_impl = implies_intro h_z3_in_a2_c1
+
+    h_z3_eq_x1 = assume eq(z3, x1)
+    esym_z3x = forall_elim esym, z3
+    esym_z3x1 = forall_elim esym_z3x, x1
+    h_eq_x1_z3 = implies_elim esym_z3x1, h_z3_eq_x1
+    h_z3_in_a2_c2 = eq_subst h_eq_x1_z3, h_x1_in_a2
+    h_z3_c2_impl = implies_intro h_z3_in_a2_c2
+
+    h_z3_in_a2 = or_elim h_z3_disj, h_z3_c1_impl, h_z3_c2_impl
+    h_z3_impl_b = implies_intro h_z3_in_a2
+    h_all_z3 = forall_intro h_z3_impl_b
+    sdef_s1a1 = forall_elim sdef, s1
+    sdef_s1a2 = forall_elim sdef_s1a1, a2
+    h_sub_s1_a2 = iff_elim_r sdef_s1a2, h_all_z3
+
+    # nat_subset_elem: subset(s1, a2) → elem(s1, a2) | eq(s1, a2)
+    nse_C = use nat_subset_elem
+    nse_C1 = forall_elim nse_C, n
+    nse_C2 = forall_elim nse_C1, s1
+    nse_C3 = forall_elim nse_C2, a2
+    h_nse_C_conj1 = and_intro h_nat, h_s1_in_n
+    h_nse_C_conj2 = and_intro h_nse_C_conj1, h_a2_in_n
+    h_nse_C_conj3 = and_intro h_nse_C_conj2, h_sub_s1_a2
+    h_nse_C_result = implies_elim nse_C3, h_nse_C_conj3
+
+    # Sub-case elem(s1, a2): third disjunct
+    h_s1_in_a2_C = assume elem(s1, a2)
+    d_left_C1 = let elem(a2, s1) | eq(a2, s1)
+    h_tri_C1 = or_intro_r d_left_C1, h_s1_in_a2_C
+    h_C1_impl = implies_intro h_tri_C1
+
+    # Sub-case eq(s1, a2): eq_sym → eq(a2, s1) → second disjunct
+    h_eq_s1_a2_C = assume eq(s1, a2)
+    esym_s1a = forall_elim esym, s1
+    esym_s1a2 = forall_elim esym_s1a, a2
+    h_eq_a2_s1_C = implies_elim esym_s1a2, h_eq_s1_a2_C
+    d_a2s1_C = let elem(a2, s1)
+    h_left_C2 = or_intro_r d_a2s1_C, h_eq_a2_s1_C
+    d_s1a2_C2 = let elem(s1, a2)
+    h_tri_C2 = or_intro_l h_left_C2, d_s1a2_C2
+    h_C2_impl = implies_intro h_tri_C2
+
+    h_C_inner = or_elim h_nse_C_result, h_C1_impl, h_C2_impl
+    h_case_C_impl = implies_intro h_C_inner
+
+    # ---- or_elim on IH ----
+    h_step_result = or_elim h_IH_result, h_case_D_impl, h_case_C_impl
+
+    h_a2_n_impl = implies_intro h_step_result
+    h_all_a2 = forall_intro h_a2_n_impl
+
+    # Combine: elem(s1, wS)
+    h_s1_conj = and_intro h_s1_in_n, h_all_a2
+    h_s1_sep = forall_elim h_S, s1
+    h_s1_in_S = iff_elim_r h_s1_sep, h_s1_conj
+
+    h_succ_impl = implies_intro h_s1_in_S
+    h_forall_s1 = forall_intro h_succ_impl
+    h_x1_impl = implies_intro h_forall_s1
+    h_forall_x1 = forall_intro h_x1_impl
+
+    # ---- Combine: inductive_set(wS) ----
+    h_both = and_intro h_b1, h_forall_x1
+    isdef = use inductive_set_def
+    isdef1 = forall_elim isdef, wS
+    h_ind_S = iff_elim_r isdef1, h_both
+
+    # ---- nat_induction ----
+    ni = use nat_induction
+    ni1 = forall_elim ni, n
+    ni2 = forall_elim ni1, wS
+    h_ni_conj1 = and_intro h_nat, h_sub_Sn
+    h_ni_conj2 = and_intro h_ni_conj1, h_ind_S
+    h_eq_Sn = implies_elim ni2, h_ni_conj2
+
+    # Transfer elem(b, n) → elem(b, wS)
+    esym_wS = forall_elim esym, wS
+    esym_wSn = forall_elim esym_wS, n
+    h_eq_nS = implies_elim esym_wSn, h_eq_Sn
+    h_b_in_S = eq_subst h_eq_nS, h_b_in_n
+
+    # Extract trichotomy for our a, b
+    h_b_sep = forall_elim h_S, b
+    h_b_conj = iff_elim_l h_b_sep, h_b_in_S
+    h_b_prop = and_elim_r h_b_conj
+    h_b_prop_a = forall_elim h_b_prop, a
+    h_final = implies_elim h_b_prop_a, h_a_in_n
+
+    # Close exists scope (wS)
+    h_closed = exists_intro h_final
+
+    h_main_impl = implies_intro h_closed
+    h_r3 = forall_intro h_main_impl
+    h_r2 = forall_intro h_r3
+    h_r1 = forall_intro h_r2
+    qed h_r1
+
+# ============================================================
+# Proof 5: nat_well_ordered
+# Every non-empty subset of N has a least element.
+# Apply foundation to A: get y in A disjoint from A.
+# For any z in A: trichotomy gives elem(z,y)|eq(z,y)|elem(y,z).
+# The elem(z,y) case contradicts disjointness, leaving eq(z,y)|elem(y,z).
+# ============================================================
+proof nat_well_ordered:
+    fix n
+    fix A
+    h = assume nat_set(n) & subset(A, n) & (exists x. elem(x, A))
+    h_left = and_elim_l h
+    h_nonempty = and_elim_r h
+    h_nat = and_elim_l h_left
+    h_sub_An = and_elim_r h_left
+
+    # subset body: forall x. (elem(x, A) -> elem(x, n))
+    sdef = use subset_def
+    sdef_An1 = forall_elim sdef, A
+    sdef_An2 = forall_elim sdef_An1, n
+    h_sub_body = iff_elim_l sdef_An2, h_sub_An
+
+    # Foundation: exists y. (elem(y, A) & forall z. ~(elem(z, y) & elem(z, A)))
+    found = use foundation
+    found1 = forall_elim found, A
+    h_found = implies_elim found1, h_nonempty
+    h_wy = exists_elim h_found, wy
+    h_wy_in_A = and_elim_l h_wy
+    h_wy_disj = and_elim_r h_wy
+
+    # wy is in n (from subset)
+    h_wy_n_impl = forall_elim h_sub_body, wy
+    h_wy_in_n = implies_elim h_wy_n_impl, h_wy_in_A
+
+    # For any z0 in A: show eq(z0, wy) | elem(wy, z0)
+    fix z0
+    h_z0_in_A = assume elem(z0, A)
+
+    # z0 is in n
+    h_z0_n_impl = forall_elim h_sub_body, z0
+    h_z0_in_n = implies_elim h_z0_n_impl, h_z0_in_A
+
+    # Trichotomy: (elem(z0, wy) | eq(z0, wy)) | elem(wy, z0)
+    tri = use nat_trichotomy
+    tri1 = forall_elim tri, n
+    tri2 = forall_elim tri1, z0
+    tri3 = forall_elim tri2, wy
+    h_tri_conj1 = and_intro h_nat, h_z0_in_n
+    h_tri_conj2 = and_intro h_tri_conj1, h_wy_in_n
+    h_tri_result = implies_elim tri3, h_tri_conj2
+
+    # Case left: elem(z0, wy) | eq(z0, wy)
+    h_left_tri = assume elem(z0, wy) | eq(z0, wy)
+
+    # Sub-case: elem(z0, wy) — contradiction with foundation
+    h_z0_in_wy = assume elem(z0, wy)
+    h_not_both = forall_elim h_wy_disj, z0
+    h_both_z0 = and_intro h_z0_in_wy, h_z0_in_A
+    h_bot = not_elim h_not_both, h_both_z0
+    d_goal = let eq(z0, wy) | elem(wy, z0)
+    h_absurd = bottom_elim h_bot, d_goal
+    h_z0_wy_impl = implies_intro h_absurd
+
+    # Sub-case: eq(z0, wy) — first disjunct
+    h_eq_z0_wy = assume eq(z0, wy)
+    d_wy_z0 = let elem(wy, z0)
+    h_left_result = or_intro_l h_eq_z0_wy, d_wy_z0
+    h_eq_impl = implies_intro h_left_result
+
+    h_left_inner = or_elim h_left_tri, h_z0_wy_impl, h_eq_impl
+    h_left_tri_impl = implies_intro h_left_inner
+
+    # Case right: elem(wy, z0) — second disjunct
+    h_wy_in_z0 = assume elem(wy, z0)
+    d_eq_z0_wy = let eq(z0, wy)
+    h_right_result = or_intro_r d_eq_z0_wy, h_wy_in_z0
+    h_right_tri_impl = implies_intro h_right_result
+
+    h_z0_result = or_elim h_tri_result, h_left_tri_impl, h_right_tri_impl
+    h_z0_impl = implies_intro h_z0_result
+    h_all_z0 = forall_intro h_z0_impl
+
+    # Combine: elem(wy, A) & forall z. (elem(z, A) -> (eq(z, wy) | elem(wy, z)))
+    h_final_conj = and_intro h_wy_in_A, h_all_z0
+    h_final_ex = exists_intro h_final_conj, wy
+    # Close exists scope (wy from foundation)
+    h_final_closed = exists_intro h_final_ex
+
+    h_wo_impl = implies_intro h_final_closed
+    h_r2 = forall_intro h_wo_impl
+    h_r1 = forall_intro h_r2
+    qed h_r1

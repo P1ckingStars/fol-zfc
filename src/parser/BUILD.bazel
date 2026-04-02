@@ -20,7 +20,13 @@ cc_library(
     ],
     copts = [
         "-Wno-unused-function",
-    ],
+    ] + select({
+        "//build:profiling": ["-DPROFILING_ENABLED"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
-    deps = ["//src/core:formula"],
+    deps = [
+        "//src/core:formula",
+        "//src/util:profiler",
+    ],
 )

@@ -1,0 +1,48 @@
+# ============================================================
+# Proofs for Binary Relation Properties
+# ============================================================
+
+# Well-founded implies irreflexive (Note 3.45)
+# Use wf_no_self_loop: for each a ∈ x, construct singleton and set_diff
+proof wf_irreflexive: UNPROVED
+    use well_founded_def
+    use irreflexive_rel_def
+    use wf_no_self_loop
+
+# Well-founded + trichotomous implies transitive (Note 3.108)
+# By contradiction on each non-transitive case using trichotomy.
+# If a ≺ b and b ≺ c but ¬(a ≺ c), trichotomy gives a = c or c ≺ a.
+# Both lead to cycles, contradicting well-foundedness.
+proof wf_trich_transitive: UNPROVED
+    use well_founded_def
+    use trichotomous_def
+    use transitive_rel_def
+    use wf_irreflexive
+    use wf_minimal
+
+# Well-founded + transitive gives partial well-order (direct from def)
+proof wf_trans_partial_order: UNPROVED
+    use partial_well_order_def
+
+# Well-founded + trichotomous gives well-order
+proof wf_trich_well_order: UNPROVED
+    use well_order_def
+    use partial_well_order_def
+    use wf_trich_transitive
+
+# Partial well-order is irreflexive
+proof partial_wo_irreflexive: UNPROVED
+    use partial_well_order_def
+    use wf_irreflexive
+
+# Extraction lemmas
+proof well_order_wf: UNPROVED
+    use well_order_def
+    use partial_well_order_def
+
+proof well_order_transitive: UNPROVED
+    use well_order_def
+    use partial_well_order_def
+
+proof well_order_trichotomous: UNPROVED
+    use well_order_def
