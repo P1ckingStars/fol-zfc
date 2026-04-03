@@ -331,7 +331,7 @@ rule_call
         $$ = ASTNode::make_rule_step("forall_intro", args);
         delete $2;
     }
-    | FORALL_ELIM id_list {
+    | FORALL_ELIM term_list {
         $$ = ASTNode::make_rule_step("forall_elim", $2);
     }
     | EXISTS_INTRO id_list {
