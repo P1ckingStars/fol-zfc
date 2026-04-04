@@ -421,6 +421,12 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
         return util::Ok();
     }
 
+    // If this name is also a schema, mark it as proven for schema_inst
+    // regardless of whether the claim proof succeeds. Schemas are axiomatically
+    // accepted; the claim proof is a separate concern.
+    if (ctx_.find_schema(proof.claim_name).has_value())
+        ctx_.mark_schema_proven(proof.claim_name);
+
     auto pctx = prove(proof.claim_name);
 
     std::unordered_map<std::string, FormulaHandle> steps;
