@@ -728,6 +728,11 @@ util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
         return MAKE_ERROR << "qed: formula not derived: " << derived.get().to_string();
     }
 
+    // Check that all scope dependencies are discharged
+    if (!stack_.deps_empty(derived)) {
+        return MAKE_ERROR << "qed: formula has unresolved scope dependencies";
+    }
+
     // Check that derived matches goal (up to alpha-equivalence of bound vars)
     if (goal_formula_.valid()) {
         // De Bruijn: structural equality = alpha-equivalence

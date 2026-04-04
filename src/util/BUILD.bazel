@@ -9,6 +9,7 @@ cc_library(
 cc_library(
     name = "logging",
     hdrs = ["logging.h"],
+    deps = [":error"],
     visibility = ["//visibility:public"],
 )
 

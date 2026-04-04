@@ -151,6 +151,7 @@ public:
     Term fix_var();
     FormulaHandle assume(FormulaHandle const & formula);
     bool is_derived(FormulaHandle const &a) const;
+    bool deps_empty(FormulaHandle const &f) const;
     void pop();
 
     // Use a proven theorem

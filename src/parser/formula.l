@@ -108,3 +108,7 @@ static int col = 1;
 .               { return yytext[0]; }
 
 %%
+
+void reset_lexer_col() {
+    col = 1;
+}
