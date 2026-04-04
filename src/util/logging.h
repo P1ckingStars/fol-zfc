@@ -6,6 +6,8 @@
 #include <string>
 #include <string_view>
 
+#include "src/util/error.h"
+
 namespace logic::util {
 
 enum class LogLevel { DEBUG = 0, WARNING = 1, ERROR = 2, FATAL = 3 };
@@ -30,18 +32,6 @@ inline void set_log_level(LogLevel level) {
     min_log_level() = level;
 }
 
-// Extract filename from path (compile-time friendly)
-constexpr const char* extract_filename(const char* path) {
-    const char* file = path;
-    while (*path) {
-        if (*path == '/' || *path == '\\') {
-            file = path + 1;
-        }
-        ++path;
-    }
-    return file;
-}
-
 // Log message with source location
 inline void log_message(LogLevel level, const char* file, int line,
                         const std::string& message) {
@@ -49,7 +39,7 @@ inline void log_message(LogLevel level, const char* file, int line,
 
     std::ostream& out = (level >= LogLevel::ERROR) ? std::cerr : std::cout;
     out << "[" << level_to_string(level) << "] "
-        << extract_filename(file) << ":" << line
+        << filename_from_path(file) << ":" << line
         << " - " << message << std::endl;
 
     if (level == LogLevel::FATAL) {

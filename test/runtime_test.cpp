@@ -711,15 +711,11 @@ bool test_def_annotation_with_proof() {
 // ==================== Ordered Pair Proofs ====================
 
 // Helper to load ordered pair axioms
-Runtime& load_ordered_pair_axioms() {
-    static Runtime rt;
-    static bool loaded = false;
-    if (!loaded) {
-        auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
-        if (!result.ok()) {
-            throw std::runtime_error("Failed to load ordered_pair.fol.def: " + result.error().to_string());
-        }
-        loaded = true;
+Runtime load_ordered_pair_axioms() {
+    Runtime rt;
+    auto result = rt.load_file_recursive("zfc/basics/ordered_pair.fol.def");
+    if (!result.ok()) {
+        throw std::runtime_error("Failed to load ordered_pair.fol.def: " + result.error().to_string());
     }
     return rt;
 }
@@ -745,7 +741,7 @@ Runtime& load_ordered_pair_axioms() {
 // 8. Use forall_intro (4 times) to close all quantifiers
 
 bool test_ordered_pair_axioms_loaded() {
-    Runtime& rt = load_ordered_pair_axioms();
+    Runtime rt = load_ordered_pair_axioms();
 
     // Verify all axioms are present (definitions + extensionality from axioms.fol)
     std::vector<std::string> required_axioms = {

@@ -246,4 +246,391 @@ std::string Sentence::to_string() const {
     return root_.get().to_string();
 }
 
+// ==================== FormulaBuilder ====================
+
+FormulaHandle FormulaBuilder::predicate(PredicateHandle pred, std::vector<Term> args) {
+    for (const auto& t : args) {
+        if (!t.is_description()) {
+            use_var(t.as_variable());
+        }
+    }
+    return add_formula(Formula(PredicateInstance(pred, std::move(args))));
+}
+
+FormulaHandle FormulaBuilder::make_schema_var(size_t id, std::vector<Term> args) {
+    for (const auto& t : args) {
+        if (!t.is_description()) use_var(t.as_variable());
+    }
+    return add_formula(Formula(SchemaVar{id, std::move(args)}));
+}
+
+// ========== De Bruijn: shift ==========
+
+Term FormulaBuilder::shift_term(const Term& t, int cutoff, int delta) {
+    if (t.is_generalized()) {
+        var_index k = t.as_variable();
+        if (static_cast<int>(k) >= cutoff)
+            return Term::generalized(static_cast<var_index>(static_cast<int>(k) + delta));
+        return t;
+    }
+    if (t.is_description()) {
+        const auto& d = t.as_description();
+        FormulaHandle nb = shift_formula(d.body, cutoff + 1, delta);
+        if (nb != d.body) return Term::description(nb);
+        return t;
+    }
+    return t;
+}
+
+FormulaHandle FormulaBuilder::shift_formula(FormulaHandle h, int cutoff, int delta) {
+    if (delta == 0) return h;
+    const Formula& f = h.get();
+
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : p.args()) {
+            Term nt = shift_term(t, cutoff, delta);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+        return h;
+    }
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        auto nl = c.left.valid() ? shift_formula(c.left, cutoff, delta) : c.left;
+        auto nr = c.right.valid() ? shift_formula(c.right, cutoff, delta) : c.right;
+        if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        auto nb = shift_formula(q.body, cutoff + 1, delta);
+        if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+        return h;
+    }
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        if (sv.args.empty()) return h;
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : sv.args) {
+            Term nt = shift_term(t, cutoff, delta);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+        return h;
+    }
+    return h;
+}
+
+// ========== De Bruijn: abstract ==========
+
+Term FormulaBuilder::abstract_var_in_term(const Term& t, var_index fixed_var, int depth) {
+    if (t.is_fixed() && t.as_variable() == fixed_var)
+        return Term::generalized(static_cast<var_index>(depth));
+    if (t.is_generalized()) {
+        var_index k = t.as_variable();
+        return (static_cast<int>(k) >= depth) ? Term::generalized(k + 1) : t;
+    }
+    if (t.is_description()) {
+        const auto& d = t.as_description();
+        FormulaHandle nb = abstract_var_impl(d.body, fixed_var, depth + 1);
+        if (nb != d.body) return Term::description(nb);
+        return t;
+    }
+    return t;
+}
+
+FormulaHandle FormulaBuilder::abstract_var_impl(FormulaHandle h, var_index fixed_var, int depth) {
+    const Formula& f = h.get();
+
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : p.args()) {
+            Term nt = abstract_var_in_term(t, fixed_var, depth);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+        return h;
+    }
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        auto nl = c.left.valid() ? abstract_var_impl(c.left, fixed_var, depth) : c.left;
+        auto nr = c.right.valid() ? abstract_var_impl(c.right, fixed_var, depth) : c.right;
+        if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        auto nb = abstract_var_impl(q.body, fixed_var, depth + 1);
+        if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+        return h;
+    }
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        if (sv.args.empty()) return h;
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : sv.args) {
+            Term nt = abstract_var_in_term(t, fixed_var, depth);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+        return h;
+    }
+    return h;
+}
+
+FormulaHandle FormulaBuilder::abstract_var(FormulaHandle body, var_index fixed_var) {
+    return abstract_var_impl(body, fixed_var, 0);
+}
+
+// ========== De Bruijn: instantiate ==========
+
+Term FormulaBuilder::instantiate_gen_in_term(const Term& t, const Term& replacement, int depth) {
+    if (t.is_generalized()) {
+        var_index k = t.as_variable();
+        if (static_cast<int>(k) == depth)
+            return shift_term(replacement, 0, depth);
+        if (static_cast<int>(k) > depth)
+            return Term::generalized(k - 1);
+        return t;
+    }
+    if (t.is_description()) {
+        const auto& d = t.as_description();
+        FormulaHandle nb = instantiate_gen_impl(d.body, replacement, depth + 1);
+        if (nb != d.body) return Term::description(nb);
+        return t;
+    }
+    return t;
+}
+
+FormulaHandle FormulaBuilder::instantiate_gen_impl(FormulaHandle h, const Term& replacement, int depth) {
+    const Formula& f = h.get();
+
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : p.args()) {
+            Term nt = instantiate_gen_in_term(t, replacement, depth);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+        return h;
+    }
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        auto nl = c.left.valid() ? instantiate_gen_impl(c.left, replacement, depth) : c.left;
+        auto nr = c.right.valid() ? instantiate_gen_impl(c.right, replacement, depth) : c.right;
+        if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        auto nb = instantiate_gen_impl(q.body, replacement, depth + 1);
+        if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+        return h;
+    }
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        if (sv.args.empty()) return h;
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : sv.args) {
+            Term nt = instantiate_gen_in_term(t, replacement, depth);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+        return h;
+    }
+    return h;
+}
+
+FormulaHandle FormulaBuilder::instantiate_gen(FormulaHandle body, const Term& replacement) {
+    return instantiate_gen_impl(body, replacement, 0);
+}
+
+// ========== De Bruijn: subst_fixed ==========
+
+Term FormulaBuilder::subst_fixed_in_term(const Term& t, var_index fixed_var, const Term& replacement, int depth) {
+    if (t.is_fixed() && t.as_variable() == fixed_var)
+        return shift_term(replacement, 0, depth);
+    if (t.is_description()) {
+        const auto& d = t.as_description();
+        FormulaHandle nb = subst_fixed_impl(d.body, fixed_var, replacement, depth + 1);
+        if (nb != d.body) return Term::description(nb);
+        return t;
+    }
+    return t;
+}
+
+FormulaHandle FormulaBuilder::subst_fixed_impl(FormulaHandle h, var_index fixed_var, const Term& replacement, int depth) {
+    const Formula& f = h.get();
+
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : p.args()) {
+            Term nt = subst_fixed_in_term(t, fixed_var, replacement, depth);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+        return h;
+    }
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        auto nl = c.left.valid() ? subst_fixed_impl(c.left, fixed_var, replacement, depth) : c.left;
+        auto nr = c.right.valid() ? subst_fixed_impl(c.right, fixed_var, replacement, depth) : c.right;
+        if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        auto nb = subst_fixed_impl(q.body, fixed_var, replacement, depth + 1);
+        if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+        return h;
+    }
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        if (sv.args.empty()) return h;
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : sv.args) {
+            Term nt = subst_fixed_in_term(t, fixed_var, replacement, depth);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+        return h;
+    }
+    return h;
+}
+
+// ========== Simple term substitution ==========
+
+Term FormulaBuilder::translate_in_term(const Term& t, const Term& old_term, const Term& new_term) {
+    if (t == old_term) return new_term;
+    if (!t.is_description()) return t;
+    const auto& d = t.as_description();
+    FormulaHandle new_body = translate_term(d.body, old_term, new_term);
+    if (new_body != d.body) return Term::description(new_body);
+    return t;
+}
+
+FormulaHandle FormulaBuilder::translate_term(FormulaHandle const &h, Term const &old_term, Term const &new_term) {
+    const Formula& f = h.get();
+
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        if (sv.args.empty()) return h;
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : sv.args) {
+            Term nt = translate_in_term(t, old_term, new_term);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(SchemaVar{sv.id, std::move(new_args)}));
+        return h;
+    }
+
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        std::vector<Term> new_args;
+        bool changed = false;
+        for (const auto& t : p.args()) {
+            Term nt = translate_in_term(t, old_term, new_term);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed) return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+        return h;
+    }
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        auto nl = c.left.valid() ? translate_term(c.left, old_term, new_term) : c.left;
+        auto nr = c.right.valid() ? translate_term(c.right, old_term, new_term) : c.right;
+        if (nl != c.left || nr != c.right) return add_formula(Formula(Compound{c.op, nl, nr}));
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        auto nb = translate_term(q.body, old_term, new_term);
+        if (nb != q.body) return add_formula(Formula(Quantified{q.op, nb}));
+        return h;
+    }
+    return h;
+}
+
+// ========== Schema Instantiation ==========
+
+Term FormulaBuilder::instantiate_schema_in_term(const Term& t, const std::vector<SchemaBind>& bindings) {
+    if (!t.is_description()) return t;
+    const auto& d = t.as_description();
+    auto nb = instantiate_schema(d.body, bindings);
+    if (nb != d.body) return Term::description(nb);
+    return t;
+}
+
+FormulaHandle FormulaBuilder::instantiate_schema(FormulaHandle h, const std::vector<SchemaBind>& bindings) {
+    const Formula& f = h.get();
+    if (f.is_schema_var()) {
+        const auto& sv = f.as_schema_var();
+        const auto& bind = bindings[sv.id];
+        if (bind.params.empty()) {
+            return bind.body;
+        }
+        FormulaHandle result = bind.body;
+        for (size_t i = 0; i < bind.params.size() && i < sv.args.size(); ++i) {
+            Term arg = instantiate_schema_in_term(sv.args[i], bindings);
+            result = subst_fixed_impl(result, bind.params[i], arg, 0);
+        }
+        return result;
+    }
+    if (!f.has_schema_vars()) return h;
+
+    if (f.is_compound()) {
+        const auto& c = f.as_compound();
+        auto nl = c.left.valid() ? instantiate_schema(c.left, bindings) : c.left;
+        auto nr = c.right.valid() ? instantiate_schema(c.right, bindings) : c.right;
+        if (nl != c.left || nr != c.right)
+            return add_formula(Formula(Compound{c.op, nl, nr}));
+        return h;
+    }
+    if (f.is_quantified()) {
+        const auto& q = f.as_quantified();
+        auto nb = instantiate_schema(q.body, bindings);
+        if (nb != q.body)
+            return add_formula(Formula(Quantified{q.op, nb}));
+        return h;
+    }
+    if (f.is_predicate()) {
+        const auto& p = f.as_predicate();
+        bool changed = false;
+        std::vector<Term> new_args;
+        for (const auto& t : p.args()) {
+            Term nt = instantiate_schema_in_term(t, bindings);
+            new_args.push_back(nt);
+            if (!(nt == t)) changed = true;
+        }
+        if (changed)
+            return add_formula(Formula(PredicateInstance(p.predicate(), std::move(new_args))));
+        return h;
+    }
+    return h;
+}
+
 }  // namespace logic

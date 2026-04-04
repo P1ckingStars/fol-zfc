@@ -2490,3 +2490,7 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 #line 110 "formula.l"
 
 
+void reset_lexer_col() {
+    col = 1;
+}
+

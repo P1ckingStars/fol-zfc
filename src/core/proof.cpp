@@ -110,6 +110,11 @@ bool ProofStack::is_derived(FormulaHandle const &a) const {
     return formula_deps_.contains(a);
 }
 
+bool ProofStack::deps_empty(FormulaHandle const &f) const {
+    auto it = formula_deps_.find(f);
+    return it == formula_deps_.end() || it->second.empty();
+}
+
 void ProofStack::pop() {
     close_current_scope();
 }

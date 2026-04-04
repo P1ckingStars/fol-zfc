@@ -421,6 +421,12 @@ util::ResultStatus Runtime::execute_proof(const ParsedProof& proof) {
         return util::Ok();
     }
 
+    // If this name is also a schema, mark it as proven for schema_inst
+    // regardless of whether the claim proof succeeds. Schemas are axiomatically
+    // accepted; the claim proof is a separate concern.
+    if (ctx_.find_schema(proof.claim_name).has_value())
+        ctx_.mark_schema_proven(proof.claim_name);
+
     auto pctx = prove(proof.claim_name);
 
     std::unordered_map<std::string, FormulaHandle> steps;
@@ -720,6 +726,11 @@ util::ResultStatus ProofContext::qed(FormulaHandle const& derived) {
     // Check that the formula is actually derived (not just created via let)
     if (!stack_.is_derived(derived)) {
         return MAKE_ERROR << "qed: formula not derived: " << derived.get().to_string();
+    }
+
+    // Check that all scope dependencies are discharged
+    if (!stack_.deps_empty(derived)) {
+        return MAKE_ERROR << "qed: formula has unresolved scope dependencies";
     }
 
     // Check that derived matches goal (up to alpha-equivalence of bound vars)

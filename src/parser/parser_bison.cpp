@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
+extern void reset_lexer_col();
+
 namespace logic {
 
 // ==================== AST Cloning ====================
@@ -264,6 +266,8 @@ static bool ast_contains_predicate(const ASTNode* node, const std::string& pred_
 // Run the Bison push-parser on input and return the resulting ParseContext.
 // Throws on parse failure.
 static ParseContext run_parser(std::string_view input) {
+    reset_lexer_col();
+
     yyscan_t scanner;
     if (yylex_init(&scanner) != 0) {
         throw std::runtime_error("Failed to initialize lexer");
@@ -397,6 +401,9 @@ static ParsedStatement process_axiom_claim_stmt(const ASTNode* stmt_node, Global
 std::vector<ParsedStatement> parse_statements(std::string_view input, GlobalContext& ctx) {
     ParseContext parse_ctx = run_parser(input);
 
+    if (!parse_ctx.statements)
+        throw std::runtime_error("Expected statement list, got bare formula");
+
     std::vector<ParsedStatement> result;
     for (const ASTNode* stmt_node : *parse_ctx.statements) {
         if (stmt_node->type == ASTNode::ProofBlock) {
@@ -517,6 +524,9 @@ static ParsedProof convert_proof_block(const ASTNode* proof_node) {
 
 ParseResult parse_with_proofs(std::string_view input, GlobalContext& ctx) {
     ParseContext parse_ctx = ([&]() { PROFILE_SCOPE("parse_bison"); return run_parser(input); })();
+
+    if (!parse_ctx.statements)
+        throw std::runtime_error("Expected statement list, got bare formula");
 
     ParseResult result;
     for (const ASTNode* stmt_node : *parse_ctx.statements) {

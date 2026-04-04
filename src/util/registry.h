@@ -33,12 +33,6 @@ protected:
 
 public:
     virtual ~RegistryBase() = default;
-    
-    Handle<T> transfer_owner(Handle<T> handle) {
-        handle.registry_ = this;
-        return handle;
-    }
-
 };
 
 // Handle wraps an ID and registry reference.
