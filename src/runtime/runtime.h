@@ -173,9 +173,15 @@ public:
 
     // Get proof goal
     SentenceHandle goal() const { return goal_sentence_; }
+    FormulaHandle goal_formula() const { return goal_formula_; }
     const std::string& name() const { return name_; }
     bool is_completed() const { return completed_; }
     const std::unordered_set<std::string>& used() const { return used_names_; }
+
+    // Read-only access to proof state (for serialization)
+    const std::vector<Scope>& scopes() const { return stack_.get_scopes(); }
+    const std::unordered_map<FormulaHandle, ScopeDeps>& derived() const { return stack_.derived(); }
+    const ClassicalProofStack& stack() const { return stack_; }
 };
 
 }  // namespace logic

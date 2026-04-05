@@ -148,6 +148,10 @@ protected:
 public:
     ProofStack(GlobalContext & context);
 
+    // Read-only access to proof state (for serialization)
+    const std::vector<Scope>& get_scopes() const { return scopes; }
+    const std::unordered_map<FormulaHandle, ScopeDeps>& derived() const { return formula_deps_; }
+
     Term fix_var();
     FormulaHandle assume(FormulaHandle const & formula);
     bool is_derived(FormulaHandle const &a) const;
