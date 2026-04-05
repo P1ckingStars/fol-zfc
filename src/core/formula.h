@@ -522,6 +522,12 @@ public:
 
     FormulaHandle make_schema_var(size_t id, std::vector<Term> args = {});
 
+    // Instantiate a quantifier body: replace Gen(0) with term, shift remaining Gen down.
+    // Public wrapper for instantiate_gen (used by forall_elim internally).
+    FormulaHandle instantiate_quantifier_body(FormulaHandle body, const Term& replacement) {
+        return instantiate_gen(body, replacement);
+    }
+
     // Add a sentence's root formula to the builder (for using theorems in proofs)
     FormulaHandle add_sentence(SentenceHandle s) {
         return s.get().root();
