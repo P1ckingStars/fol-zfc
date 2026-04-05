@@ -447,6 +447,10 @@ public:
         return named_claims_;
     }
 
+    const std::unordered_map<std::string, SentenceHandle>& axioms() const {
+        return named_axioms_;
+    }
+
     const std::unordered_map<std::string, SentenceHandle>& theorems() const {
         return named_theorems_;
     }
